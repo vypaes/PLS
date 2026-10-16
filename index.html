@@ -992,6 +992,38 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       gap: 0.65rem;
     }
 
+    /* CABEÇALHO DE TÉCNICO (agrupa as demandas por técnico no Painel e no Modo TV) */
+    .tec-group-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.4rem;
+      padding-bottom: 0.2rem;
+      border-bottom: 2px solid var(--accent);
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .tec-group-header:first-child { margin-top: 0; }
+    .tec-group-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .tec-group-count {
+      background: var(--accent);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 0.05rem 0.5rem;
+      font-size: 0.72rem;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
     .pill-demand {
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -1725,6 +1757,20 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
+    }
+
+    /* TV: cabeçalho de técnico */
+    body.tv-mode-active .tec-group-header {
+      flex-shrink: 0 !important;
+      margin-top: 0.2rem !important;
+      padding-bottom: 0.1rem !important;
+      color: #ffffff !important;
+      font-size: clamp(0.72rem, 0.9vw, 0.9rem) !important;
+      border-bottom: 1px solid var(--accent) !important;
+    }
+    body.tv-mode-active .tec-group-header:first-child { margin-top: 0 !important; }
+    body.tv-mode-active .tec-group-count {
+      font-size: clamp(0.62rem, 0.75vw, 0.78rem) !important;
     }
 
     /* CONTADOR DISCRETO QUANDO A QUANTIDADE FOR MUITO GRANDE (SEM ROLAGEM) */
@@ -4159,92 +4205,118 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
           var MAX_TV_ITEMS = 10; // Máximo que cabe confortavelmente em 100vh sem estourar
 
-          // 1º RENDERIZAR DEMANDAS ATRASADAS
-          if (overdueListEl) {
-            overdueListEl.className = 'critical-grid-6' + (isTvMode ? ' ' + getDensityClass(overdueDemandas.length) : '');
-            if (overdueDemandas.length === 0) {
-              overdueListEl.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:0.5rem 0;">Nenhuma demanda com prazo atrasado no momento. Toda a operação está em dia!</div>';
-            } else {
-              var listAtr = isTvMode ? overdueDemandas.slice(0, MAX_TV_ITEMS) : overdueDemandas;
-              var atrHtml = listAtr.map(function(item) {
-                var d = item.dem;
-                var equipTxt = (isTvMode && d.equipamento) ? ' • ' + escapeHtml(d.equipamento) : '';
-                return (
-                  '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
-                    '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                    '<div class="pill-badge">' +
-                      '<span class="dot-indicator dot-red"></span>' +
-                      '<span style="color:#dc2626; font-weight:700;">atrás ' + item.diff + ' dia(s)</span>' +
-                      equipTxt +
-                    '</div>' +
-                  '</div>'
-                );
-              }).join('');
-
-              if (isTvMode && overdueDemandas.length > MAX_TV_ITEMS) {
-                atrHtml += '<div class="tv-overflow-pill">+ ' + (overdueDemandas.length - MAX_TV_ITEMS) + ' outra(s) demanda(s) atrasada(s)</div>';
-              }
-              overdueListEl.innerHTML = atrHtml;
-            }
+          // AGRUPAMENTO POR TÉCNICO (Painel e Modo TV)
+          // Cada bloco de prazo mostra o nome do técnico e a quantidade de demandas dele,
+          // seguido dos clientes daquele técnico.
+          function agruparPorTecnico(lista) {
+            var mapa = {};
+            var ordem = [];
+            lista.forEach(function(item) {
+              var nome = ((item.dem.tecnico || '') + '').trim() || 'Sem técnico';
+              if (!mapa[nome]) { mapa[nome] = []; ordem.push(nome); }
+              mapa[nome].push(item);
+            });
+            ordem.sort(function(a, b) {
+              if (a === 'Sem técnico') return 1;
+              if (b === 'Sem técnico') return -1;
+              return a.localeCompare(b, 'pt-BR');
+            });
+            return ordem.map(function(n) { return { tecnico: n, itens: mapa[n] }; });
           }
 
-          // 2º RENDERIZAR DEMANDAS DO DIA (PROGRAMADAS PARA HOJE)
-          if (todayListEl) {
-            todayListEl.className = 'critical-grid-6' + (isTvMode ? ' ' + getDensityClass(todayDemandas.length) : '');
-            if (todayDemandas.length === 0) {
-              todayListEl.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:0.5rem 0;">Nenhuma demanda com entrega programada para hoje.</div>';
-            } else {
-              var listHoje = isTvMode ? todayDemandas.slice(0, MAX_TV_ITEMS) : todayDemandas;
-              var hojeHtml = listHoje.map(function(item) {
-                var d = item.dem;
-                var equipTxt = (isTvMode && d.equipamento) ? ' • ' + escapeHtml(d.equipamento) : '';
-                return (
-                  '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '" style="border-left:3px solid #2563eb;">' +
-                    '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                    '<div class="pill-badge">' +
-                      '<span class="dot-indicator dot-blue"></span>' +
-                      '<span style="color:#2563eb; font-weight:700;">Entrega HOJE</span>' +
-                      equipTxt +
-                    '</div>' +
-                  '</div>'
-                );
-              }).join('');
-
-              if (isTvMode && todayDemandas.length > MAX_TV_ITEMS) {
-                hojeHtml += '<div class="tv-overflow-pill">+ ' + (todayDemandas.length - MAX_TV_ITEMS) + ' outra(s) demanda(s) para hoje</div>';
-              }
-              todayListEl.innerHTML = hojeHtml;
-            }
+          function renderGrupos(lista, pillFn) {
+            var grupos = agruparPorTecnico(lista);
+            var restante = isTvMode ? MAX_TV_ITEMS : Infinity;
+            var html = '';
+            var mostrados = 0;
+            var gruposMostrados = 0;
+            grupos.forEach(function(g) {
+              if (restante <= 0) return;
+              var fatia = g.itens.slice(0, restante);
+              restante -= fatia.length;
+              mostrados += fatia.length;
+              gruposMostrados++;
+              html += '<div class="tec-group-header">' +
+                        '<span class="tec-group-name" title="' + escapeHtml(g.tecnico) + '">' + escapeHtml(g.tecnico) + '</span>' +
+                        '<span class="tec-group-count">' + g.itens.length + '</span>' +
+                      '</div>' + fatia.map(pillFn).join('');
+            });
+            return { html: html, linhas: mostrados + gruposMostrados, ocultas: lista.length - mostrados };
           }
 
-          // 3º RENDERIZAR DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS
-          if (upcomingListEl) {
-            upcomingListEl.className = 'critical-grid-6' + (isTvMode ? ' ' + getDensityClass(upcomingDemandas.length) : '');
-            if (upcomingDemandas.length === 0) {
-              upcomingListEl.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:0.5rem 0;">Nenhuma demanda com entrega prevista para os próximos 5 dias.</div>';
-            } else {
-              var listProx = isTvMode ? upcomingDemandas.slice(0, MAX_TV_ITEMS) : upcomingDemandas;
-              var proxHtml = listProx.map(function(item) {
-                var d = item.dem;
-                var equipTxt = (isTvMode && d.equipamento) ? ' • ' + escapeHtml(d.equipamento) : '';
-                return (
-                  '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
-                    '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                    '<div class="pill-badge">' +
-                      '<span class="dot-indicator dot-orange"></span>' +
-                      '<span style="color:#ea580c; font-weight:700;">vence em ' + item.diff + ' dia(s)</span>' +
-                      equipTxt +
-                    '</div>' +
-                  '</div>'
-                );
-              }).join('');
-
-              if (isTvMode && upcomingDemandas.length > MAX_TV_ITEMS) {
-                proxHtml += '<div class="tv-overflow-pill">+ ' + (upcomingDemandas.length - MAX_TV_ITEMS) + ' outra(s) demanda(s) na semana</div>';
-              }
-              upcomingListEl.innerHTML = proxHtml;
+          function renderBloco(el, lista, vazioMsg, pillFn, overflowMsg) {
+            if (!el) return;
+            if (lista.length === 0) {
+              el.className = 'critical-grid-6';
+              el.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:0.5rem 0;">' + vazioMsg + '</div>';
+              return;
             }
+            var r = renderGrupos(lista, pillFn);
+            el.className = 'critical-grid-6' + (isTvMode ? ' ' + getDensityClass(r.linhas) : '');
+            var h = r.html;
+            if (isTvMode && r.ocultas > 0) {
+              h += '<div class="tv-overflow-pill">+ ' + r.ocultas + ' ' + overflowMsg + '</div>';
+            }
+            el.innerHTML = h;
           }
+
+          function equipDe(d) {
+            return (isTvMode && d.equipamento) ? ' • ' + escapeHtml(d.equipamento) : '';
+          }
+
+          // 1º DEMANDAS ATRASADAS
+          renderBloco(overdueListEl, overdueDemandas,
+            'Nenhuma demanda com prazo atrasado no momento. Toda a operação está em dia!',
+            function(item) {
+              var d = item.dem;
+              return (
+                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
+                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
+                  '<div class="pill-badge">' +
+                    '<span class="dot-indicator dot-red"></span>' +
+                    '<span style="color:#dc2626; font-weight:700;">atrás ' + item.diff + ' dia(s)</span>' +
+                    equipDe(d) +
+                  '</div>' +
+                '</div>'
+              );
+            },
+            'outra(s) demanda(s) atrasada(s)');
+
+          // 2º DEMANDAS DO DIA
+          renderBloco(todayListEl, todayDemandas,
+            'Nenhuma demanda com entrega programada para hoje.',
+            function(item) {
+              var d = item.dem;
+              return (
+                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '" style="border-left:3px solid #2563eb;">' +
+                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
+                  '<div class="pill-badge">' +
+                    '<span class="dot-indicator dot-blue"></span>' +
+                    '<span style="color:#2563eb; font-weight:700;">Entrega HOJE</span>' +
+                    equipDe(d) +
+                  '</div>' +
+                '</div>'
+              );
+            },
+            'outra(s) demanda(s) para hoje');
+
+          // 3º DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS
+          renderBloco(upcomingListEl, upcomingDemandas,
+            'Nenhuma demanda com entrega prevista para os próximos 5 dias.',
+            function(item) {
+              var d = item.dem;
+              return (
+                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
+                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
+                  '<div class="pill-badge">' +
+                    '<span class="dot-indicator dot-orange"></span>' +
+                    '<span style="color:#ea580c; font-weight:700;">vence em ' + item.diff + ' dia(s)</span>' +
+                    equipDe(d) +
+                  '</div>' +
+                '</div>'
+              );
+            },
+            'outra(s) demanda(s) na semana');
 
         } catch (e) {
           console.error('Erro em renderPainelTab:', e);
@@ -4349,7 +4421,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   '<div class="cal-side-item-sub">' +
                     '<span>' + escapeHtml(d.tipo) + '</span>' +
                     '<span>•</span>' +
-                    '<span>' + escapeHtml(d.solicitante) + '</span>' +
+                    '<span>' + escapeHtml(d.tecnico || 'Sem técnico') + '</span>' +
                   '</div>' +
                 '</div>'
               );
