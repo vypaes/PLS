@@ -7,9 +7,9 @@
 
   <!-- Ícone do app (tela inicial do celular) + modo app instalado -->
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-  <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="favicon-48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <meta name="theme-color" content="#1a1b1f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1022,6 +1022,50 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       font-size: 0.72rem;
       font-weight: 800;
       flex-shrink: 0;
+    }
+
+    /* ===== v18: CABEÇALHO CONGELADO, SUB-ABAS, TABELAS COM TÍTULO FIXO ===== */
+    html { scroll-padding-top: var(--topbar-h, 0px); }
+    .pls-topbar { position: -webkit-sticky; position: sticky; top: 0; z-index: 100; }
+
+    .lanc-subnav {
+      display: flex; gap: 0.5rem; margin-bottom: 1rem; padding: 0.4rem 0;
+      position: sticky; top: var(--topbar-h, 0px); z-index: 50; background: #f8fafc;
+    }
+    .lanc-subbtn {
+      flex: 1; padding: 0.7rem 1rem; border: 2px solid #e2e8f0; background: #ffffff; color: #334155;
+      border-radius: 8px; font-size: 0.92rem; font-weight: 700; cursor: pointer;
+    }
+    .lanc-subbtn:hover { border-color: var(--accent); }
+    .lanc-subbtn.active { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+    .lanc-subcount { font-weight: 600; opacity: 0.85; font-size: 0.8rem; }
+    body.sem-lancar:not(.editando-demanda) .lanc-subbtn[data-view="form"] { display: none; }
+
+    /* técnicos 2 a 4 só aparecem ao criar (ao editar, a demanda é de um técnico só) */
+    body.editando-demanda .tec-extra { display: none !important; }
+
+    /* tabelas: rolagem própria e linha de títulos congelada */
+    .table-container { max-height: 72vh; overflow: auto; }
+    .table-pls th { position: sticky; top: 0; z-index: 2; }
+
+    /* Painel (tela normal): os 3 blocos lado a lado em telas largas, para a página ficar menor */
+    @media (min-width: 1100px) {
+      body:not(.tv-mode-active) .critical-section {
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; align-items: start;
+      }
+      body:not(.tv-mode-active) .critical-section .critical-subblock { margin-bottom: 0; }
+      body:not(.tv-mode-active) .critical-section .critical-grid-6 { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+
+    @media (max-width: 640px) {
+      .pls-topbar { padding: 0.45rem 0.75rem 0 0.75rem; }
+      .pls-version-badge, .pls-brand-sub { display: none !important; }
+      .pls-main-content { padding: 0.75rem; }
+    }
+    @media print {
+      .table-container { max-height: none !important; overflow: visible !important; }
+      .lanc-subnav { display: none !important; }
+      #lanc-view-lista { display: block !important; }
     }
 
     .pill-demand {
@@ -2108,7 +2152,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v17 — 13/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v18 — 24/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2133,6 +2177,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
     <!-- 1ª ABA: LANÇAMENTO E DEMANDAS -->
     <section id="tab-lancamentos" class="tab-content active">
+      <!-- SUB-ABAS: mostra só o formulário OU só a lista de demandas -->
+      <div class="lanc-subnav no-print" id="lanc-subnav">
+        <button type="button" class="lanc-subbtn active" data-action="lanc-view" data-view="form">➕ Novo Lançamento</button>
+        <button type="button" class="lanc-subbtn" data-action="lanc-view" data-view="lista">📋 Demandas Lançadas <span class="lanc-subcount" id="lanc-subnav-count"></span></button>
+      </div>
+
+      <div id="lanc-view-form">
       <div class="card-pls" id="card-form-demanda">
         <div class="card-header-title">
           <span id="demand-form-title">Novo Lançamento de Demanda</span>
@@ -2162,8 +2213,27 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="demand-tecnico">Técnico <span class="req-star">*</span></label>
+              <label class="form-label" for="demand-tecnico">Técnico 1 <span class="req-star">*</span></label>
               <select id="demand-tecnico" class="form-control" required></select>
+            </div>
+
+            <div class="form-group tec-extra">
+              <label class="form-label" for="demand-tecnico-2">Técnico 2 <span style="font-weight:400; color:#64748b;">(opcional)</span></label>
+              <select id="demand-tecnico-2" class="form-control"></select>
+            </div>
+
+            <div class="form-group tec-extra">
+              <label class="form-label" for="demand-tecnico-3">Técnico 3 <span style="font-weight:400; color:#64748b;">(opcional)</span></label>
+              <select id="demand-tecnico-3" class="form-control"></select>
+            </div>
+
+            <div class="form-group tec-extra">
+              <label class="form-label" for="demand-tecnico-4">Técnico 4 <span style="font-weight:400; color:#64748b;">(opcional)</span></label>
+              <select id="demand-tecnico-4" class="form-control"></select>
+            </div>
+
+            <div class="form-group full-width tec-extra" style="font-size:0.76rem; color:#64748b; margin-top:-0.4rem;">
+              ℹ️ Cada técnico escolhido recebe a sua própria demanda: ela aparece no painel e no ranking de cada um.
             </div>
 
             <div class="form-group">
@@ -2251,7 +2321,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         </form>
       </div>
 
+      </div><!-- /lanc-view-form -->
+
       <!-- TABELA DE DEMANDAS -->
+      <div id="lanc-view-lista" style="display:none;">
       <div class="card-pls">
         <div class="card-header-title">
           <div>
@@ -2282,6 +2355,26 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               <option value="Cancelado">Cancelado</option>
             </select>
           </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:170px;">
+            <label class="form-label" for="lanc-filtro-tecnico" style="margin:0;">Filtrar por Técnico:</label>
+            <select id="lanc-filtro-tecnico" class="form-control"></select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:150px;">
+            <label class="form-label" for="lanc-filtro-campo" style="margin:0;">Data a filtrar:</label>
+            <select id="lanc-filtro-campo" class="form-control">
+              <option value="dataAtend">Atendimento</option>
+              <option value="dataPrev">Entrega prevista</option>
+              <option value="dataCad">Cadastro</option>
+            </select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem;">
+            <label class="form-label" for="lanc-filtro-ini" style="margin:0;">De:</label>
+            <input type="date" id="lanc-filtro-ini" class="form-control">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem;">
+            <label class="form-label" for="lanc-filtro-fim" style="margin:0;">Até:</label>
+            <input type="date" id="lanc-filtro-fim" class="form-control">
+          </div>
           <div>
             <button type="button" class="btn-pls-secondary" data-action="clear-lanc-filters" style="height:35px; white-space:nowrap;">Limpar filtro</button>
           </div>
@@ -2307,6 +2400,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           </table>
         </div>
       </div>
+      </div><!-- /lanc-view-lista -->
     </section>
 
     <!-- 2ª ABA: PAINEL -->
@@ -2406,11 +2500,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             <div class="critical-grid-6" id="critical-today-list"></div>
           </div>
 
-          <!-- 3º DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS -->
+          <!-- 3º PRÓXIMO DIA DE CADA TÉCNICO -->
           <div class="critical-subblock critical-subblock-upcoming">
             <div class="critical-header">
-              <h4>DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS</h4>
-              <span style="font-size:0.75rem; color:#ea580c; font-weight:700; background:#fff7ed; padding:0.2rem 0.55rem; border-radius:4px; border:1px solid #ffedd5;">PRÓXIMOS 5 DIAS</span>
+              <h4>PRÓXIMO DIA DE CADA TÉCNICO</h4>
+              <span style="font-size:0.75rem; color:#ea580c; font-weight:700; background:#fff7ed; padding:0.2rem 0.55rem; border-radius:4px; border:1px solid #ffedd5;">PRÓXIMO DIA</span>
             </div>
             <div class="critical-grid-6" id="critical-upcoming-list"></div>
           </div>
@@ -3265,7 +3359,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       function refreshUI() {
-        var ids = ['demand-cliente', 'demand-canal', 'demand-tecnico', 'demand-tipo', 'demand-status', 'client-canal', 'client-status'];
+        var ids = ['demand-cliente', 'demand-canal', 'demand-tecnico', 'demand-tecnico-2', 'demand-tecnico-3', 'demand-tecnico-4', 'lanc-filtro-tecnico', 'demand-tipo', 'demand-status', 'client-canal', 'client-status'];
         var vals = ids.map(function(id) { var e = document.getElementById(id); return e ? e.value : ''; });
         try { populateSelects(); } catch (e) { console.error(e); }
         ids.forEach(function(id, i) {
@@ -3450,6 +3544,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             }
           }
 
+          // Técnicos 2 a 4 (opcionais) e filtro de técnico da lista de demandas
+          ['demand-tecnico-2', 'demand-tecnico-3', 'demand-tecnico-4', 'lanc-filtro-tecnico'].forEach(function(idSel) {
+            var selX = document.getElementById(idSel);
+            if (!selX) return;
+            var curX = selX.value;
+            var optsX = idSel === 'lanc-filtro-tecnico' ? '<option value="">Todos</option>' : '<option value="">-- nenhum --</option>';
+            appData.tecnicos.forEach(function(tec) {
+              optsX += '<option value="' + escapeHtml(tec) + '">' + escapeHtml(tec) + '</option>';
+            });
+            selX.innerHTML = optsX;
+            if (curX && appData.tecnicos.indexOf(curX) !== -1) selX.value = curX;
+          });
+
           // Filtros da aba Histórico
           populateHistoricoFilters();
         } catch (e) {
@@ -3514,8 +3621,23 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var fCliRaw = document.getElementById('lanc-filtro-cliente') ? document.getElementById('lanc-filtro-cliente').value : '';
           var fCliNorm = normalizeStr(fCliRaw);
           var fStatus = document.getElementById('lanc-filtro-status') ? document.getElementById('lanc-filtro-status').value : '';
+          var fTecEl = document.getElementById('lanc-filtro-tecnico');
+          var fTec = fTecEl ? fTecEl.value : '';
+          var fCampoEl = document.getElementById('lanc-filtro-campo');
+          var fCampo = (fCampoEl && fCampoEl.value) || 'dataAtend';
+          var fIniEl = document.getElementById('lanc-filtro-ini');
+          var fFimEl = document.getElementById('lanc-filtro-fim');
+          var fIni = fIniEl ? fIniEl.value : '';
+          var fFim = fFimEl ? fFimEl.value : '';
 
           var filtradas = appData.demandas.filter(function(dem) {
+            if (fTec && (dem.tecnico || '') !== fTec) return false;
+            if (fIni || fFim) {
+              var dv = dem[fCampo] || '';
+              if (!dv) return false;
+              if (fIni && dv < fIni) return false;
+              if (fFim && dv > fFim) return false;
+            }
             // Busca por "contém", ignorando maiúsculas e acentos; campo vazio = mostrar todas
             if (fCliNorm) {
               var cliDemNorm = normalizeStr(dem.cliente);
@@ -3532,8 +3654,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           });
 
           tbody.innerHTML = '';
+          var subCount = document.getElementById('lanc-subnav-count');
+          if (subCount) subCount.textContent = '(' + appData.demandas.length + ')';
           if (countLabel) {
-            if (fCliNorm || fStatus) {
+            if (fCliNorm || fStatus || fTec || fIni || fFim) {
               countLabel.textContent = filtradas.length + ' de ' + appData.demandas.length + ' demanda(s) exibida(s)';
             } else {
               countLabel.textContent = appData.demandas.length + ' demanda(s) registrada(s)';
@@ -3542,7 +3666,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
           if (filtradas.length === 0) {
             if (appData.demandas.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:1.5rem; color:#64748b;">Nenhuma demanda cadastrada. Preencha o formulário acima para registrar.</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:1.5rem; color:#64748b;">Nenhuma demanda cadastrada. Use a aba "Novo Lançamento" para registrar.</td></tr>';
             } else {
               tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:1.5rem; color:#64748b;">Nenhuma demanda encontrada com o filtro selecionado. Clique em "Limpar filtro" para ver todas.</td></tr>';
             }
@@ -4167,7 +4291,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           // TRÊS BLOCOS SEPARADOS DE PRAZOS:
           // 1º DEMANDAS ATRASADAS (diff < 0)
           // 2º DEMANDAS DO DIA (diff === 0)
-          // 3º DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS (diff >= 1 && diff <= 5)
+          // 3º PRÓXIMO DIA DE CADA TÉCNICO (menor data futura de cada um)
           var overdueListEl = document.getElementById('critical-overdue-list');
           var todayListEl = document.getElementById('critical-today-list');
           var upcomingListEl = document.getElementById('critical-upcoming-list');
@@ -4175,6 +4299,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var overdueDemandas = [];
           var todayDemandas = [];
           var upcomingDemandas = [];
+          var upcomingAll = [];
 
           appData.demandas.forEach(function(d) {
             // Canceladas e Concluídas não entram em prazos operacionais
@@ -4184,10 +4309,28 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               overdueDemandas.push({ dem: d, diff: Math.abs(diff) });
             } else if (diff === 0) {
               todayDemandas.push({ dem: d });
-            } else if (diff >= 1 && diff <= 5) { // APENAS PRÓXIMOS 5 DIAS
-              upcomingDemandas.push({ dem: d, diff: diff });
+            } else if (diff >= 1) {
+              upcomingAll.push({ dem: d, diff: diff });
             }
           });
+
+          // PRÓXIMO DIA DE CADA TÉCNICO: só as demandas da data mais próxima de cada técnico
+          var proxDiaPorTec = {};
+          upcomingAll.forEach(function(it) {
+            var k = ((it.dem.tecnico || '') + '').trim() || 'Sem técnico';
+            if (proxDiaPorTec[k] === undefined || it.diff < proxDiaPorTec[k]) proxDiaPorTec[k] = it.diff;
+          });
+          upcomingDemandas = upcomingAll.filter(function(it) {
+            var k = ((it.dem.tecnico || '') + '').trim() || 'Sem técnico';
+            return it.diff === proxDiaPorTec[k];
+          });
+
+          function rotuloProxDia(d, diff) {
+            var pt = (d.dataPrev || '').split('-');
+            var dt = new Date(parseInt(pt[0], 10), parseInt(pt[1], 10) - 1, parseInt(pt[2], 10));
+            var ds = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()];
+            return (diff === 1 ? 'amanhã' : 'em ' + diff + ' dias') + ' · ' + ds + ' ' + pt[2] + '/' + pt[1];
+          }
 
           // ORDENAÇÃO: mais críticas primeiro
           // Atrasadas: mais antigas primeiro (maior diff)
@@ -4300,9 +4443,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             },
             'outra(s) demanda(s) para hoje');
 
-          // 3º DEMANDAS DA SEMANA — PRÓXIMOS 5 DIAS
+          // 3º PRÓXIMO DIA DE CADA TÉCNICO
           renderBloco(upcomingListEl, upcomingDemandas,
-            'Nenhuma demanda com entrega prevista para os próximos 5 dias.',
+            'Nenhuma entrega futura prevista para os técnicos.',
             function(item) {
               var d = item.dem;
               return (
@@ -4310,13 +4453,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
                   '<div class="pill-badge">' +
                     '<span class="dot-indicator dot-orange"></span>' +
-                    '<span style="color:#ea580c; font-weight:700;">vence em ' + item.diff + ' dia(s)</span>' +
+                    '<span style="color:#ea580c; font-weight:700;">' + rotuloProxDia(d, item.diff) + '</span>' +
                     equipDe(d) +
                   '</div>' +
                 '</div>'
               );
             },
-            'outra(s) demanda(s) na semana');
+            'outra(s) demanda(s) futura(s)');
 
         } catch (e) {
           console.error('Erro em renderPainelTab:', e);
@@ -4744,6 +4887,34 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       // TROCA DE ABAS (LAZY RENDERING)
+      // SUB-ABAS DA 1ª ABA: formulário OU lista de demandas
+      var lancView = 'form';
+      function setLancView(v) {
+        var b = document.body.classList;
+        if (v === 'form' && b.contains('sem-lancar') && !b.contains('editando-demanda')) v = 'lista';
+        lancView = v;
+        var f = document.getElementById('lanc-view-form');
+        var l = document.getElementById('lanc-view-lista');
+        if (f) f.style.display = (v === 'form') ? '' : 'none';
+        if (l) l.style.display = (v === 'lista') ? '' : 'none';
+        document.querySelectorAll('.lanc-subbtn').forEach(function(btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-view') === v);
+        });
+        if (v === 'lista') renderLancamentosTab();
+      }
+
+      // Altura do cabeçalho congelado (usada para fixar as sub-abas logo abaixo dele)
+      function ajustarTopbarH() {
+        var tb = document.querySelector('.pls-topbar');
+        if (tb) document.documentElement.style.setProperty('--topbar-h', tb.offsetHeight + 'px');
+      }
+      window.addEventListener('resize', ajustarTopbarH);
+      setTimeout(ajustarTopbarH, 0);
+      if (window.ResizeObserver) {
+        var tbObs = document.querySelector('.pls-topbar');
+        if (tbObs) new ResizeObserver(ajustarTopbarH).observe(tbObs);
+      }
+
       function switchTab(tabKey) {
         if (!podeVerAba(tabKey)) tabKey = 'lancamentos';
         activeTab = tabKey;
@@ -4774,6 +4945,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (tabKey === 'lancamentos') {
             populateSelects();
             renderLancamentosTab();
+            setLancView(lancView);
           } else if (tabKey === 'clientes') {
             renderClientesTab();
           } else if (tabKey === 'painel') {
@@ -4840,7 +5012,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
         // LIMPAR / NOVO DEMANDA
         if (action === 'clear-demand-form') {
+          var estavaEditando = document.body.classList.contains('editando-demanda');
           resetDemandForm();
+          if (estavaEditando) setLancView('lista');
           return;
         }
 
@@ -4904,6 +5078,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (activeTab !== 'lancamentos') {
               switchTab('lancamentos');
             }
+            setLancView('form');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }
           return;
@@ -4979,8 +5154,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var fLancSt = document.getElementById('lanc-filtro-status');
           if (fLancCli) fLancCli.value = '';
           if (fLancSt) fLancSt.value = '';
+          ['lanc-filtro-tecnico', 'lanc-filtro-ini', 'lanc-filtro-fim'].forEach(function(idF) {
+            var elF = document.getElementById(idF);
+            if (elF) elF.value = '';
+          });
+          var campoF = document.getElementById('lanc-filtro-campo');
+          if (campoF) campoF.value = 'dataAtend';
           renderLancamentosTab();
           showToast('Filtro de demandas limpo.');
+          return;
+        }
+
+        // SUB-ABAS DA 1ª ABA
+        if (action === 'lanc-view') {
+          setLancView(target.getAttribute('data-view'));
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           return;
         }
 
@@ -5289,6 +5477,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var canal = document.getElementById('demand-canal').value;
               var solicitante = document.getElementById('demand-solicitante').value.trim();
               var tecnico = document.getElementById('demand-tecnico').value;
+              // Até 4 técnicos (sem repetir): cada um recebe a sua própria demanda
+              var tecnicosSel = tecnico ? [tecnico] : [];
+              ['demand-tecnico-2', 'demand-tecnico-3', 'demand-tecnico-4'].forEach(function(idT) {
+                var elT = document.getElementById(idT);
+                var vT = elT ? elT.value : '';
+                if (vT && tecnicosSel.indexOf(vT) === -1) tecnicosSel.push(vT);
+              });
               var tipo = document.getElementById('demand-tipo').value;
               var equipamento = document.getElementById('demand-equipamento').value.trim();
               var obsTecnicas = document.getElementById('demand-obs-tecnicas').value.trim();
@@ -5330,6 +5525,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 saveData();
                 resetDemandForm();
                 renderLancamentosTab();
+                setLancView('lista');
                 showToast('Demanda atualizada com sucesso!');
                 return;
               }
@@ -5381,6 +5577,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var diaNome = DIAS_NOMES[String(diaSemana)] || 'semana';
                 var todayISO = getTodayISO();
                 var novasDemandas = [];
+                // Uma série de demandas para cada técnico escolhido
+                tecnicosSel.forEach(function(tecNome, ti) {
                 var grupoRecAtual = novoUUID();
 
                 // Cria cada demanda independente com os mesmos dados
@@ -5391,11 +5589,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   var occAtendISO = (occPrevISO === todayISO) ? (dataAtend || occPrevISO) : occPrevISO;
 
                   var novaDemRec = {
-                    id: 'dem_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substr(2, 4),
+                    id: 'dem_' + Date.now() + '_' + ti + '_' + i + '_' + Math.random().toString(36).substr(2, 4),
                     cliente: cliente,
                     canal: canal,
                     solicitante: solicitante,
-                    tecnico: tecnico,
+                    tecnico: tecNome,
                     tipo: tipo,
                     equipamento: equipamento,
                     obsTecnicas: obsTecnicas,
@@ -5410,6 +5608,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   };
                   novasDemandas.push(novaDemRec);
                 }
+                });
 
                 // Salva todas no armazenamento
                 for (var k = novasDemandas.length - 1; k >= 0; k--) {
@@ -5422,29 +5621,34 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
                 var dataIniBR = formatDateBR(occurrences[0]);
                 var dataFimBR = formatDateBR(occurrences[occurrences.length - 1]);
-                var msgConfirm = occurrences.length + ' demandas semanais criadas e salvas — de ' + dataIniBR + ' até ' + dataFimBR + ', toda ' + diaNome;
+                var msgConfirm = (occurrences.length * tecnicosSel.length) + ' demandas semanais criadas (' + tecnicosSel.join(', ') + ') e salvas — de ' + dataIniBR + ' até ' + dataFimBR + ', toda ' + diaNome;
                 showToast(msgConfirm);
                 return;
               }
 
-              // Criar única nova demanda (comportamento padrão)
-              var novaDem = {
-                id: 'dem_' + Date.now(),
-                cliente: cliente,
-                canal: canal,
-                solicitante: solicitante,
-                tecnico: tecnico,
-                tipo: tipo,
-                equipamento: equipamento,
-                obsTecnicas: obsTecnicas,
-                obs: obsTecnicas, // retrocompatibilidade
-                dataCad: dataCad,
-                dataAtend: dataAtend,
-                dataPrev: dataPrev,
-                status: status
-              };
-              appData.demandas.unshift(novaDem);
-              showToast('Nova demanda cadastrada e salva!');
+              // Criar nova demanda (uma para cada técnico escolhido)
+              tecnicosSel.slice().reverse().forEach(function(tecNome, idxR) {
+                var idxT = tecnicosSel.length - 1 - idxR;
+                var novaDem = {
+                  id: 'dem_' + Date.now() + (idxT ? '_' + idxT : ''),
+                  cliente: cliente,
+                  canal: canal,
+                  solicitante: solicitante,
+                  tecnico: tecNome,
+                  tipo: tipo,
+                  equipamento: equipamento,
+                  obsTecnicas: obsTecnicas,
+                  obs: obsTecnicas, // retrocompatibilidade
+                  dataCad: dataCad,
+                  dataAtend: dataAtend,
+                  dataPrev: dataPrev,
+                  status: status
+                };
+                appData.demandas.unshift(novaDem);
+              });
+              showToast(tecnicosSel.length > 1
+                ? tecnicosSel.length + ' demandas cadastradas (uma para cada técnico: ' + tecnicosSel.join(', ') + ')!'
+                : 'Nova demanda cadastrada e salva!');
 
               saveData();
               resetDemandForm();
@@ -5529,6 +5733,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             lancCliFilter.addEventListener('change', renderLancamentosTab);
           }
           if (lancStFilter) lancStFilter.addEventListener('change', renderLancamentosTab);
+          ['lanc-filtro-tecnico', 'lanc-filtro-campo', 'lanc-filtro-ini', 'lanc-filtro-fim'].forEach(function(idF) {
+            var elF = document.getElementById(idF);
+            if (elF) elF.addEventListener('change', renderLancamentosTab);
+          });
 
           // Filtros do Painel
           var pMes = document.getElementById('painel-filtro-mes');
