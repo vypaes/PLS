@@ -1118,6 +1118,34 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     body.tv-mode-active .critical-subblock .critical-grid-6 .pill-demand.pill-done { background: rgba(22, 101, 52, 0.35) !important; border-color: #16a34a !important; }
     body.tv-mode-active .critical-subblock .critical-grid-6 .pill-demand.pill-done .pill-badge span { color: #4ade80 !important; }
 
+    /* ===== v22: IMPRESSÃO DAS DEMANDAS POR TÉCNICO ===== */
+    .imp-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; }
+    .imp-item { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.86rem; cursor: pointer; user-select: none; color: #0f172a; }
+    .imp-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+    #print-sheet { display: none; }
+    @media print {
+      body.print-sheet-only > *:not(#print-sheet) { display: none !important; }
+      body.print-sheet-only #print-sheet { display: block !important; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
+      body.print-sheet-only { background: #fff !important; display: block !important; }
+      @page { margin: 12mm; }
+      #print-sheet .ps-head { border-bottom: 3px solid #ea580c; padding-bottom: 6px; margin-bottom: 10px; }
+      #print-sheet .ps-head h1 { font-size: 17pt; margin: 0 0 2px; }
+      #print-sheet .ps-sub { font-size: 10.5pt; font-weight: 700; }
+      #print-sheet .ps-emit { font-size: 8.5pt; color: #444; }
+      #print-sheet .ps-tec { margin-bottom: 14px; }
+      #print-sheet .ps-tec.ps-quebra { page-break-before: always; }
+      #print-sheet .ps-tec.ps-quebra:first-of-type { page-break-before: auto; }
+      #print-sheet .ps-tec h2 { font-size: 13pt; margin: 0 0 4px; padding: 4px 8px; background: #1a1b1f; color: #fff; display: flex; justify-content: space-between; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      #print-sheet .ps-tec h2 span { font-weight: 400; font-size: 9.5pt; }
+      #print-sheet table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+      #print-sheet th { text-align: left; background: #eee; border: 1px solid #999; padding: 3px 6px; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      #print-sheet td { border: 1px solid #999; padding: 4px 6px; vertical-align: top; }
+      #print-sheet tr { page-break-inside: avoid; }
+      #print-sheet .ps-atraso { color: #b91c1c; font-weight: 800; }
+      #print-sheet .ps-hoje { font-weight: 800; }
+      #print-sheet .ps-tag { font-size: 8pt; color: #555; display: block; }
+    }
+
     .pill-demand {
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -2202,7 +2230,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v21 — 24/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v22 — 24/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2510,8 +2538,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             <button type="button" class="btn-pls-primary no-print" data-action="open-tv-window" style="background-color:#0f172a; border:1px solid #334155;" title="Abrir janela separada para arrastar para a TV / segunda tela">
               <span>📺 Modo TV (Projetar)</span>
             </button>
-            <button type="button" class="btn-pls-secondary no-print" data-action="print-tab">
-              <span>🖨 Imprimir Painel</span>
+            <button type="button" class="btn-pls-secondary no-print" data-action="open-imprimir">
+              <span>🖨 Imprimir demandas</span>
             </button>
           </div>
         </div>
@@ -2947,6 +2975,46 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
     <!-- 7ª ABA: CONFIGURAÇÕES — USUÁRIOS E PRIVILÉGIOS (SÓ ADMINISTRADOR) -->
     <section id="tab-config" class="tab-content">
+      <div class="card-pls" id="card-cfg-painel">
+        <div class="card-header-title">
+          <div>
+            <span>Painel e Modo TV</span>
+            <span style="font-size:0.8rem; font-weight:normal; color:#64748b; margin-left:0.5rem;">Como a lista rola sozinha quando há mais demandas do que cabe na tela. Vale para o painel e para a TV, em todos os computadores.</span>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="cfg-painel-modo">Rolagem do painel</label>
+            <select id="cfg-painel-modo" class="form-control">
+              <option value="tela">Por tela — para um tempo para ler e passa para a próxima</option>
+              <option value="continua">Contínua — desce devagar e de forma suave</option>
+              <option value="estatico">Painel parado (sem rolagem)</option>
+            </select>
+          </div>
+          <div class="form-group" id="cfg-painel-tempo-grp">
+            <label class="form-label" for="cfg-painel-tempo" id="cfg-painel-tempo-lbl">Tempo</label>
+            <select id="cfg-painel-tempo" class="form-control">
+              <option value="5">5 segundos</option>
+              <option value="10">10 segundos</option>
+              <option value="15">15 segundos</option>
+              <option value="20">20 segundos</option>
+              <option value="30">30 segundos</option>
+              <option value="45">45 segundos</option>
+              <option value="60">1 minuto</option>
+              <option value="90">1 minuto e 30 segundos</option>
+              <option value="120">2 minutos</option>
+              <option value="180">3 minutos</option>
+              <option value="300">5 minutos</option>
+              <option value="600">10 minutos</option>
+            </select>
+          </div>
+        </div>
+        <div id="cfg-painel-hint" style="font-size:0.78rem; color:#64748b; margin:0.25rem 0 0.75rem; line-height:1.45;"></div>
+        <div class="form-actions" style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+          <button type="button" class="btn-pls-primary" data-action="salvar-cfg-painel">💾 Salvar configuração do painel</button>
+        </div>
+      </div>
+
       <div class="card-pls">
         <div class="card-header-title">
           <div>
@@ -3076,6 +3144,38 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
     </div>
   </div>
+
+  <!-- MODAL: IMPRIMIR DEMANDAS DOS TÉCNICOS -->
+  <div id="modal-imprimir" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:680px; width:96vw;">
+      <div class="modal-head">
+        <h3>Imprimir demandas dos técnicos</h3>
+        <button type="button" class="modal-close-btn" data-action="close-imprimir">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="srv-form-title">Quais técnicos?</div>
+        <div class="imp-box" id="imp-tecnicos"></div>
+
+        <div class="srv-form-title" style="margin-top:0.9rem;">Quais demandas?</div>
+        <div class="imp-box">
+          <label class="imp-item"><input type="checkbox" id="imp-atrasadas"> <span>⚠ Atrasadas</span></label>
+          <label class="imp-item"><input type="checkbox" id="imp-hoje" checked> <span>📅 De hoje</span></label>
+          <label class="imp-item"><input type="checkbox" id="imp-proximo"> <span>➡ Próximo dia de cada técnico</span></label>
+          <label class="imp-item"><input type="checkbox" id="imp-data-chk"> <span>🗓 Uma data específica:</span> <input type="date" id="imp-data" class="form-control" style="width:auto; padding:0.2rem 0.4rem;"></label>
+        </div>
+
+        <label class="imp-item" style="margin-top:0.9rem;"><input type="checkbox" id="imp-paginas"> <span>Começar cada técnico em uma página nova</span></label>
+        <div id="imp-resumo" class="srv-resumo" style="margin-top:0.9rem;"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-pls-secondary" data-action="close-imprimir">Cancelar</button>
+        <button type="button" class="btn-pls-primary" data-action="confirmar-imprimir">🖨 Imprimir / Salvar PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOLHA DE IMPRESSÃO (só aparece ao imprimir as demandas) -->
+  <div id="print-sheet"></div>
 
   <!-- MODAL GENÉRICO (SENHA / USUÁRIOS) -->
   <div id="modal-generico" class="modal-overlay" role="dialog" aria-modal="true">
@@ -3226,6 +3326,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       var recargaTimer = null;
       var perfilAtual = null;
 
+      // Configuração da rolagem do painel / modo TV (gravada no banco, vale para todos os computadores)
+      var CFG_PAINEL_PADRAO = { modo: 'tela', tempo: 20 };
+      var painelCfg = { modo: CFG_PAINEL_PADRAO.modo, tempo: CFG_PAINEL_PADRAO.tempo };
+      function normalizarCfgPainel(v) {
+        var modo = v && ['estatico', 'continua', 'tela'].indexOf(v.modo) !== -1 ? v.modo : CFG_PAINEL_PADRAO.modo;
+        var tempo = v ? parseInt(v.tempo, 10) : NaN;
+        if (!(tempo >= 3 && tempo <= 3600)) tempo = CFG_PAINEL_PADRAO.tempo;
+        return { modo: modo, tempo: tempo };
+      }
+
       function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
       function novoUUID() {
@@ -3307,8 +3417,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           buscarTudo('clientes', function(q) { return q.order('nome'); }),
           buscarTudo('demandas', function(q) { return q.order('created_at', { ascending: false }).order('data_cad', { ascending: false }).order('id', { ascending: false }); }),
           buscarTudo('servicos', function(q) { return q.order('data').order('created_at'); })
-            .catch(function(e) { console.error('Não foi possível ler os serviços diários:', e); return []; })
+            .catch(function(e) { console.error('Não foi possível ler os serviços diários:', e); return []; }),
+          chk(sb.from('configuracoes').select('chave,valor').eq('chave', 'painel'))
+            .then(function(r) { return r.data || []; })
+            .catch(function(e) { console.error('Não foi possível ler a configuração do painel:', e); return []; })
         ]).then(function(res) {
+          if (res[8] && res[8][0]) painelCfg = normalizarCfgPainel(res[8][0].valor);
           appData = {
             clientes: res[5].map(cliFromDb),
             tecnicos: res[4],
@@ -5237,40 +5351,239 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         } catch (e) { console.error(e); }
       }
 
-      // ROLAGEM AUTOMÁTICA DO PAINEL E DO MODO TV
-      // Cada bloco que tiver mais demandas do que cabe na tela desce devagar, para no fim,
-      // volta ao topo, para um tempo e repete. Mexer com o mouse/dedo pausa por alguns segundos.
+      // ROLAGEM AUTOMÁTICA DO PAINEL E DO MODO TV (configurável em Configurações)
+      //  - "tela": fica parado o tempo escolhido em cada tela e depois passa para a próxima
+      //  - "continua": desce suavemente, levando o tempo escolhido para percorrer a lista toda
+      //  - "estatico": não rola
+      // Mexer com o mouse/dedo pausa por alguns segundos.
       (function autoRolagemPainel() {
-        var PAUSA_MS = 6000, RETOMA_MS = 15000, TICK_MS = 50, PASSO_DESCE = 2, PASSO_SOBE = 12;
+        var TICK_MS = 50, RETOMA_MS = 15000, PAUSA_EXTREMOS_MS = 8000;
         var estados = new WeakMap();
         setInterval(function() {
           if (document.hidden) return;
           if (!(isTvMode || activeTab === 'painel')) return;
+          var modo = painelCfg.modo;
+          var tempoMs = Math.max(3, painelCfg.tempo || 20) * 1000;
           var agora = Date.now();
           document.querySelectorAll('.critical-grid-6').forEach(function(el) {
             var st = estados.get(el);
-            if (!st) { st = { fase: 'topo', ate: agora + PAUSA_MS, ultimo: el.scrollTop, userAte: 0 }; estados.set(el, st); }
+            if (!st) { st = { modo: null, fase: 'topo', ate: 0, pos: el.scrollTop, userAte: 0, animAte: 0 }; estados.set(el, st); }
+            if (st.modo !== modo) {            // mudou a configuração: volta ao topo e recomeça
+              st.modo = modo; st.fase = 'topo'; st.pos = 0; el.scrollTop = 0; st.animAte = 0;
+              st.ate = agora + (modo === 'tela' ? tempoMs : PAUSA_EXTREMOS_MS);
+            }
             var max = el.scrollHeight - el.clientHeight;
-            if (max <= 4) { st.fase = 'topo'; st.ate = agora + PAUSA_MS; st.ultimo = el.scrollTop; return; }
-            if (Math.abs(el.scrollTop - st.ultimo) > 3) st.userAte = agora + RETOMA_MS;
+            if (modo === 'estatico' || max <= 4) { st.fase = 'topo'; st.pos = el.scrollTop; if (st.ate < agora) st.ate = agora + (modo === 'tela' ? tempoMs : PAUSA_EXTREMOS_MS); return; }
+
+            if (agora >= st.animAte && Math.abs(el.scrollTop - st.pos) > 3) st.userAte = agora + RETOMA_MS;
             if (!isTvMode && el.matches(':hover')) st.userAte = agora + 4000;
-            if (agora < st.userAte) { st.ultimo = el.scrollTop; return; }
+            if (agora < st.userAte) { st.pos = el.scrollTop; st.ate = Math.max(st.ate, agora + 1000); return; }
+
+            if (modo === 'tela') {
+              if (agora < st.ate) return;
+              var pagina = Math.max(80, el.clientHeight - 56);
+              if (st.pos >= max - 2) {          // chegou ao fim: volta ao topo
+                el.scrollTo({ top: 0, behavior: 'smooth' });
+                st.pos = 0; st.animAte = agora + 1500; st.ate = agora + 1500 + tempoMs;
+              } else {                          // próxima tela
+                var alvo = Math.min(st.pos + pagina, max);
+                el.scrollTo({ top: alvo, behavior: 'smooth' });
+                st.pos = alvo; st.animAte = agora + 1200; st.ate = agora + 1200 + tempoMs;
+              }
+              return;
+            }
+
+            // modo contínuo
             if (st.fase === 'topo') {
               if (agora >= st.ate) st.fase = 'desce';
             } else if (st.fase === 'desce') {
-              var antes = el.scrollTop;
-              el.scrollTop = antes + PASSO_DESCE;
-              if (el.scrollTop >= max - 1 || el.scrollTop === antes) { st.fase = 'fundo'; st.ate = agora + PAUSA_MS; }
+              st.pos += max * TICK_MS / tempoMs;
+              if (st.pos >= max) { st.pos = max; st.fase = 'fundo'; st.ate = agora + PAUSA_EXTREMOS_MS; }
+              el.scrollTop = st.pos;
             } else if (st.fase === 'fundo') {
-              if (agora >= st.ate) st.fase = 'sobe';
-            } else if (st.fase === 'sobe') {
-              el.scrollTop = el.scrollTop - PASSO_SOBE;
-              if (el.scrollTop <= 0) { st.fase = 'topo'; st.ate = agora + PAUSA_MS; }
+              if (agora >= st.ate) {
+                el.scrollTo({ top: 0, behavior: 'smooth' });
+                st.pos = 0; st.animAte = agora + 1500; st.fase = 'topo'; st.ate = agora + 1500 + PAUSA_EXTREMOS_MS;
+              }
             }
-            st.ultimo = el.scrollTop;
           });
         }, TICK_MS);
       })();
+
+      // CONFIGURAÇÃO DA ROLAGEM (tela Configurações)
+      function atualizarDicaCfgPainel() {
+        var modo = document.getElementById('cfg-painel-modo').value;
+        var grp = document.getElementById('cfg-painel-tempo-grp');
+        var lbl = document.getElementById('cfg-painel-tempo-lbl');
+        var dica = document.getElementById('cfg-painel-hint');
+        if (grp) grp.style.display = modo === 'estatico' ? 'none' : '';
+        if (modo === 'tela') {
+          lbl.textContent = 'Tempo parado em cada tela';
+          dica.textContent = 'A lista fica parada o tempo escolhido para dar tempo de ler e depois passa para a próxima parte. Ao chegar no fim, volta ao topo.';
+        } else if (modo === 'continua') {
+          lbl.textContent = 'Tempo para percorrer a lista inteira';
+          dica.textContent = 'A lista desce devagar, sem parar. Quanto maior o tempo, mais lenta a rolagem. No início e no fim ela espera alguns segundos.';
+        } else {
+          dica.textContent = 'O painel fica parado. No painel do computador você ainda pode rolar com o mouse; na TV só aparece o que cabe na tela.';
+        }
+      }
+      function preencherCfgPainel() {
+        var m = document.getElementById('cfg-painel-modo'), t = document.getElementById('cfg-painel-tempo');
+        if (!m || !t) return;
+        m.value = painelCfg.modo;
+        if (![].some.call(t.options, function(o) { return o.value === String(painelCfg.tempo); })) {
+          var op = document.createElement('option');
+          op.value = String(painelCfg.tempo); op.textContent = painelCfg.tempo + ' segundos';
+          t.appendChild(op);
+        }
+        t.value = String(painelCfg.tempo);
+        atualizarDicaCfgPainel();
+      }
+
+      // IMPRESSÃO DAS DEMANDAS POR TÉCNICO
+      function nomeTecItem(t) { return ((t || '') + '').trim() || 'Sem técnico'; }
+
+      function itensParaImpressao() {
+        var demPorId = {}, servPorDem = {}, pendPorDem = {};
+        appData.demandas.forEach(function(d) { demPorId[d.id] = d; });
+        (appData.servicos || []).forEach(function(sv) {
+          (servPorDem[sv.demandaId] = servPorDem[sv.demandaId] || []).push(sv);
+          if (sv.status === 'Em andamento' && sv.data) (pendPorDem[sv.demandaId] = pendPorDem[sv.demandaId] || []).push(sv);
+        });
+        var itens = [];
+        Object.keys(pendPorDem).forEach(function(id) {
+          var d = demPorId[id];
+          if (!d || d.status === 'Concluída' || d.status === 'Cancelado') return;
+          pendPorDem[id].forEach(function(sv) {
+            itens.push({ tec: nomeTecItem(sv.tecnico), data: sv.data, diff: getDiffDays(sv.data), cliente: d.cliente,
+              equip: d.equipamento || '', tarefa: sv.descricao, entrega: d.dataPrev || '', entregaItem: false });
+          });
+        });
+        appData.demandas.forEach(function(d) {
+          if (d.status === 'Concluída' || d.status === 'Cancelado' || !d.dataPrev) return;
+          var diff = getDiffDays(d.dataPrev);
+          var pend = pendPorDem[d.id] || [];
+          if (diff < 0 && pend.some(function(sv) { return getDiffDays(sv.data) < 0; })) return;
+          if (diff >= 0 && pend.some(function(sv) { return sv.data === d.dataPrev; })) return;
+          itens.push({ tec: nomeTecItem(d.tecnico), data: d.dataPrev, diff: diff, cliente: d.cliente, equip: d.equipamento || '',
+            tarefa: d.obsTecnicas || d.obs || d.tipo || '', entrega: d.dataPrev, entregaItem: true,
+            futuraComServ: diff > 0 && !!(servPorDem[d.id] && servPorDem[d.id].length) });
+        });
+        return itens;
+      }
+
+      function lerOpcoesImpressao() {
+        var tecs = [];
+        document.querySelectorAll('#imp-tecnicos input[data-tec]').forEach(function(c) { if (c.checked) tecs.push(c.getAttribute('data-tec')); });
+        return {
+          tecs: tecs,
+          atrasadas: document.getElementById('imp-atrasadas').checked,
+          hoje: document.getElementById('imp-hoje').checked,
+          proximo: document.getElementById('imp-proximo').checked,
+          dataEsp: document.getElementById('imp-data-chk').checked ? document.getElementById('imp-data').value : '',
+          paginas: document.getElementById('imp-paginas').checked
+        };
+      }
+
+      function selecionarParaImpressao(opts) {
+        var base = itensParaImpressao().filter(function(it) { return opts.tecs.indexOf(it.tec) !== -1; });
+        var prox = {};
+        base.forEach(function(it) {
+          if (it.diff > 0 && !it.futuraComServ && (prox[it.tec] === undefined || it.diff < prox[it.tec])) prox[it.tec] = it.diff;
+        });
+        var sel = base.filter(function(it) {
+          return (opts.atrasadas && it.diff < 0) ||
+                 (opts.hoje && it.diff === 0) ||
+                 (opts.dataEsp && it.data === opts.dataEsp) ||
+                 (opts.proximo && it.diff > 0 && !it.futuraComServ && it.diff === prox[it.tec]);
+        });
+        var grupos = {};
+        sel.forEach(function(it) { (grupos[it.tec] = grupos[it.tec] || []).push(it); });
+        return Object.keys(grupos).sort(function(a, b) {
+          if (a === 'Sem técnico') return 1; if (b === 'Sem técnico') return -1;
+          return a.localeCompare(b, 'pt-BR');
+        }).map(function(n) {
+          grupos[n].sort(function(a, b) { return (a.data || '').localeCompare(b.data || '') || a.cliente.localeCompare(b.cliente, 'pt-BR'); });
+          return { tecnico: n, itens: grupos[n] };
+        });
+      }
+
+      function atualizarResumoImprimir() {
+        var el = document.getElementById('imp-resumo');
+        if (!el) return;
+        var o = lerOpcoesImpressao();
+        if (o.tecs.length === 0) { el.innerHTML = 'Escolha pelo menos um técnico.'; return; }
+        if (!o.atrasadas && !o.hoje && !o.proximo && !o.dataEsp) { el.innerHTML = 'Escolha o que imprimir (atrasadas, hoje, próximo dia ou uma data).'; return; }
+        var g = selecionarParaImpressao(o);
+        var n = g.reduce(function(a, x) { return a + x.itens.length; }, 0);
+        el.innerHTML = n === 0 ? 'Nenhuma demanda encontrada com essa seleção.'
+          : '<strong>' + n + '</strong> demanda(s) de <strong>' + g.length + '</strong> técnico(s) serão impressas.';
+      }
+
+      function abrirImprimirModal() {
+        var box = document.getElementById('imp-tecnicos');
+        var nomes = appData.tecnicos.slice();
+        nomes.push('Sem técnico');
+        box.innerHTML = '<label class="imp-item" style="font-weight:800;"><input type="checkbox" id="imp-todos" checked> <span>Todos os técnicos</span></label>' +
+          nomes.map(function(n) {
+            return '<label class="imp-item"><input type="checkbox" data-tec="' + escapeHtml(n) + '" checked> <span>' + escapeHtml(n) + '</span></label>';
+          }).join('');
+        document.getElementById('imp-data').value = getTomorrowISO();
+        atualizarResumoImprimir();
+        document.getElementById('modal-imprimir').classList.add('active');
+      }
+
+      function fecharImprimirModal() {
+        var m = document.getElementById('modal-imprimir');
+        if (m) m.classList.remove('active');
+      }
+
+      function diaCurtoBR(iso) {
+        var pt = (iso || '').split('-');
+        if (pt.length < 3) return '-';
+        var dt = new Date(parseInt(pt[0], 10), parseInt(pt[1], 10) - 1, parseInt(pt[2], 10));
+        return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()] + ' ' + pt[2] + '/' + pt[1];
+      }
+
+      function imprimirDemandas() {
+        var o = lerOpcoesImpressao();
+        var grupos = selecionarParaImpressao(o);
+        if (grupos.length === 0) { alert('Nenhuma demanda encontrada com essa seleção.'); return; }
+        var partes = [];
+        if (o.atrasadas) partes.push('atrasadas');
+        if (o.hoje) partes.push('hoje (' + formatDateBR(getTodayISO()) + ')');
+        if (o.proximo) partes.push('próximo dia de cada técnico');
+        if (o.dataEsp) partes.push('data ' + formatDateBR(o.dataEsp));
+        var agora = new Date();
+        var emit = formatDateBR(getTodayISO()) + ' às ' + String(agora.getHours()).padStart(2, '0') + ':' + String(agora.getMinutes()).padStart(2, '0');
+        var html = '<div class="ps-head"><h1>PLS Empilhadeiras — Demandas dos técnicos</h1>' +
+          '<div class="ps-sub">' + escapeHtml(partes.join(' • ')) + '</div>' +
+          '<div class="ps-emit">Emitido em ' + emit + '</div></div>';
+        grupos.forEach(function(g) {
+          html += '<section class="ps-tec' + (o.paginas ? ' ps-quebra' : '') + '"><h2>' + escapeHtml(g.tecnico) +
+            '<span>' + g.itens.length + ' demanda(s)</span></h2>' +
+            '<table><thead><tr><th style="width:15%">Quando</th><th style="width:19%">Cliente</th><th style="width:16%">Equipamento</th>' +
+            '<th>O que fazer</th><th style="width:14%">Entrega ao cliente</th></tr></thead><tbody>';
+          g.itens.forEach(function(it) {
+            var quando = it.diff < 0 ? '<span class="ps-atraso">ATRASADO<br>' + diaCurtoBR(it.data) + '</span>'
+              : it.diff === 0 ? '<span class="ps-hoje">HOJE</span>' : diaCurtoBR(it.data);
+            if (it.entregaItem) quando += '<span class="ps-tag">entrega</span>';
+            html += '<tr><td>' + quando + '</td><td><strong>' + escapeHtml(it.cliente) + '</strong></td><td>' + escapeHtml(it.equip) +
+              '</td><td>' + escapeHtml(it.tarefa) + '</td><td>' + (it.entrega ? formatDateBR(it.entrega) : '-') + '</td></tr>';
+          });
+          html += '</tbody></table></section>';
+        });
+        document.getElementById('print-sheet').innerHTML = html;
+        fecharImprimirModal();
+        document.body.classList.remove('print-single-demand-only');
+        document.body.classList.add('print-sheet-only');
+        window.print();
+      }
+      window.addEventListener('afterprint', function() {
+        document.body.classList.remove('print-sheet-only');
+        var ps = document.getElementById('print-sheet');
+        if (ps) ps.innerHTML = '';
+      });
 
       // SUB-ABAS DA 1ª ABA: formulário OU lista de demandas
       var lancView = 'form';
@@ -5343,6 +5656,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             renderHistoricoTab();
           } else if (tabKey === 'config') {
             prepararAbaConfig();
+            preencherCfgPainel();
           }
         } catch (e) {
           console.error('Erro ao renderizar aba ' + tabKey + ':', e);
@@ -5498,6 +5812,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
         // IMPRIMIR APENAS A DEMANDA ESPECÍFICA DO MODAL (FICHA TÉCNICA LIMPA)
         if (action === 'print-demand') {
+          document.body.classList.remove('print-sheet-only');
           document.body.classList.add('print-single-demand-only');
           window.print();
           setTimeout(function() {
@@ -5519,8 +5834,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
 
         // IMPRIMIR ABA ATIVA (BOTÃO PRESENTE EM TODAS AS ABAS)
+        if (action === 'open-imprimir') { abrirImprimirModal(); return; }
+        if (action === 'close-imprimir') { fecharImprimirModal(); return; }
+        if (action === 'confirmar-imprimir') { imprimirDemandas(); return; }
+
         if (action === 'print-tab' || action === 'print-painel') {
           document.body.classList.remove('print-single-demand-only');
+          document.body.classList.remove('print-sheet-only');
           window.print();
           return;
         }
@@ -5549,6 +5869,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (campoF) campoF.value = 'dataAtend';
           renderLancamentosTab();
           showToast('Filtro de demandas limpo.');
+          return;
+        }
+
+        // SALVAR CONFIGURAÇÃO DO PAINEL
+        if (action === 'salvar-cfg-painel') {
+          var novoCfg = normalizarCfgPainel({
+            modo: document.getElementById('cfg-painel-modo').value,
+            tempo: document.getElementById('cfg-painel-tempo').value
+          });
+          chk(sb.from('configuracoes').upsert({ chave: 'painel', valor: novoCfg }))
+            .then(function() {
+              painelCfg = novoCfg;
+              showToast('Configuração do painel salva. A TV atualiza sozinha em instantes.');
+            })
+            .catch(function(err) { showToast('⚠ ' + traduzErro(err), 6000); });
           return;
         }
 
@@ -6144,6 +6479,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           });
           var chkRecEl = document.getElementById('demand-recorrente');
           if (chkRecEl) chkRecEl.addEventListener('change', ajustarFormModo);
+
+          // Impressão: marcar/desmarcar técnicos e atualizar o resumo
+          var modalImp = document.getElementById('modal-imprimir');
+          if (modalImp) modalImp.addEventListener('change', function(ev) {
+            var t = ev.target;
+            if (t && t.id === 'imp-todos') {
+              document.querySelectorAll('#imp-tecnicos input[data-tec]').forEach(function(c) { c.checked = t.checked; });
+            } else if (t && t.getAttribute && t.getAttribute('data-tec') !== null) {
+              var todos = document.querySelectorAll('#imp-tecnicos input[data-tec]');
+              var marcados = document.querySelectorAll('#imp-tecnicos input[data-tec]:checked');
+              var chkT = document.getElementById('imp-todos');
+              if (chkT) chkT.checked = todos.length === marcados.length;
+            } else if (t && t.id === 'imp-data') {
+              document.getElementById('imp-data-chk').checked = true;
+            }
+            atualizarResumoImprimir();
+          });
+          var cfgModo = document.getElementById('cfg-painel-modo');
+          if (cfgModo) cfgModo.addEventListener('change', atualizarDicaCfgPainel);
 
           // Listener da caixa de seleção "Repetir semanalmente"
           var chkRecorrente = document.getElementById('demand-recorrente');
