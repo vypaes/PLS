@@ -1068,6 +1068,45 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       #lanc-view-lista { display: block !important; }
     }
 
+    /* ===== v19: SERVIÇOS DIÁRIOS, PREVISÃO DE ENTREGA E ROLAGEM AUTOMÁTICA ===== */
+    .srv-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.8rem; margin: 0.9rem 0; }
+    .srv-form-title { font-weight: 800; font-size: 0.85rem; color: #0f172a; margin-bottom: 0.5rem; }
+    .srv-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; }
+    .srv-form-grid .srv-desc { grid-column: span 2; }
+    .srv-resumo { background: #fff7ed; border: 1px solid #ffedd5; border-radius: 8px; padding: 0.7rem 0.85rem; line-height: 1.5; font-size: 0.86rem; }
+    body.sem-lancar .srv-form { display: none; }
+    body.sem-editar [data-action="toggle-servico"] { display: none; }
+    body.sem-excluir [data-action="del-servico"] { display: none; }
+
+    .pill-serv {
+      font-size: 0.76rem; color: #334155; font-weight: 600; line-height: 1.25;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .pill-entrega { font-size: 0.7rem; color: #64748b; line-height: 1.25; }
+    .pill-entrega strong { color: #0f172a; }
+
+    /* Painel (tela normal): cada bloco rola por dentro quando tem muitas demandas */
+    @media (min-width: 1100px) {
+      body:not(.tv-mode-active) .critical-grid-6 { max-height: 62vh; overflow-y: auto; padding-right: 0.25rem; }
+    }
+    @media (max-width: 1099px) {
+      body:not(.tv-mode-active) .critical-grid-6 { max-height: 45vh; overflow-y: auto; padding-right: 0.25rem; }
+    }
+
+    /* Modo TV: tamanho de letra fixo e legível; o excesso rola sozinho
+       (seletores mais específicos para vencer as regras antigas da TV) */
+    body.tv-mode-active .critical-subblock .critical-grid-6 { overflow-y: auto !important; overflow-x: hidden !important; scrollbar-width: none; }
+    body.tv-mode-active .critical-subblock .critical-grid-6::-webkit-scrollbar { display: none; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-demand { flex: 0 0 auto !important; min-height: auto !important; padding: 0.5rem 0.75rem !important; gap: 0.2rem !important; overflow: visible !important; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-client-name { font-size: clamp(0.95rem, 1.2vw, 1.25rem) !important; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-badge { font-size: clamp(0.78rem, 0.95vw, 0.95rem) !important; flex-shrink: 0; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-serv { font-size: clamp(0.8rem, 1vw, 1.02rem); color: #e2e8f0; flex-shrink: 0; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-entrega { font-size: clamp(0.72rem, 0.88vw, 0.9rem); color: #fbbf24; flex-shrink: 0; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .pill-entrega strong { color: #fde68a; }
+    body.tv-mode-active .critical-subblock .critical-grid-6 .tec-group-header { flex: 0 0 auto !important; }
+
+    @media print { #modal-servicos { display: none !important; } }
+
     .pill-demand {
       background: #ffffff;
       border: 1px solid #cbd5e1;
@@ -2152,7 +2191,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v18 — 24/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v19 — 24/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2977,6 +3016,46 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     </div>
   </div>
 
+  <!-- MODAL DOS SERVIÇOS DIÁRIOS DA DEMANDA -->
+  <div id="modal-servicos" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:860px; width:96vw;">
+      <div class="modal-head">
+        <h3 id="srv-title">Serviços diários da demanda</h3>
+        <button type="button" class="modal-close-btn" data-action="close-servicos">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="srv-resumo"></div>
+
+        <div class="srv-form">
+          <div class="srv-form-title">➕ Lançar serviço do dia</div>
+          <div class="srv-form-grid">
+            <div class="form-group">
+              <label class="form-label" for="srv-data">Dia do serviço</label>
+              <input type="date" id="srv-data" class="form-control">
+            </div>
+            <div class="form-group srv-desc">
+              <label class="form-label" for="srv-desc">Serviço a fazer</label>
+              <input type="text" id="srv-desc" class="form-control" placeholder="Ex.: trocar filtro, pintar a empilhadeira..." autocomplete="off">
+            </div>
+            <div class="form-group"><label class="form-label" for="srv-tec-1">Técnico 1</label><select id="srv-tec-1" class="form-control"></select></div>
+            <div class="form-group"><label class="form-label" for="srv-tec-2">Técnico 2</label><select id="srv-tec-2" class="form-control"></select></div>
+            <div class="form-group"><label class="form-label" for="srv-tec-3">Técnico 3</label><select id="srv-tec-3" class="form-control"></select></div>
+            <div class="form-group"><label class="form-label" for="srv-tec-4">Técnico 4</label><select id="srv-tec-4" class="form-control"></select></div>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-top:0.5rem;">
+            <button type="button" class="btn-pls-primary" data-action="add-servico">➕ Adicionar serviço</button>
+            <span style="font-size:0.76rem; color:#64748b;">Cada técnico escolhido recebe o serviço no seu painel, no dia indicado.</span>
+          </div>
+        </div>
+
+        <div id="srv-lista"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-pls-secondary" data-action="close-servicos">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL GENÉRICO (SENHA / USUÁRIOS) -->
   <div id="modal-generico" class="modal-overlay" role="dialog" aria-modal="true">
     <div class="modal-card">
@@ -3011,6 +3090,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         clientes: [],
         tecnicos: ['Carlos Mecânico', 'Marcos Silva', 'Roberto Eletricista'],
         demandas: [],
+        servicos: [],
         config: {
           canais: ['WhatsApp', 'Telefone', 'Email', 'Visita'],
           tipos: ['Preventiva', 'Corretiva', 'Locação', 'Reforma de Torre', 'Venda de Peças'],
@@ -3152,6 +3232,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         };
       }
 
+      // Serviços diários de cada demanda (uma linha por dia e por técnico)
+      function srvFromDb(r) {
+        return { id: r.id, demandaId: r.demanda_id, data: r.data || '', tecnico: r.tecnico, descricao: r.descricao, status: r.status || 'Em andamento' };
+      }
+      function srvToDb(x) {
+        return { id: x.id, demanda_id: x.demandaId, data: x.data, tecnico: x.tecnico, descricao: x.descricao, status: x.status || 'Em andamento' };
+      }
+
       function cliFromDb(r) { return { id: r.id, nome: r.nome, canal: r.canal || '', status: r.status || '', obs: r.obs || '' }; }
       function cliToDb(c) { return { id: c.id, nome: c.nome, canal: c.canal || null, status: c.status || null, obs: c.obs || null }; }
 
@@ -3189,12 +3277,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           nomes('canais'), nomes('tipos_atendimento'), nomes('status_cadastral'), nomes('status_atendimento'),
           nomes('tecnicos'),
           buscarTudo('clientes', function(q) { return q.order('nome'); }),
-          buscarTudo('demandas', function(q) { return q.order('created_at', { ascending: false }).order('data_cad', { ascending: false }).order('id', { ascending: false }); })
+          buscarTudo('demandas', function(q) { return q.order('created_at', { ascending: false }).order('data_cad', { ascending: false }).order('id', { ascending: false }); }),
+          buscarTudo('servicos', function(q) { return q.order('data').order('created_at'); })
+            .catch(function(e) { console.error('Não foi possível ler os serviços diários:', e); return []; })
         ]).then(function(res) {
           appData = {
             clientes: res[5].map(cliFromDb),
             tecnicos: res[4],
             demandas: res[6].map(demFromDb),
+            servicos: res[7].map(srvFromDb),
             config: { canais: res[0], tipos: res[1], statusCadastral: res[2], statusAtendimento: res[3] }
           };
           snapshot = clone(appData);
@@ -3277,6 +3368,28 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         });
         var lotes = emLotes(upDem.map(demToDb), 500);
         for (var l = 0; l < lotes.length; l++) await chk(sb.from('demandas').upsert(lotes[l]));
+
+        // 3b) Serviços diários: inclui/altera e exclui (antes de excluir as demandas)
+        var A_srv = A.servicos || [], B_srv = B.servicos || [];
+        var antesSrv = {};
+        A_srv.forEach(function(sv) {
+          var x = Object.assign({}, sv);
+          if (ren.tecnico[x.tecnico]) x.tecnico = ren.tecnico[x.tecnico];
+          antesSrv[x.id] = x;
+        });
+        var upSrv = B_srv.filter(function(sv) {
+          var o = antesSrv[sv.id];
+          return !o || JSON.stringify(srvToDb(o)) !== JSON.stringify(srvToDb(sv));
+        });
+        var lotesSrv = emLotes(upSrv.map(srvToDb), 500);
+        for (var ls = 0; ls < lotesSrv.length; ls++) await chk(sb.from('servicos').upsert(lotesSrv[ls]));
+        var idsBSrv = {};
+        B_srv.forEach(function(sv) { idsBSrv[sv.id] = true; });
+        var delSrv = A_srv.filter(function(sv) { return !idsBSrv[sv.id]; }).map(function(sv) { return sv.id; });
+        var lotesDelSrv = emLotes(delSrv, 200);
+        for (var ms = 0; ms < lotesDelSrv.length; ms++) {
+          await chkLinhas(sb.from('servicos').delete().in('id', lotesDelSrv[ms]).select('id'), lotesDelSrv[ms].length);
+        }
 
         var idsB = {};
         B.demandas.forEach(function(d) { idsB[d.id] = true; });
@@ -3362,6 +3475,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var ids = ['demand-cliente', 'demand-canal', 'demand-tecnico', 'demand-tecnico-2', 'demand-tecnico-3', 'demand-tecnico-4', 'lanc-filtro-tecnico', 'demand-tipo', 'demand-status', 'client-canal', 'client-status'];
         var vals = ids.map(function(id) { var e = document.getElementById(id); return e ? e.value : ''; });
         try { populateSelects(); } catch (e) { console.error(e); }
+        try { if (servicosDemandaId) renderServicosModal(); } catch (e) { console.error(e); }
         ids.forEach(function(id, i) {
           var e = document.getElementById(id);
           if (e && vals[i]) e.value = vals[i];
@@ -3387,6 +3501,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if (!Array.isArray(d.clientes)) d.clientes = [];
         if (!Array.isArray(d.tecnicos)) d.tecnicos = [];
         if (!Array.isArray(d.demandas)) d.demandas = [];
+        if (!Array.isArray(d.servicos)) d.servicos = [];
         var nomesCli = d.clientes.map(function(c) { return c.nome; });
         d.clientes.forEach(function(c, i) {
           if (!c.id) c.id = 'cli_' + Date.now() + '_' + i;
@@ -3673,6 +3788,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return;
           }
 
+          var cntSrv = {}, cntSrvOk = {};
+          (appData.servicos || []).forEach(function(sv) {
+            cntSrv[sv.demandaId] = (cntSrv[sv.demandaId] || 0) + 1;
+            if (sv.status === 'Concluída') cntSrvOk[sv.demandaId] = (cntSrvOk[sv.demandaId] || 0) + 1;
+          });
+
           filtradas.forEach(function(dem) {
             var tr = document.createElement('tr');
             var overdue = isDemandOverdue(dem);
@@ -3704,6 +3825,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<td>' + (dem.dataPrev ? formatDateBR(dem.dataPrev) : '<span style="color:#94a3b8;">Não definida</span>') + '</td>' +
               '<td>' + statusBadge + '</td>' +
               '<td style="text-align:right; white-space:nowrap;">' +
+                '<button type="button" class="btn-row" data-action="open-servicos" data-id="' + dem.id + '" style="color:#c2410c; border-color:#fdba74;">🔧 Serviços' + (cntSrv[dem.id] ? ' (' + (cntSrvOk[dem.id] || 0) + '/' + cntSrv[dem.id] + ')' : '') + '</button>' +
                 '<button type="button" class="btn-row" data-action="view-demand" data-id="' + dem.id + '">Ver</button>' +
                 '<button type="button" class="btn-row" data-action="edit-demand" data-id="' + dem.id + '">Editar</button>' +
                 '<button type="button" class="btn-row btn-row-del" data-action="delete-demand" data-id="' + dem.id + '">Excluir</button>' +
@@ -4301,52 +4423,67 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var upcomingDemandas = [];
           var upcomingAll = [];
 
+          function tecDe(nome) { return ((nome || '') + '').trim() || 'Sem técnico'; }
+
+          // Serviços diários agrupados por demanda
+          var servicosPorDem = {};
+          (appData.servicos || []).forEach(function(sv) {
+            (servicosPorDem[sv.demandaId] = servicosPorDem[sv.demandaId] || []).push(sv);
+          });
+          var demPorId = {};
+          appData.demandas.forEach(function(d) { demPorId[d.id] = d; });
+
+          // A) Demandas: previsão de entrega ao cliente
+          //    - sem serviços diários: aparece pela data de entrega (como sempre)
+          //    - com serviços diários: a entrega só aparece quando vence (hoje ou atrasada);
+          //      o dia a dia aparece pelos serviços de cada técnico
           appData.demandas.forEach(function(d) {
-            // Canceladas e Concluídas não entram em prazos operacionais
             if (d.status === 'Concluída' || d.status === 'Cancelado' || !d.dataPrev) return;
+            var temServ = !!(servicosPorDem[d.id] && servicosPorDem[d.id].length);
             var diff = getDiffDays(d.dataPrev);
-            if (diff < 0) {
-              overdueDemandas.push({ dem: d, diff: Math.abs(diff) });
-            } else if (diff === 0) {
-              todayDemandas.push({ dem: d });
-            } else if (diff >= 1) {
-              upcomingAll.push({ dem: d, diff: diff });
-            }
+            var item = { kind: temServ ? 'entrega' : 'dem', dem: d, tec: tecDe(d.tecnico) };
+            if (diff < 0) { item.diff = Math.abs(diff); overdueDemandas.push(item); }
+            else if (diff === 0) { todayDemandas.push(item); }
+            else if (!temServ) { item.diff = diff; item.dataRef = d.dataPrev; upcomingAll.push(item); }
           });
 
-          // PRÓXIMO DIA DE CADA TÉCNICO: só as demandas da data mais próxima de cada técnico
+          // B) Serviços diários pendentes de cada técnico
+          (appData.servicos || []).forEach(function(sv) {
+            if (sv.status !== 'Em andamento' || !sv.data) return;
+            var d = demPorId[sv.demandaId];
+            if (!d || d.status === 'Concluída' || d.status === 'Cancelado') return;
+            var diff = getDiffDays(sv.data);
+            var item = { kind: 'srv', dem: d, srv: sv, tec: tecDe(sv.tecnico) };
+            if (diff < 0) { item.diff = Math.abs(diff); overdueDemandas.push(item); }
+            else if (diff === 0) { todayDemandas.push(item); }
+            else { item.diff = diff; item.dataRef = sv.data; upcomingAll.push(item); }
+          });
+
+          // PRÓXIMO DIA DE CADA TÉCNICO: só o que está na data mais próxima de cada um
           var proxDiaPorTec = {};
           upcomingAll.forEach(function(it) {
-            var k = ((it.dem.tecnico || '') + '').trim() || 'Sem técnico';
-            if (proxDiaPorTec[k] === undefined || it.diff < proxDiaPorTec[k]) proxDiaPorTec[k] = it.diff;
+            if (proxDiaPorTec[it.tec] === undefined || it.diff < proxDiaPorTec[it.tec]) proxDiaPorTec[it.tec] = it.diff;
           });
-          upcomingDemandas = upcomingAll.filter(function(it) {
-            var k = ((it.dem.tecnico || '') + '').trim() || 'Sem técnico';
-            return it.diff === proxDiaPorTec[k];
-          });
+          upcomingDemandas = upcomingAll.filter(function(it) { return it.diff === proxDiaPorTec[it.tec]; });
 
-          function rotuloProxDia(d, diff) {
-            var pt = (d.dataPrev || '').split('-');
+          function rotuloProxDia(iso, diff) {
+            var pt = (iso || '').split('-');
             var dt = new Date(parseInt(pt[0], 10), parseInt(pt[1], 10) - 1, parseInt(pt[2], 10));
             var ds = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()];
             return (diff === 1 ? 'amanhã' : 'em ' + diff + ' dias') + ' · ' + ds + ' ' + pt[2] + '/' + pt[1];
           }
 
-          // ORDENAÇÃO: mais críticas primeiro
-          // Atrasadas: mais antigas primeiro (maior diff)
+          // ORDENAÇÃO: atrasadas mais antigas primeiro; do dia por cliente; próximas mais imediatas primeiro
           overdueDemandas.sort(function(a, b) { return b.diff - a.diff; });
           todayDemandas.sort(function(a, b) { return a.dem.cliente.localeCompare(b.dem.cliente); });
-          // Próximos 5 dias: mais imediatas primeiro (menor diff)
           upcomingDemandas.sort(function(a, b) { return a.diff - b.diff; });
 
           // CLASSE DE DENSIDADE CONFORME QUANTIDADE (AUTO-SCALE EM TELA ÚNICA)
           function getDensityClass(count) {
-            if (count <= 4) return 'density-low';
-            if (count <= 7) return 'density-med';
-            return 'density-high';
+            return ''; // tamanho fixo: o que passar da tela rola sozinho
           }
 
-          var MAX_TV_ITEMS = 10; // Máximo que cabe confortavelmente em 100vh sem estourar
+          var MAX_TV_ITEMS = Infinity; // sem limite: o excesso rola automaticamente
 
           // AGRUPAMENTO POR TÉCNICO (Painel e Modo TV)
           // Cada bloco de prazo mostra o nome do técnico e a quantidade de demandas dele,
@@ -4355,7 +4492,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var mapa = {};
             var ordem = [];
             lista.forEach(function(item) {
-              var nome = ((item.dem.tecnico || '') + '').trim() || 'Sem técnico';
+              var nome = item.tec || ((item.dem.tecnico || '') + '').trim() || 'Sem técnico';
               if (!mapa[nome]) { mapa[nome] = []; ordem.push(nome); }
               mapa[nome].push(item);
             });
@@ -4391,6 +4528,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (!el) return;
             if (lista.length === 0) {
               el.className = 'critical-grid-6';
+              el.removeAttribute('data-h');
               el.innerHTML = '<div style="color:#94a3b8; font-size:0.8rem; padding:0.5rem 0;">' + vazioMsg + '</div>';
               return;
             }
@@ -4400,65 +4538,68 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (isTvMode && r.ocultas > 0) {
               h += '<div class="tv-overflow-pill">+ ' + r.ocultas + ' ' + overflowMsg + '</div>';
             }
-            el.innerHTML = h;
+            if (el.getAttribute('data-h') !== h) {
+              var topoAnt = el.scrollTop;
+              el.innerHTML = h;
+              el.setAttribute('data-h', h);
+              el.scrollTop = topoAnt;
+            }
           }
 
           function equipDe(d) {
             return (isTvMode && d.equipamento) ? ' • ' + escapeHtml(d.equipamento) : '';
           }
 
-          // 1º DEMANDAS ATRASADAS
+          // CARTÃO: cliente, situação, serviço (se for serviço diário) e previsão de entrega ao cliente
+          function montarPill(item, tipo) {
+            var d = item.dem;
+            var isSrv = item.kind === 'srv';
+            var dot, cor, label;
+            if (tipo === 'overdue') {
+              dot = 'dot-red'; cor = '#dc2626';
+              label = (isSrv ? 'serviço atrás ' : (item.kind === 'entrega' ? 'entrega atrás ' : 'atrás ')) + item.diff + ' dia(s)';
+            } else if (tipo === 'today') {
+              dot = 'dot-blue'; cor = '#2563eb';
+              label = isSrv ? 'Serviço HOJE' : 'Entrega HOJE';
+            } else {
+              dot = 'dot-orange'; cor = '#ea580c';
+              label = rotuloProxDia(item.dataRef, item.diff);
+            }
+            var borda = tipo === 'today' ? ' style="border-left:3px solid #2563eb;"' : '';
+            var acao = isSrv ? 'open-servicos' : 'view-demand';
+            var servHtml = isSrv
+              ? '<div class="pill-serv" title="' + escapeHtml((d.equipamento || '') + ' — ' + item.srv.descricao) + '">🔧 ' + escapeHtml(item.srv.descricao) + '</div>'
+              : '';
+            return (
+              '<div class="pill-demand" data-action="' + acao + '" data-id="' + d.id + '"' + borda + '>' +
+                '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
+                '<div class="pill-badge">' +
+                  '<span class="dot-indicator ' + dot + '"></span>' +
+                  '<span style="color:' + cor + '; font-weight:700;">' + label + '</span>' +
+                  equipDe(d) +
+                '</div>' +
+                servHtml +
+                '<div class="pill-entrega">📦 Entrega ao cliente: <strong>' + (d.dataPrev ? formatDateBR(d.dataPrev) : 'não definida') + '</strong></div>' +
+              '</div>'
+            );
+          }
+
+          // 1º ATRASADAS
           renderBloco(overdueListEl, overdueDemandas,
             'Nenhuma demanda com prazo atrasado no momento. Toda a operação está em dia!',
-            function(item) {
-              var d = item.dem;
-              return (
-                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
-                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                  '<div class="pill-badge">' +
-                    '<span class="dot-indicator dot-red"></span>' +
-                    '<span style="color:#dc2626; font-weight:700;">atrás ' + item.diff + ' dia(s)</span>' +
-                    equipDe(d) +
-                  '</div>' +
-                '</div>'
-              );
-            },
+            function(item) { return montarPill(item, 'overdue'); },
             'outra(s) demanda(s) atrasada(s)');
 
-          // 2º DEMANDAS DO DIA
+          // 2º DO DIA
           renderBloco(todayListEl, todayDemandas,
-            'Nenhuma demanda com entrega programada para hoje.',
-            function(item) {
-              var d = item.dem;
-              return (
-                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '" style="border-left:3px solid #2563eb;">' +
-                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                  '<div class="pill-badge">' +
-                    '<span class="dot-indicator dot-blue"></span>' +
-                    '<span style="color:#2563eb; font-weight:700;">Entrega HOJE</span>' +
-                    equipDe(d) +
-                  '</div>' +
-                '</div>'
-              );
-            },
+            'Nenhum serviço ou entrega programado para hoje.',
+            function(item) { return montarPill(item, 'today'); },
             'outra(s) demanda(s) para hoje');
 
           // 3º PRÓXIMO DIA DE CADA TÉCNICO
           renderBloco(upcomingListEl, upcomingDemandas,
-            'Nenhuma entrega futura prevista para os técnicos.',
-            function(item) {
-              var d = item.dem;
-              return (
-                '<div class="pill-demand" data-action="view-demand" data-id="' + d.id + '">' +
-                  '<div class="pill-client-name" title="' + escapeHtml(d.cliente) + '">' + escapeHtml(d.cliente) + '</div>' +
-                  '<div class="pill-badge">' +
-                    '<span class="dot-indicator dot-orange"></span>' +
-                    '<span style="color:#ea580c; font-weight:700;">' + rotuloProxDia(d, item.diff) + '</span>' +
-                    equipDe(d) +
-                  '</div>' +
-                '</div>'
-              );
-            },
+            'Nenhum serviço ou entrega futura prevista para os técnicos.',
+            function(item) { return montarPill(item, 'upcoming'); },
             'outra(s) demanda(s) futura(s)');
 
         } catch (e) {
@@ -4801,6 +4942,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           '<div class="modal-row"><span class="modal-label">Status do Atendimento:</span><span class="modal-value"><strong>' + escapeHtml(statusTxt) + '</strong></span></div>' +
           (dem.recorrente ? '<div class="modal-row"><span class="modal-label">Recorrência:</span><span class="modal-value"><span class="badge-rec">🔁 Demanda gerada por contrato semanal' + (dem.recDia ? ' (' + dem.recDia + ')' : '') + '</span></span></div>' : '');
 
+        var nSrvDem = (appData.servicos || []).filter(function(sv) { return sv.demandaId === dem.id; });
+        bodyHtml += '<div class="modal-row no-print" style="margin-top:0.6rem;"><button type="button" class="btn-pls-primary" data-action="open-servicos" data-id="' + dem.id + '">🔧 Serviços diários (' + nSrvDem.filter(function(sv) { return sv.status === 'Concluída'; }).length + '/' + nSrvDem.length + ' concluídos)</button></div>';
         document.getElementById('modal-demand-body').innerHTML = bodyHtml;
         var modal = document.getElementById('modal-demanda');
         if (modal) modal.classList.add('active');
@@ -4887,6 +5030,131 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       // TROCA DE ABAS (LAZY RENDERING)
+      // SERVIÇOS DIÁRIOS DE CADA DEMANDA
+      var servicosDemandaId = null;
+
+      function diaSemanaBR(iso) {
+        var pt = (iso || '').split('-');
+        if (pt.length < 3) return '';
+        var dt = new Date(parseInt(pt[0], 10), parseInt(pt[1], 10) - 1, parseInt(pt[2], 10));
+        return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()] + ' ' + pt[2] + '/' + pt[1];
+      }
+
+      function openServicosModal(demId) {
+        var dem = appData.demandas.find(function(d) { return d.id === demId; });
+        if (!dem) return;
+        servicosDemandaId = demId;
+        var opts = '<option value="">-- nenhum --</option>';
+        appData.tecnicos.forEach(function(t) { opts += '<option value="' + escapeHtml(t) + '">' + escapeHtml(t) + '</option>'; });
+        for (var i = 1; i <= 4; i++) {
+          var selT = document.getElementById('srv-tec-' + i);
+          if (selT) { selT.innerHTML = opts; selT.value = (i === 1 && dem.tecnico) ? dem.tecnico : ''; }
+        }
+        document.getElementById('srv-data').value = getTomorrowISO();
+        var descEl = document.getElementById('srv-desc');
+        descEl.value = '';
+        descEl.onkeydown = function(ev) {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            var b = document.querySelector('#modal-servicos [data-action="add-servico"]');
+            if (b) b.click();
+          }
+        };
+        renderServicosModal();
+        document.getElementById('modal-servicos').classList.add('active');
+      }
+
+      function closeServicosModal() {
+        var m = document.getElementById('modal-servicos');
+        if (m) m.classList.remove('active');
+        servicosDemandaId = null;
+      }
+
+      function renderServicosModal() {
+        var dem = appData.demandas.find(function(d) { return d.id === servicosDemandaId; });
+        if (!dem) { closeServicosModal(); return; }
+        var lista = (appData.servicos || []).filter(function(sv) { return sv.demandaId === dem.id; });
+        lista.sort(function(a, b) {
+          return (a.data || '').localeCompare(b.data || '') || (a.tecnico || '').localeCompare(b.tecnico || '', 'pt-BR');
+        });
+        var ok = lista.filter(function(sv) { return sv.status === 'Concluída'; }).length;
+
+        document.getElementById('srv-title').textContent = 'Serviços diários — ' + dem.cliente;
+        document.getElementById('srv-resumo').innerHTML =
+          '<div class="srv-resumo">' +
+            '<div><strong>' + escapeHtml(dem.cliente) + '</strong> • ' + escapeHtml(dem.equipamento || '-') + '</div>' +
+            '<div>📦 Previsão de entrega ao cliente: <strong>' + (dem.dataPrev ? formatDateBR(dem.dataPrev) : 'não definida') + '</strong></div>' +
+            '<div>Situação da demanda: <strong>' + escapeHtml(dem.status) + '</strong> • Serviços concluídos: <strong>' + ok + ' de ' + lista.length + '</strong></div>' +
+          '</div>';
+
+        var el = document.getElementById('srv-lista');
+        if (lista.length === 0) {
+          el.innerHTML = '<div style="color:#64748b; font-size:0.85rem; padding:0.5rem 0;">Nenhum serviço lançado ainda. Use o quadro acima para programar o primeiro.</div>';
+          return;
+        }
+        var rows = lista.map(function(sv) {
+          var feito = sv.status === 'Concluída';
+          var atrasado = !feito && sv.status !== 'Cancelado' && getDiffDays(sv.data) < 0;
+          var badge = feito ? '<span class="badge-pls badge-concluida">Concluído</span>'
+            : (atrasado ? '<span class="badge-pls badge-atrasado">Atrasado</span>' : '<span class="badge-pls badge-andamento">Pendente</span>');
+          var btn = feito
+            ? '<button type="button" class="btn-row" data-action="toggle-servico" data-id="' + sv.id + '">↩ Reabrir</button>'
+            : '<button type="button" class="btn-row" data-action="toggle-servico" data-id="' + sv.id + '" style="color:#16a34a; border-color:#86efac;">✔ Concluir</button>';
+          return '<tr>' +
+            '<td style="white-space:nowrap;"><strong>' + diaSemanaBR(sv.data) + '</strong></td>' +
+            '<td><strong>' + escapeHtml(sv.tecnico) + '</strong></td>' +
+            '<td>' + escapeHtml(sv.descricao) + '</td>' +
+            '<td>' + badge + '</td>' +
+            '<td style="text-align:right; white-space:nowrap;">' + btn +
+              '<button type="button" class="btn-row btn-row-del" data-action="del-servico" data-id="' + sv.id + '">Excluir</button></td>' +
+          '</tr>';
+        }).join('');
+        el.innerHTML = '<div class="table-container" style="max-height:38vh;"><table class="table-pls"><thead><tr>' +
+          '<th>Dia</th><th>Técnico</th><th>Serviço</th><th>Situação</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+      }
+
+      function atualizarTelasDeServicos() {
+        try {
+          renderLancamentosTab();
+          if (activeTab === 'painel') renderPainelTab();
+        } catch (e) { console.error(e); }
+      }
+
+      // ROLAGEM AUTOMÁTICA DO PAINEL E DO MODO TV
+      // Cada bloco que tiver mais demandas do que cabe na tela desce devagar, para no fim,
+      // volta ao topo, para um tempo e repete. Mexer com o mouse/dedo pausa por alguns segundos.
+      (function autoRolagemPainel() {
+        var PAUSA_MS = 6000, RETOMA_MS = 15000, TICK_MS = 50, PASSO_DESCE = 2, PASSO_SOBE = 12;
+        var estados = new WeakMap();
+        setInterval(function() {
+          if (document.hidden) return;
+          if (!(isTvMode || activeTab === 'painel')) return;
+          var agora = Date.now();
+          document.querySelectorAll('.critical-grid-6').forEach(function(el) {
+            var st = estados.get(el);
+            if (!st) { st = { fase: 'topo', ate: agora + PAUSA_MS, ultimo: el.scrollTop, userAte: 0 }; estados.set(el, st); }
+            var max = el.scrollHeight - el.clientHeight;
+            if (max <= 4) { st.fase = 'topo'; st.ate = agora + PAUSA_MS; st.ultimo = el.scrollTop; return; }
+            if (Math.abs(el.scrollTop - st.ultimo) > 3) st.userAte = agora + RETOMA_MS;
+            if (!isTvMode && el.matches(':hover')) st.userAte = agora + 4000;
+            if (agora < st.userAte) { st.ultimo = el.scrollTop; return; }
+            if (st.fase === 'topo') {
+              if (agora >= st.ate) st.fase = 'desce';
+            } else if (st.fase === 'desce') {
+              var antes = el.scrollTop;
+              el.scrollTop = antes + PASSO_DESCE;
+              if (el.scrollTop >= max - 1 || el.scrollTop === antes) { st.fase = 'fundo'; st.ate = agora + PAUSA_MS; }
+            } else if (st.fase === 'fundo') {
+              if (agora >= st.ate) st.fase = 'sobe';
+            } else if (st.fase === 'sobe') {
+              el.scrollTop = el.scrollTop - PASSO_SOBE;
+              if (el.scrollTop <= 0) { st.fase = 'topo'; st.ate = agora + PAUSA_MS; }
+            }
+            st.ultimo = el.scrollTop;
+          });
+        }, TICK_MS);
+      })();
+
       // SUB-ABAS DA 1ª ABA: formulário OU lista de demandas
       var lancView = 'form';
       function setLancView(v) {
@@ -5089,6 +5357,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var idDel = target.getAttribute('data-id');
           if (confirm('Deseja realmente excluir esta demanda?')) {
             appData.demandas = appData.demandas.filter(function(d) { return d.id !== idDel; });
+            appData.servicos = (appData.servicos || []).filter(function(sv) { return sv.demandaId !== idDel; });
             saveData();
             renderLancamentosTab();
             showToast('Demanda excluída.');
@@ -5162,6 +5431,65 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (campoF) campoF.value = 'dataAtend';
           renderLancamentosTab();
           showToast('Filtro de demandas limpo.');
+          return;
+        }
+
+        // SERVIÇOS DIÁRIOS
+        if (action === 'open-servicos') {
+          closeDemandModal();
+          openServicosModal(target.getAttribute('data-id'));
+          return;
+        }
+        if (action === 'close-servicos') {
+          closeServicosModal();
+          return;
+        }
+        if (action === 'add-servico') {
+          var demS = appData.demandas.find(function(d) { return d.id === servicosDemandaId; });
+          if (!demS) return;
+          var dataS = document.getElementById('srv-data').value;
+          var descS = document.getElementById('srv-desc').value.trim();
+          var tecsS = [];
+          for (var iS = 1; iS <= 4; iS++) {
+            var vS = document.getElementById('srv-tec-' + iS).value;
+            if (vS && tecsS.indexOf(vS) === -1) tecsS.push(vS);
+          }
+          if (!dataS || !descS || tecsS.length === 0) {
+            alert('Informe o dia, o serviço a fazer e pelo menos um técnico.');
+            return;
+          }
+          if (!appData.servicos) appData.servicos = [];
+          tecsS.forEach(function(t) {
+            appData.servicos.push({ id: novoUUID(), demandaId: demS.id, data: dataS, tecnico: t, descricao: descS, status: 'Em andamento' });
+          });
+          saveData();
+          document.getElementById('srv-desc').value = '';
+          renderServicosModal();
+          atualizarTelasDeServicos();
+          showToast(tecsS.length > 1 ? 'Serviço lançado para ' + tecsS.join(', ') + '.' : 'Serviço lançado para ' + tecsS[0] + '.');
+          document.getElementById('srv-desc').focus();
+          return;
+        }
+        if (action === 'toggle-servico') {
+          var svT = (appData.servicos || []).find(function(x) { return x.id === target.getAttribute('data-id'); });
+          if (svT) {
+            svT.status = svT.status === 'Concluída' ? 'Em andamento' : 'Concluída';
+            saveData();
+            renderServicosModal();
+            atualizarTelasDeServicos();
+            showToast(svT.status === 'Concluída' ? 'Serviço concluído.' : 'Serviço reaberto.');
+          }
+          return;
+        }
+        if (action === 'del-servico') {
+          var idSD = target.getAttribute('data-id');
+          if (confirm('Deseja realmente excluir este serviço?')) {
+            appData.servicos = (appData.servicos || []).filter(function(x) { return x.id !== idSD; });
+            saveData();
+            renderServicosModal();
+            atualizarTelasDeServicos();
+            showToast('Serviço excluído.');
+          }
           return;
         }
 
