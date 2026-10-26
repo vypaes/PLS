@@ -150,7 +150,7 @@ var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'pls-auth'}});
 
 var perfil=null, D={tecnicos:[],clientes:[],canais:[],tipos:[],demandas:[],servicos:[]};
-var lancModo='simples', tab='painel', fTec='', fStatus='abertas', busca='', calMes=null, calSel=null, rtTimer=null, rtLigado=false;
+var svEdit=null, lancModo='simples', tab='painel', fTec='', fStatus='abertas', busca='', calMes=null, calSel=null, rtTimer=null, rtLigado=false;
 var $=function(id){return document.getElementById(id);};
 var DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
 var MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -356,7 +356,7 @@ function selOpts(lista,atual,ph){
 }
 function abrirDem(id,view){
   var d=D.demandas.find(function(x){return x.id===id;});if(!d)return;
-  view=view||'dem';
+  view=view||'dem';if(view!=='srv')svEdit=null;
   var srv=D.servicos.filter(function(s){return s.demandaId===id;}).sort(function(a,b){return a.data.localeCompare(b.data)||(a.tecnico||'').localeCompare(b.tecnico||'','pt-BR');});
   var ok=srv.filter(function(s){return s.status==='Concluída';}).length;
   var ed=pode('editar'),h='';
@@ -367,13 +367,18 @@ function abrirDem(id,view){
     srv.forEach(function(s){var feito=s.status==='Concluída',atr=!feito&&diff(s.data)<0;
       h+='<div class="srv'+(feito?' ok':'')+'"><div class="tx">'+esc(s.descricao)+'<small>'+curto(s.data)+' · 👤 '+esc(s.tecnico||'')+(atr?' · <b style="color:var(--red)">atrasado</b>':'')+'</small></div>'
        +(ed?'<button data-srv="'+esc(s.id)+'">'+(feito?'↩':'✔')+'</button>':(feito?'✔':''))
+       +(ed||pode('lancar')?'<button data-edit-srv="'+esc(s.id)+'">✏️</button>':'')
        +(ed||pode('lancar')?'<button data-del-srv="'+esc(s.id)+'" style="color:var(--red)">🗑</button>':'')+'</div>';});
     if(ed||pode('lancar')){
-      h+='<div class="addsrv"><div class="sec" style="margin:0 0 8px">＋ Lançar serviço</div>'
-       +'<div class="fld"><label>Data</label><input id="s-data" type="date" value="'+hoje()+'"></div>'
-       +'<div class="fld"><label>Serviço</label><input id="s-desc" placeholder="O que será feito"></div>'
-       +'<div class="fld"><label>Quem executa (até 4)</label>'+picker('pk-srv',d.tecnico?[d.tecnico]:[])+'</div>'
-       +'<button class="btn" type="button" id="s-add">Lançar serviço</button></div>';
+      var se=svEdit?D.servicos.find(function(x){return x.id===svEdit;}):null;
+      if(svEdit&&!se)svEdit=null;
+      h+='<div class="addsrv" id="addsrv"><div class="sec" style="margin:0 0 8px">'+(se?'✏️ Editar serviço de '+esc(se.tecnico||'')+' — '+curto(se.data):'＋ Lançar serviço')+'</div>'
+       +'<div class="fld"><label>Data</label><input id="s-data" type="date" value="'+(se?esc(se.data):hoje())+'"></div>'
+       +'<div class="fld"><label>Serviço</label><input id="s-desc" placeholder="O que será feito" value="'+(se?esc(se.descricao):'')+'"></div>'
+       +'<div class="fld"><label>'+(se?'Técnicos (toque para incluir mais, até 4)':'Quem executa (até 4)')+'</label>'+picker('pk-srv',se?[se.tecnico]:(d.tecnico?[d.tecnico]:[]))+'</div>'
+       +(se?'<div class="hint">Os técnicos incluídos recebem o mesmo serviço e o mesmo dia.</div>':'')
+       +'<button class="btn" type="button" id="s-add">'+(se?'💾 Salvar alteração':'Lançar serviço')+'</button>'
+       +(se?'<button class="btn sec2" type="button" id="s-cancel" style="margin-top:8px">Cancelar edição</button>':'')+'</div>';
     }
   } else if(view==='edit'){
     var mostraAt=!d.usaServicos||d.servicoUnico;
@@ -469,8 +474,27 @@ function addServico(){
   if(!data){toast('Informe a data.');return;}
   if(!desc){toast('Descreva o serviço.');return;}
   if(!tecs.length){toast('Escolha pelo menos um técnico.');return;}
+  var b=$('s-add');
+  if(svEdit){
+    var se=D.servicos.find(function(x){return x.id===svEdit;});if(!se){svEdit=null;return;}
+    var fica=tecs.indexOf(se.tecnico)!==-1?se.tecnico:tecs[0];
+    var extras=tecs.filter(function(t){return t!==fica&&!D.servicos.some(function(x){return x.id!==se.id&&x.demandaId===id&&x.data===data&&x.tecnico===t&&x.descricao===desc;});});
+    var novas=extras.map(function(t){return{id:uuid(),demanda_id:id,data:data,tecnico:t,descricao:desc,status:'Em andamento'};});
+    b.disabled=true;
+    chk(sb.from('servicos').update({data:data,descricao:desc,tecnico:fica}).eq('id',se.id).select('id')).then(function(r){
+      if(!r.data.length)throw new Error('Você não tem permissão para isso.');
+      se.data=data;se.descricao=desc;se.tecnico=fica;
+      return novas.length?chk(sb.from('servicos').insert(novas)).then(function(){novas.forEach(function(x){D.servicos.push(mapSrv(x));});}):null;
+    }).then(function(){
+      var d=D.demandas.find(function(x){return x.id===id;});
+      if(novas.length&&d&&d.servicoUnico&&d.status==='Concluída'){return chk(sb.from('demandas').update({status:'Em andamento'}).eq('id',id)).then(function(){d.status='Em andamento';});}
+    }).then(function(){
+      svEdit=null;abrirDem(id,'srv');render();toast(extras.length?'Serviço atualizado e incluído para '+extras.join(', ')+' ✔':'Serviço atualizado ✔');
+    }).catch(function(e){toast('⚠ '+erro(e),5000);b.disabled=false;});
+    return;
+  }
   var rows=tecs.map(function(t){return{id:uuid(),demanda_id:id,data:data,tecnico:t,descricao:desc,status:'Em andamento'};});
-  var b=$('s-add');b.disabled=true;
+  b.disabled=true;
   chk(sb.from('servicos').insert(rows)).then(function(){
     rows.forEach(function(r){D.servicos.push(mapSrv(r));});
     abrirDem(id,'srv');render();toast('Serviço lançado para '+tecs.join(', ')+' ✔');
@@ -509,10 +533,12 @@ function enviarLanc(ev){
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
+  var t=e.target.closest('[data-edit-srv],#s-cancel,[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
   if(t.id==='fechar'){fecharSheet();return;}
   if(t.hasAttribute('data-modo')){setModo(t.getAttribute('data-modo'));return;}
   if(t.id==='s-add'){addServico();return;}
+  if(t.hasAttribute('data-edit-srv')){svEdit=t.getAttribute('data-edit-srv');abrirDem($('sheet').getAttribute('data-id'),'srv');var a=$('addsrv');if(a)a.scrollIntoView({behavior:'smooth',block:'center'});return;}
+  if(t.id==='s-cancel'){svEdit=null;abrirDem($('sheet').getAttribute('data-id'),'srv');return;}
   if(t.hasAttribute('data-view')){abrirDem($('sheet').getAttribute('data-id'),t.getAttribute('data-view'));return;}
   if(t.hasAttribute('data-del-srv')){excluirSrv(t.getAttribute('data-del-srv'));return;}
   if(t.hasAttribute('data-del-dem')){excluirDem();return;}

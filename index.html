@@ -2230,7 +2230,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v22 — 24/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v23 — 26/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -3116,7 +3116,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         <div id="srv-resumo"></div>
 
         <div class="srv-form">
-          <div class="srv-form-title">➕ Lançar serviço do dia</div>
+          <div class="srv-form-title" id="srv-form-title">➕ Lançar serviço do dia</div>
           <div class="srv-form-grid">
             <div class="form-group">
               <label class="form-label" for="srv-data">Dia do serviço</label>
@@ -3132,8 +3132,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             <div class="form-group"><label class="form-label" for="srv-tec-4">Técnico 4</label><select id="srv-tec-4" class="form-control"></select></div>
           </div>
           <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; margin-top:0.5rem;">
-            <button type="button" class="btn-pls-primary" data-action="add-servico">➕ Adicionar serviço</button>
-            <span style="font-size:0.76rem; color:#64748b;">Cada técnico escolhido recebe o serviço no seu painel, no dia indicado.</span>
+            <button type="button" class="btn-pls-primary" id="srv-btn-add" data-action="add-servico">➕ Adicionar serviço</button>
+            <button type="button" class="btn-pls-secondary" id="srv-btn-cancel" data-action="cancel-edit-servico" style="display:none;">Cancelar edição</button>
+            <span id="srv-form-hint" style="font-size:0.76rem; color:#64748b;">Cada técnico escolhido recebe o serviço no seu painel, no dia indicado.</span>
           </div>
         </div>
 
@@ -5271,7 +5272,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         return ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][dt.getDay()] + ' ' + pt[2] + '/' + pt[1];
       }
 
+      var servicoEditId = null;
+      function sairEdicaoServico() {
+        servicoEditId = null;
+        var t = document.getElementById('srv-form-title'), b = document.getElementById('srv-btn-add'), c = document.getElementById('srv-btn-cancel'), h = document.getElementById('srv-form-hint');
+        if (t) t.textContent = '➕ Lançar serviço do dia';
+        if (b) b.textContent = '➕ Adicionar serviço';
+        if (c) c.style.display = 'none';
+        if (h) h.textContent = 'Cada técnico escolhido recebe o serviço no seu painel, no dia indicado.';
+      }
       function openServicosModal(demId) {
+        sairEdicaoServico();
         var dem = appData.demandas.find(function(d) { return d.id === demId; });
         if (!dem) return;
         servicosDemandaId = demId;
@@ -5296,6 +5307,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       function closeServicosModal() {
+        sairEdicaoServico();
         var m = document.getElementById('modal-servicos');
         if (m) m.classList.remove('active');
         servicosDemandaId = null;
@@ -5337,6 +5349,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<td>' + escapeHtml(sv.descricao) + '</td>' +
             '<td>' + badge + '</td>' +
             '<td style="text-align:right; white-space:nowrap;">' + btn +
+              '<button type="button" class="btn-row" data-action="edit-servico" data-id="' + sv.id + '">Editar</button>' +
               '<button type="button" class="btn-row btn-row-del" data-action="del-servico" data-id="' + sv.id + '">Excluir</button></td>' +
           '</tr>';
         }).join('');
@@ -5912,6 +5925,28 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return;
           }
           if (!appData.servicos) appData.servicos = [];
+          if (servicoEditId) {
+            var svE = appData.servicos.find(function(x) { return x.id === servicoEditId; });
+            if (!svE) { sairEdicaoServico(); return; }
+            var tecFica = tecsS.indexOf(svE.tecnico) !== -1 ? svE.tecnico : tecsS[0];
+            svE.data = dataS; svE.descricao = descS; svE.tecnico = tecFica; svE.atualizadoEm = new Date().toISOString();
+            var novos = [];
+            tecsS.forEach(function(t) {
+              if (t === tecFica) return;
+              var jaTem = appData.servicos.some(function(x) { return x.id !== svE.id && x.demandaId === demS.id && x.data === dataS && x.tecnico === t && x.descricao === descS; });
+              if (jaTem) return;
+              appData.servicos.push({ id: novoUUID(), demandaId: demS.id, data: dataS, tecnico: t, descricao: descS, status: 'Em andamento' });
+              novos.push(t);
+            });
+            if (novos.length && demS.servicoUnico && demS.status === 'Concluída') demS.status = 'Em andamento';
+            saveData();
+            sairEdicaoServico();
+            document.getElementById('srv-desc').value = '';
+            renderServicosModal();
+            atualizarTelasDeServicos();
+            showToast(novos.length ? 'Serviço atualizado e incluído para ' + novos.join(', ') + '.' : 'Serviço atualizado.');
+            return;
+          }
           tecsS.forEach(function(t) {
             appData.servicos.push({ id: novoUUID(), demandaId: demS.id, data: dataS, tecnico: t, descricao: descS, status: 'Em andamento' });
           });
@@ -5921,6 +5956,27 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           atualizarTelasDeServicos();
           showToast(tecsS.length > 1 ? 'Serviço lançado para ' + tecsS.join(', ') + '.' : 'Serviço lançado para ' + tecsS[0] + '.');
           document.getElementById('srv-desc').focus();
+          return;
+        }
+        if (action === 'edit-servico') {
+          var svEd = (appData.servicos || []).find(function(x) { return x.id === target.getAttribute('data-id'); });
+          if (svEd) {
+            servicoEditId = svEd.id;
+            document.getElementById('srv-data').value = svEd.data || '';
+            document.getElementById('srv-desc').value = svEd.descricao || '';
+            for (var iE = 1; iE <= 4; iE++) document.getElementById('srv-tec-' + iE).value = (iE === 1) ? (svEd.tecnico || '') : '';
+            document.getElementById('srv-form-title').textContent = '✏️ Editando serviço de ' + (svEd.tecnico || '') + ' — ' + formatDateBR(svEd.data);
+            document.getElementById('srv-btn-add').textContent = '💾 Salvar alteração';
+            document.getElementById('srv-btn-cancel').style.display = '';
+            document.getElementById('srv-form-hint').textContent = 'Para incluir mais técnicos neste serviço, escolha-os nos campos Técnico 2, 3 e 4. Eles recebem o mesmo serviço e o mesmo dia.';
+            document.getElementById('srv-desc').focus();
+          }
+          return;
+        }
+        if (action === 'cancel-edit-servico') {
+          sairEdicaoServico();
+          document.getElementById('srv-desc').value = '';
+          document.getElementById('srv-data').value = getTomorrowISO();
           return;
         }
         if (action === 'toggle-servico') {
