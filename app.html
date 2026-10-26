@@ -350,33 +350,93 @@ function render(){
 function ir(t){tab=t;if(t==='lancar'){var f=$('f-lanc');if(f)f.remove();lancModo='simples';}$('main').scrollTop=0;render();}
 
 /* ---------- detalhe ---------- */
-function abrirDem(id){
+function selOpts(lista,atual,ph){
+  var l=lista.slice();if(atual&&l.indexOf(atual)===-1)l.push(atual);
+  return (ph?'<option value="">'+ph+'</option>':'')+l.map(function(x){return '<option'+(x===atual?' selected':'')+'>'+esc(x)+'</option>';}).join('');
+}
+function abrirDem(id,view){
   var d=D.demandas.find(function(x){return x.id===id;});if(!d)return;
-  var srv=D.servicos.filter(function(s){return s.demandaId===id;}).sort(function(a,b){return a.data.localeCompare(b.data);});
-  var ed=pode('editar');
-  var h='<h2>'+esc(d.cliente)+'</h2><div class="sub" style="color:var(--mut);margin-bottom:8px">'+esc(d.status)+'</div>'
-   +[['Equipamento',d.equipamento],['Técnico responsável',d.tecnico],['Tipo',d.tipo],['Canal',d.canal],['Solicitante',d.solicitante],['Lançada em',br(d.dataCad)],['Entrega prevista',br(d.dataPrev)]].map(function(r){return '<div class="kv"><span>'+r[0]+'</span><span>'+esc(r[1]||'-')+'</span></div>';}).join('');
-  if(d.obs)h+='<div class="kv"><span>Obs.</span><span>'+esc(d.obs)+'</span></div>';
-  if(srv.length){
-    h+='<div class="sec" style="margin-top:14px">🔧 Serviços</div>';
-    srv.forEach(function(s){var ok=s.status==='Concluída';
-      h+='<div class="srv'+(ok?' ok':'')+'"><div class="tx">'+esc(s.descricao)+'<small>'+curto(s.data)+' · '+esc(s.tecnico||'')+'</small></div>'+(ed?'<button data-srv="'+esc(s.id)+'">'+(ok?'↩ Reabrir':'✔ Feito')+'</button>':(ok?'✔':''))+'</div>';});
+  view=view||'dem';
+  var srv=D.servicos.filter(function(s){return s.demandaId===id;}).sort(function(a,b){return a.data.localeCompare(b.data)||(a.tecnico||'').localeCompare(b.tecnico||'','pt-BR');});
+  var ok=srv.filter(function(s){return s.status==='Concluída';}).length;
+  var ed=pode('editar'),h='';
+  var voltar='<button class="btn sec2" style="margin-bottom:12px;width:auto;padding:9px 14px;font-size:14px" data-view="dem">‹ Voltar</button>';
+  if(view==='srv'){
+    h=voltar+'<h2>🔧 Serviços — '+esc(d.cliente)+'</h2><div class="sub" style="color:var(--mut);margin-bottom:6px">'+esc(d.equipamento||'')+' · Entrega '+br(d.dataPrev)+' · '+ok+' de '+srv.length+' concluídos</div>';
+    if(!srv.length)h+='<div class="empty" style="padding:14px">Nenhum serviço lançado ainda.</div>';
+    srv.forEach(function(s){var feito=s.status==='Concluída',atr=!feito&&diff(s.data)<0;
+      h+='<div class="srv'+(feito?' ok':'')+'"><div class="tx">'+esc(s.descricao)+'<small>'+curto(s.data)+' · 👤 '+esc(s.tecnico||'')+(atr?' · <b style="color:var(--red)">atrasado</b>':'')+'</small></div>'
+       +(ed?'<button data-srv="'+esc(s.id)+'">'+(feito?'↩':'✔')+'</button>':(feito?'✔':''))
+       +(ed||pode('lancar')?'<button data-del-srv="'+esc(s.id)+'" style="color:var(--red)">🗑</button>':'')+'</div>';});
+    if(ed||pode('lancar')){
+      h+='<div class="addsrv"><div class="sec" style="margin:0 0 8px">＋ Lançar serviço</div>'
+       +'<div class="fld"><label>Data</label><input id="s-data" type="date" value="'+hoje()+'"></div>'
+       +'<div class="fld"><label>Serviço</label><input id="s-desc" placeholder="O que será feito"></div>'
+       +'<div class="fld"><label>Quem executa (até 4)</label>'+picker('pk-srv',d.tecnico?[d.tecnico]:[])+'</div>'
+       +'<button class="btn" type="button" id="s-add">Lançar serviço</button></div>';
+    }
+  } else if(view==='edit'){
+    var mostraAt=!d.usaServicos||d.servicoUnico;
+    h=voltar+'<h2>✏️ Editar demanda</h2><form id="f-edit" autocomplete="off" style="margin-top:10px">'
+     +'<div class="fld"><label>Cliente *</label><input id="e-cli" list="dl-cli-e" value="'+esc(d.cliente)+'" required><datalist id="dl-cli-e">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
+     +'<div class="fld"><label>Técnico'+(d.usaServicos?' responsável':'')+' *</label><select id="e-tec" required>'+selOpts(D.tecnicos,d.tecnico)+'</select></div>'
+     +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="e-tipo" required>'+selOpts(D.tipos,d.tipo)+'</select></div>'
+     +'<div class="fld"><label>Canal *</label><select id="e-canal" required>'+selOpts(D.canais,d.canal)+'</select></div></div>'
+     +'<div class="fld"><label>Data prevista de entrega</label><input id="e-prev" type="date" value="'+esc(d.dataPrev)+'"></div>'
+     +(mostraAt?'<div class="fld"><label>Data do atendimento</label><input id="e-atend" type="date" value="'+esc(d.dataAtend)+'"></div>':'')
+     +'<div class="fld"><label>Equipamento</label><input id="e-equip" value="'+esc(d.equipamento)+'"></div>'
+     +'<div class="fld"><label>Solicitante</label><input id="e-sol" value="'+esc(d.solicitante==='-'?'':d.solicitante)+'"></div>'
+     +'<div class="fld"><label>Observações</label><textarea id="e-obs" rows="3">'+esc(d.obs)+'</textarea></div>'
+     +'<div class="fld"><label>Situação</label><select id="e-status">'+selOpts(['Em andamento','Concluída','Cancelado'],d.status)+'</select></div>'
+     +'<button class="btn" id="e-btn" type="submit">💾 Salvar alterações</button></form>';
+  } else {
+    h='<h2>'+esc(d.cliente)+'</h2><div class="sub" style="color:var(--mut);margin-bottom:8px">'+esc(d.status)+'</div>'
+     +[['Equipamento',d.equipamento],['Técnico'+(d.usaServicos?' responsável':''),d.tecnico],['Tipo',d.tipo],['Canal',d.canal],['Solicitante',d.solicitante],['Lançada em',br(d.dataCad)],['Entrega prevista',br(d.dataPrev)]].map(function(r){return '<div class="kv"><span>'+r[0]+'</span><span>'+esc(r[1]||'-')+'</span></div>';}).join('');
+    if(d.obs)h+='<div class="kv"><span>Obs.</span><span>'+esc(d.obs)+'</span></div>';
+    h+='<div style="margin-top:16px;display:grid;gap:8px">'
+     +'<button class="btn" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74" data-view="srv">🔧 Serviços'+(srv.length?' ('+ok+'/'+srv.length+')':'')+'</button>';
+    if(ed)h+='<button class="btn sec2" data-view="edit">✏️ Editar</button>';
+    if(ed){
+      if(d.status==='Em andamento')h+='<button class="btn grn" data-st-set="Concluída">✔ Concluir demanda</button><button class="btn sec2" data-st-set="Cancelado">Cancelar demanda</button>';
+      else h+='<button class="btn" data-st-set="Em andamento">↩ Reabrir demanda</button>';
+    }
+    if(pode('excluir'))h+='<button class="btn sec2" style="color:var(--red)" data-del-dem="1">🗑 Excluir demanda</button>';
+    h+='<button class="btn sec2" id="fechar">Fechar</button></div>';
   }
-  if(d.usaServicos&&d.status==='Em andamento'&&(ed||pode('lancar'))){
-    h+='<div class="addsrv"><div class="sec" style="margin:0 0 8px">＋ Lançar serviço</div>'
-     +'<div class="fld"><label>Data</label><input id="s-data" type="date" value="'+hoje()+'"></div>'
-     +'<div class="fld"><label>Serviço</label><input id="s-desc" placeholder="O que será feito"></div>'
-     +'<div class="fld"><label>Quem executa (até 4)</label>'+picker('pk-srv',d.tecnico?[d.tecnico]:[])+'</div>'
-     +'<button class="btn" type="button" id="s-add">Lançar serviço</button></div>';
-  }
-  if(ed){
-    h+='<div style="margin-top:16px;display:grid;gap:8px">';
-    if(d.status==='Em andamento')h+='<button class="btn grn" data-st-set="Concluída">✔ Concluir demanda</button><button class="btn sec2" data-st-set="Cancelado">Cancelar demanda</button>';
-    else h+='<button class="btn" data-st-set="Em andamento">↩ Reabrir demanda</button>';
-    h+='</div>';
-  }
-  h+='<button class="btn sec2" style="margin-top:8px" id="fechar">Fechar</button>';
-  var sh=$('sheet');sh.innerHTML=h;sh.setAttribute('data-id',id);$('sheet-bg').classList.add('on');
+  var sh=$('sheet');sh.innerHTML=h;sh.setAttribute('data-id',id);sh.setAttribute('data-cur',view);$('sheet-bg').classList.add('on');
+}
+function salvarEdicao(ev){
+  ev.preventDefault();
+  var id=$('sheet').getAttribute('data-id'),d=D.demandas.find(function(x){return x.id===id;});if(!d)return;
+  var cli=$('e-cli').value.trim();
+  if(D.clientes.indexOf(cli)===-1&&cli!==d.cliente){toast('Escolha um cliente da lista cadastrada.',3500);return;}
+  var ch={cliente:cli,tecnico:$('e-tec').value,tipo:$('e-tipo').value,canal:$('e-canal').value,data_prev:$('e-prev').value||null,
+    equipamento:$('e-equip').value.trim()||'Empilhadeira',solicitante:$('e-sol').value.trim()||'-',obs_tecnicas:$('e-obs').value.trim()||null,status:$('e-status').value};
+  if($('e-atend'))ch.data_atend=$('e-atend').value||null;
+  var b=$('e-btn');b.disabled=true;b.textContent='Salvando...';
+  chk(sb.from('demandas').update(ch).eq('id',id).select('id')).then(function(r){
+    if(!r.data.length)throw new Error('Você não tem permissão para isso.');
+    d.cliente=ch.cliente;d.tecnico=ch.tecnico;d.tipo=ch.tipo;d.canal=ch.canal;d.dataPrev=ch.data_prev||'';d.equipamento=ch.equipamento;d.solicitante=ch.solicitante;d.obs=ch.obs_tecnicas||'';d.status=ch.status;
+    if('data_atend' in ch)d.dataAtend=ch.data_atend||'';
+    toast('Alterações salvas ✔');abrirDem(id);render();
+  }).catch(function(e){toast('⚠ '+erro(e),5000);b.disabled=false;b.textContent='💾 Salvar alterações';});
+}
+function excluirDem(){
+  var id=$('sheet').getAttribute('data-id');
+  if(!confirm('Deseja realmente excluir esta demanda e seus serviços?'))return;
+  chk(sb.from('servicos').delete().eq('demanda_id',id)).then(function(){return chk(sb.from('demandas').delete().eq('id',id).select('id'));}).then(function(r){
+    if(!r.data.length)throw new Error('Você não tem permissão para isso.');
+    D.demandas=D.demandas.filter(function(x){return x.id!==id;});D.servicos=D.servicos.filter(function(x){return x.demandaId!==id;});
+    fecharSheet();render();toast('Demanda excluída.');
+  }).catch(function(e){toast('⚠ '+erro(e),5000);});
+}
+function excluirSrv(sid){
+  var sv=D.servicos.find(function(x){return x.id===sid;});if(!sv)return;
+  if(!confirm('Excluir este serviço?'))return;
+  chk(sb.from('servicos').delete().eq('id',sid).select('id')).then(function(r){
+    if(!r.data.length)throw new Error('Você não tem permissão para isso.');
+    D.servicos=D.servicos.filter(function(x){return x.id!==sid;});abrirDem(sv.demandaId,'srv');render();toast('Serviço excluído.');
+  }).catch(function(e){toast('⚠ '+erro(e),5000);});
 }
 function fecharSheet(){$('sheet-bg').classList.remove('on');}
 function setStatusDem(id,st){
@@ -400,7 +460,7 @@ function toggleSrv(sid){
       var ns=todos&&d.status==='Em andamento'?'Concluída':(!todos&&d.status==='Concluída'?'Em andamento':null);
       if(ns)p=chk(sb.from('demandas').update({status:ns}).eq('id',d.id)).then(function(){d.status=ns;});
     }
-    return p.then(function(){abrirDem(s.demandaId);render();toast(novo==='Concluída'?'Serviço concluído ✔':'Serviço reaberto');});
+    return p.then(function(){abrirDem(s.demandaId,'srv');render();toast(novo==='Concluída'?'Serviço concluído ✔':'Serviço reaberto');});
   }).catch(function(e){toast('⚠ '+erro(e),4000);});
 }
 
@@ -413,7 +473,7 @@ function addServico(){
   var b=$('s-add');b.disabled=true;
   chk(sb.from('servicos').insert(rows)).then(function(){
     rows.forEach(function(r){D.servicos.push(mapSrv(r));});
-    abrirDem(id);render();toast('Serviço lançado para '+tecs.join(', ')+' ✔');
+    abrirDem(id,'srv');render();toast('Serviço lançado para '+tecs.join(', ')+' ✔');
   }).catch(function(e){toast('⚠ '+erro(e),5000);b.disabled=false;});
 }
 
@@ -442,17 +502,20 @@ function enviarLanc(ev){
   }).then(function(){
     var f=$('f-lanc');if(f)f.remove();
     fTec='';lancModo='simples';
-    if(modo==='diarios'){tab='painel';render();abrirDem(row.id);toast('Demanda lançada ✔ Agora cadastre os serviços.',3500);return;}
+    if(modo==='diarios'){tab='painel';render();abrirDem(row.id,'srv');toast('Demanda lançada ✔ Agora cadastre os serviços.',3500);return;}
     toast(modo==='unico'?'Serviço único lançado para '+execs.join(', ')+' ✔':'Demanda lançada ✔');tab='painel';render();
   }).catch(function(e){toast('⚠ '+erro(e),5000);btn.disabled=false;btn.textContent=txt;});
 }
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
+  var t=e.target.closest('[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
   if(t.id==='fechar'){fecharSheet();return;}
   if(t.hasAttribute('data-modo')){setModo(t.getAttribute('data-modo'));return;}
   if(t.id==='s-add'){addServico();return;}
+  if(t.hasAttribute('data-view')){abrirDem($('sheet').getAttribute('data-id'),t.getAttribute('data-view'));return;}
+  if(t.hasAttribute('data-del-srv')){excluirSrv(t.getAttribute('data-del-srv'));return;}
+  if(t.hasAttribute('data-del-dem')){excluirDem();return;}
   if(t.hasAttribute('data-pick')){
     if(!t.classList.contains('on')&&t.parentNode.querySelectorAll('.chip.on').length>=4){toast('Máximo de 4 técnicos.');return;}
     t.classList.toggle('on');return;
@@ -468,7 +531,7 @@ document.addEventListener('click',function(e){
 });
 $('sheet-bg').addEventListener('click',function(e){if(e.target===this)fecharSheet();});
 document.addEventListener('input',function(e){if(e.target.id==='busca'){busca=e.target.value;var l=listaDemandas();$('lista').innerHTML=l.length?l.slice(0,80).map(cardDem).join(''):'<div class="empty">Nenhuma demanda.</div>';}});
-document.addEventListener('submit',function(e){if(e.target.id==='f-lanc')enviarLanc(e);});
+document.addEventListener('submit',function(e){if(e.target.id==='f-lanc')enviarLanc(e);if(e.target.id==='f-edit')salvarEdicao(e);});
 $('b-reload').addEventListener('click',function(){carregar().then(function(){render();toast('Atualizado');}).catch(function(e){toast('⚠ '+erro(e),4000);});});
 $('b-sair').addEventListener('click',function(){if(confirm('Sair do aplicativo?'))sb.auth.signOut().finally(function(){location.reload();});});
 
