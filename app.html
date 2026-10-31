@@ -502,8 +502,15 @@ function toggleSrv(sid){
       var todos=D.servicos.filter(function(x){return x.demandaId===d.id;}).every(function(x){return x.status==='Concluída';});
       var ns=todos&&d.status==='Em andamento'?'Concluída':(!todos&&d.status==='Concluída'?'Em andamento':null);
       if(ns)p=chk(sb.from('demandas').update({status:ns}).eq('id',d.id)).then(function(){d.status=ns;});
+    } else if(d){
+      var restam=D.servicos.some(function(x){return x.demandaId===d.id&&x.status!=='Concluída'&&x.status!=='Cancelado';});
+      var ns2=null;
+      if(novo==='Concluída'&&!restam&&d.status==='Em andamento'){
+        if(confirm('Último serviço concluído — '+d.cliente+'.\n\nNão há mais serviços a executar.\n\nOK = dar baixa e marcar a demanda como CONCLUÍDA.\nCancelar = manter em andamento (para lançar mais serviços).'))ns2='Concluída';
+      } else if(novo!=='Concluída'&&d.status==='Concluída')ns2='Em andamento';
+      if(ns2)p=chk(sb.from('demandas').update({status:ns2}).eq('id',d.id)).then(function(){d.status=ns2;});
     }
-    return p.then(function(){abrirDem(s.demandaId,'srv');render();toast(novo==='Concluída'?'Serviço concluído ✔':'Serviço reaberto');});
+    return p.then(function(){abrirDem(s.demandaId,'srv');render();toast(d&&d.status==='Concluída'&&novo==='Concluída'?'Demanda concluída ✔':(novo==='Concluída'?'Serviço concluído ✔':'Serviço reaberto'));});
   }).catch(function(e){toast('⚠ '+erro(e),4000);});
 }
 

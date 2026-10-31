@@ -2252,7 +2252,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v26 — 31/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v27 — 31/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2473,6 +2473,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               <option value="dataAtend">Atendimento (inclui serviços diários)</option>
               <option value="dataPrev">Entrega prevista</option>
               <option value="dataCad">Cadastro</option>
+            </select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:190px;">
+            <label class="form-label" for="lanc-filtro-ordem" style="margin:0;">Ordenar pela data:</label>
+            <select id="lanc-filtro-ordem" class="form-control">
+              <option value="padrao">Padrão (últimas lançadas)</option>
+              <option value="asc">Mais próximas primeiro (vencendo)</option>
+              <option value="desc">Mais distantes primeiro</option>
             </select>
           </div>
           <div style="display:flex; flex-direction:column; gap:0.25rem;">
@@ -3983,6 +3991,33 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             }
             return true;
           });
+
+          // ORDENAÇÃO pela data escolhida em "Data a filtrar". Em andamento vêm antes das concluídas/canceladas.
+          var fOrdem = (document.getElementById('lanc-filtro-ordem') || {}).value || 'padrao';
+          if (fOrdem !== 'padrao') {
+            var hojeOrd = getTodayISO();
+            var chaveOrd = function(dem) {
+              var v = '';
+              if (fCampo === 'dataAtend') {
+                var pend = (svMap[dem.id] || []).filter(function(sv) { return sv.status === 'Em andamento' && sv.data; }).map(function(sv) { return sv.data; }).sort();
+                var fut = pend.filter(function(x) { return x >= hojeOrd; });
+                v = pend.length ? (fut.length ? fut[0] : pend[pend.length - 1]) : (dem.dataAtend || '');
+              } else {
+                v = dem[fCampo] || '';
+              }
+              return v;
+            };
+            var dec = fOrdem === 'desc';
+            filtradas = filtradas.map(function(dem, i) { return { dem: dem, k: chaveOrd(dem), g: dem.status === 'Em andamento' ? 0 : 1, i: i }; })
+              .sort(function(a, b) {
+                if (a.g !== b.g) return a.g - b.g;
+                if (!a.k && !b.k) return a.i - b.i;
+                if (!a.k) return 1;          // sem data vai para o fim
+                if (!b.k) return -1;
+                if (a.k !== b.k) return dec ? b.k.localeCompare(a.k) : a.k.localeCompare(b.k);
+                return a.i - b.i;
+              }).map(function(o) { return o.dem; });
+          }
 
           tbody.innerHTML = '';
           var subCount = document.getElementById('lanc-subnav-count');
@@ -6052,9 +6087,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var fLancSt = document.getElementById('lanc-filtro-status');
           if (fLancCli) fLancCli.value = '';
           if (fLancSt) fLancSt.value = '';
-          ['lanc-filtro-tecnico', 'lanc-filtro-ini', 'lanc-filtro-fim'].forEach(function(idF) {
+          ['lanc-filtro-tecnico', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-ordem'].forEach(function(idF) {
             var elF = document.getElementById(idF);
-            if (elF) elF.value = '';
+            if (elF) elF.value = (idF === 'lanc-filtro-ordem') ? 'padrao' : '';
           });
           var campoF = document.getElementById('lanc-filtro-campo');
           if (campoF) campoF.value = 'dataAtend';
@@ -6168,11 +6203,22 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 .every(function(x) { return x.status === 'Concluída'; });
               if (todosOk && demT.status === 'Em andamento') demT.status = 'Concluída';
               else if (!todosOk && demT.status === 'Concluída') demT.status = 'Em andamento';
+            } else if (demT) {
+              var restamS = appData.servicos.some(function(x) { return x.demandaId === demT.id && x.status !== 'Concluída' && x.status !== 'Cancelado'; });
+              if (svT.status === 'Concluída' && !restamS && demT.status === 'Em andamento') {
+                // último serviço concluído: pergunta se baixa a demanda ou se vai lançar mais serviço
+                if (confirm('Último serviço concluído — ' + demT.cliente + '.\n\nNão há mais serviços a executar nesta demanda.\n\nOK = dar baixa e marcar a demanda como CONCLUÍDA.\nCancelar = manter em andamento (para lançar mais serviços).')) {
+                  demT.status = 'Concluída';
+                  showToast('Demanda concluída. Todos os serviços foram feitos.');
+                }
+              } else if (svT.status !== 'Concluída' && demT.status === 'Concluída') {
+                demT.status = 'Em andamento';   // reabriu um serviço: a demanda volta a estar em andamento
+              }
             }
             saveData();
             renderServicosModal();
             atualizarTelasDeServicos();
-            showToast(svT.status === 'Concluída' ? 'Serviço concluído.' : 'Serviço reaberto.');
+            if (!(demT && demT.status === 'Concluída' && svT.status === 'Concluída' && !demT.servicoUnico)) showToast(svT.status === 'Concluída' ? 'Serviço concluído.' : 'Serviço reaberto.');
           }
           return;
         }
@@ -6840,9 +6886,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             lancCliFilter.addEventListener('change', renderLancamentosTab);
           }
           if (lancStFilter) lancStFilter.addEventListener('change', renderLancamentosTab);
-          ['lanc-filtro-tecnico', 'lanc-filtro-campo', 'lanc-filtro-ini', 'lanc-filtro-fim'].forEach(function(idF) {
+          ['lanc-filtro-tecnico', 'lanc-filtro-campo', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-ordem'].forEach(function(idF) {
             var elF = document.getElementById(idF);
-            if (elF) elF.addEventListener('change', renderLancamentosTab);
+            if (elF) elF.addEventListener('change', function() {
+              // escolher a data de entrega/cadastro já ordena: do que vence primeiro para o que vence depois
+              if (idF === 'lanc-filtro-campo') {
+                var oo = document.getElementById('lanc-filtro-ordem');
+                if (oo && oo.value === 'padrao') oo.value = 'asc';
+              }
+              renderLancamentosTab();
+            });
           });
 
           // Filtros do Painel
