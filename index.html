@@ -2252,7 +2252,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v27 — 31/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v28 — 31/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2467,22 +2467,27 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             <label class="form-label" for="lanc-filtro-tecnico" style="margin:0;">Filtrar por Técnico:</label>
             <select id="lanc-filtro-tecnico" class="form-control"></select>
           </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:170px;">
+            <label class="form-label" for="lanc-filtro-tipo" style="margin:0;">Filtrar por Tipo:</label>
+            <select id="lanc-filtro-tipo" class="form-control"></select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:170px;">
+            <label class="form-label" for="lanc-filtro-serv" style="margin:0;">Serviços lançados:</label>
+            <select id="lanc-filtro-serv" class="form-control">
+              <option value="">Todas</option>
+              <option value="com">Demandas com serviço</option>
+              <option value="sem">Demandas sem serviço</option>
+            </select>
+          </div>
           <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:150px;">
-            <label class="form-label" for="lanc-filtro-campo" style="margin:0;">Data a filtrar:</label>
+            <label class="form-label" for="lanc-filtro-campo" style="margin:0;">Período pela data de:</label>
             <select id="lanc-filtro-campo" class="form-control">
               <option value="dataAtend">Atendimento (inclui serviços diários)</option>
               <option value="dataPrev">Entrega prevista</option>
               <option value="dataCad">Cadastro</option>
             </select>
           </div>
-          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:190px;">
-            <label class="form-label" for="lanc-filtro-ordem" style="margin:0;">Ordenar pela data:</label>
-            <select id="lanc-filtro-ordem" class="form-control">
-              <option value="padrao">Padrão (últimas lançadas)</option>
-              <option value="asc">Mais próximas primeiro (vencendo)</option>
-              <option value="desc">Mais distantes primeiro</option>
-            </select>
-          </div>
+
           <div style="display:flex; flex-direction:column; gap:0.25rem;">
             <label class="form-label" for="lanc-filtro-ini" style="margin:0;">De:</label>
             <input type="date" id="lanc-filtro-ini" class="form-control">
@@ -2490,6 +2495,22 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           <div style="display:flex; flex-direction:column; gap:0.25rem;">
             <label class="form-label" for="lanc-filtro-fim" style="margin:0;">Até:</label>
             <input type="date" id="lanc-filtro-fim" class="form-control">
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:210px;">
+            <label class="form-label" for="lanc-ordenar" style="margin:0;">Ordem da lista:</label>
+            <select id="lanc-ordenar" class="form-control">
+              <option value="dataPrev">Entrega prevista ao cliente</option>
+              <option value="dataAtend">Data do atendimento / serviço</option>
+              <option value="dataCad">Data de cadastro</option>
+              <option value="lancadas">Últimas lançadas</option>
+            </select>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:0.25rem; min-width:190px;">
+            <label class="form-label" for="lanc-sentido" style="margin:0;">Sentido:</label>
+            <select id="lanc-sentido" class="form-control">
+              <option value="asc">Mais próximas primeiro (prioridade)</option>
+              <option value="desc">Mais distantes primeiro</option>
+            </select>
           </div>
           <div>
             <button type="button" class="btn-pls-secondary" data-action="clear-lanc-filters" style="height:35px; white-space:nowrap;">Limpar filtro</button>
@@ -3888,6 +3909,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (curX && appData.tecnicos.indexOf(curX) !== -1) selX.value = curX;
           });
 
+          // Filtro de Tipo na lista de demandas
+          var selTipoF = document.getElementById('lanc-filtro-tipo');
+          if (selTipoF) {
+            var curTipoF = selTipoF.value;
+            var tiposF = (appData.config && appData.config.tipos) || [];
+            appData.demandas.forEach(function(d) { if (d.tipo && tiposF.indexOf(d.tipo) === -1) tiposF = tiposF.concat([d.tipo]); });
+            selTipoF.innerHTML = '<option value="">Todos</option>' + tiposF.map(function(t) { return '<option value="' + escapeHtml(t) + '">' + escapeHtml(t) + '</option>'; }).join('');
+            if (curTipoF && tiposF.indexOf(curTipoF) !== -1) selTipoF.value = curTipoF;
+          }
+
           // Filtros da aba Histórico
           populateHistoricoFilters();
         } catch (e) {
@@ -3963,8 +3994,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var svMap = {};
           (appData.servicos || []).forEach(function(sv) { (svMap[sv.demandaId] = svMap[sv.demandaId] || []).push(sv); });
 
+          var fTipoEl = document.getElementById('lanc-filtro-tipo');
+          var fTipo = fTipoEl ? fTipoEl.value : '';
+          var fServEl = document.getElementById('lanc-filtro-serv');
+          var fServ = fServEl ? fServEl.value : '';
+
           var filtradas = appData.demandas.filter(function(dem) {
             var svsDem = svMap[dem.id] || [];
+            if (fTipo && dem.tipo !== fTipo) return false;
+            if (fServ === 'com' && svsDem.length === 0) return false;
+            if (fServ === 'sem' && svsDem.length > 0) return false;
             if (fTec && (dem.tecnico || '') !== fTec && !svsDem.some(function(sv) { return sv.tecnico === fTec; })) return false;
             if (fIni || fFim) {
               var dentro = function(dv) {
@@ -3992,22 +4031,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return true;
           });
 
-          // ORDENAÇÃO pela data escolhida em "Data a filtrar". Em andamento vêm antes das concluídas/canceladas.
-          var fOrdem = (document.getElementById('lanc-filtro-ordem') || {}).value || 'padrao';
-          if (fOrdem !== 'padrao') {
+          // ORDENAÇÃO (independente do filtro de período): pela data escolhida em "Ordem da lista".
+          // Prioridade: em andamento primeiro; dentro delas, a data mais próxima (atrasadas e de hoje no topo).
+          var fOrdenar = (document.getElementById('lanc-ordenar') || {}).value || 'dataPrev';
+          var fSentido = (document.getElementById('lanc-sentido') || {}).value || 'asc';
+          if (fOrdenar !== 'lancadas') {
             var hojeOrd = getTodayISO();
             var chaveOrd = function(dem) {
-              var v = '';
-              if (fCampo === 'dataAtend') {
+              if (fOrdenar === 'dataAtend') {
                 var pend = (svMap[dem.id] || []).filter(function(sv) { return sv.status === 'Em andamento' && sv.data; }).map(function(sv) { return sv.data; }).sort();
                 var fut = pend.filter(function(x) { return x >= hojeOrd; });
-                v = pend.length ? (fut.length ? fut[0] : pend[pend.length - 1]) : (dem.dataAtend || '');
-              } else {
-                v = dem[fCampo] || '';
+                return pend.length ? (fut.length ? fut[0] : pend[pend.length - 1]) : (dem.dataAtend || '');
               }
-              return v;
+              return dem[fOrdenar] || '';
             };
-            var dec = fOrdem === 'desc';
+            var dec = fSentido === 'desc';
             filtradas = filtradas.map(function(dem, i) { return { dem: dem, k: chaveOrd(dem), g: dem.status === 'Em andamento' ? 0 : 1, i: i }; })
               .sort(function(a, b) {
                 if (a.g !== b.g) return a.g - b.g;
@@ -4015,7 +4053,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 if (!a.k) return 1;          // sem data vai para o fim
                 if (!b.k) return -1;
                 if (a.k !== b.k) return dec ? b.k.localeCompare(a.k) : a.k.localeCompare(b.k);
-                return a.i - b.i;
+                return a.dem.cliente.localeCompare(b.dem.cliente, 'pt-BR');
               }).map(function(o) { return o.dem; });
           }
 
@@ -4023,7 +4061,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var subCount = document.getElementById('lanc-subnav-count');
           if (subCount) subCount.textContent = '(' + appData.demandas.length + ')';
           if (countLabel) {
-            if (fCliNorm || fStatus || fTec || fIni || fFim) {
+            if (fCliNorm || fStatus || fTec || fIni || fFim || fTipo || fServ) {
               countLabel.textContent = filtradas.length + ' de ' + appData.demandas.length + ' demanda(s) exibida(s)';
             } else {
               countLabel.textContent = appData.demandas.length + ' demanda(s) registrada(s)';
@@ -6087,12 +6125,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var fLancSt = document.getElementById('lanc-filtro-status');
           if (fLancCli) fLancCli.value = '';
           if (fLancSt) fLancSt.value = '';
-          ['lanc-filtro-tecnico', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-ordem'].forEach(function(idF) {
+          ['lanc-filtro-tecnico', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-tipo', 'lanc-filtro-serv'].forEach(function(idF) {
             var elF = document.getElementById(idF);
-            if (elF) elF.value = (idF === 'lanc-filtro-ordem') ? 'padrao' : '';
+            if (elF) elF.value = '';
           });
           var campoF = document.getElementById('lanc-filtro-campo');
           if (campoF) campoF.value = 'dataAtend';
+          var ordF = document.getElementById('lanc-ordenar'); if (ordF) ordF.value = 'dataPrev';
+          var senF = document.getElementById('lanc-sentido'); if (senF) senF.value = 'asc';
           renderLancamentosTab();
           showToast('Filtro de demandas limpo.');
           return;
@@ -6886,16 +6926,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             lancCliFilter.addEventListener('change', renderLancamentosTab);
           }
           if (lancStFilter) lancStFilter.addEventListener('change', renderLancamentosTab);
-          ['lanc-filtro-tecnico', 'lanc-filtro-campo', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-ordem'].forEach(function(idF) {
+          ['lanc-filtro-tecnico', 'lanc-filtro-campo', 'lanc-filtro-ini', 'lanc-filtro-fim', 'lanc-filtro-tipo', 'lanc-filtro-serv', 'lanc-ordenar', 'lanc-sentido'].forEach(function(idF) {
             var elF = document.getElementById(idF);
-            if (elF) elF.addEventListener('change', function() {
-              // escolher a data de entrega/cadastro já ordena: do que vence primeiro para o que vence depois
-              if (idF === 'lanc-filtro-campo') {
-                var oo = document.getElementById('lanc-filtro-ordem');
-                if (oo && oo.value === 'padrao') oo.value = 'asc';
-              }
-              renderLancamentosTab();
-            });
+            if (elF) elF.addEventListener('change', renderLancamentosTab);
           });
 
           // Filtros do Painel
