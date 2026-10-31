@@ -2252,7 +2252,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v25 — 31/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v26 — 31/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2312,14 +2312,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               <input type="text" id="demand-solicitante" class="form-control" placeholder="Quem pediu..." required>
             </div>
 
-            <div class="form-group">
-              <label class="form-label" for="demand-tecnico" id="lbl-tecnico">Técnico responsável <span class="req-star">*</span></label>
-              <select id="demand-tecnico" class="form-control" required></select>
+            <div class="form-group" id="grp-tecnico">
+              <label class="form-label" for="demand-tecnico" id="lbl-tecnico">Técnico <span class="req-star">*</span></label>
+              <select id="demand-tecnico" class="form-control"></select>
             </div>
 
-            <div class="form-group full-width" id="tec-hint" style="font-size:0.76rem; color:#64748b; margin-top:-0.4rem;">
-              <div>ℹ️ O técnico responsável acompanha a demanda do cliente. Quem executa cada serviço é lançado depois, em <strong>🔧 Serviços</strong> (e só esses técnicos contam no ranking).</div>
-            </div>
 
             <div class="form-group">
               <label class="form-label" for="demand-tipo">Tipo de Atendimento <span class="req-star">*</span></label>
@@ -2497,7 +2494,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 <th>Cliente</th>
                 <th>Canal</th>
                 <th>Solicitante</th>
-                <th>Técnico (resp.)</th>
+                <th>Técnico(s)</th>
                 <th>Tipo</th>
                 <th>Equipamento</th>
                 <th>Obs. Técnicas</th>
@@ -2814,7 +2811,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         <div class="card-header-title">
           <div>
             <span>Ranking por Técnico</span>
-            <span style="font-size:0.8rem; font-weight:normal; color:#64748b; margin-left:0.5rem;">Trabalhos executados por técnico (o técnico apenas responsável por uma demanda não conta)</span>
+            <span style="font-size:0.8rem; font-weight:normal; color:#64748b; margin-left:0.5rem;">Trabalhos executados por técnico (conta quem executa o serviço)</span>
           </div>
           <button type="button" class="btn-pls-secondary no-print" data-action="print-tab" style="font-size:0.75rem; padding:0.25rem 0.65rem;">
             <span>🖨 Imprimir PDF</span>
@@ -2840,7 +2837,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           <table class="table-pls">
             <thead>
               <tr>
-                <th>Técnico (resp.)</th>
+                <th>Técnico</th>
                 <th>Total de Trabalhos</th>
                 <th>Atrasadas</th>
                 <th>Em Andamento</th>
@@ -2996,7 +2993,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 <th>Cliente</th>
                 <th>Canal</th>
                 <th>Solicitante</th>
-                <th>Técnico (resp.)</th>
+                <th>Técnico(s)</th>
                 <th>Tipo</th>
                 <th>Equipamento</th>
                 <th>Obs. Técnicas</th>
@@ -3771,6 +3768,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         return dem.dataPrev < today;
       }
 
+      // Não existe mais "técnico responsável": quem conta é o EXECUTOR do serviço.
+      // Em demandas com serviços, o campo tecnico da demanda é só um valor interno (não é exibido nem contado).
+      function tecDem(d) { return d.usaServicos ? '' : (d.tecnico || ''); }
+      function tecsExec(d) {
+        if (!d.usaServicos) return d.tecnico || '-';
+        var nomes = [];
+        (appData.servicos || []).forEach(function(sv) { if (sv.demandaId === d.id && sv.tecnico && nomes.indexOf(sv.tecnico) === -1) nomes.push(sv.tecnico); });
+        return nomes.length ? nomes.join(', ') : '-';
+      }
+
       function getDiffDays(isoDate) {
         if (!isoDate) return 0;
         var todayParts = getTodayISO().split('-');
@@ -4026,7 +4033,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<td><strong>' + escapeHtml(dem.cliente) + '</strong>' + recBadge + '</td>' +
               '<td>' + escapeHtml(dem.canal) + '</td>' +
               '<td>' + escapeHtml(dem.solicitante) + '</td>' +
-              '<td><strong>' + escapeHtml(dem.tecnico || '-') + '</strong></td>' +
+              '<td><strong>' + escapeHtml(tecsExec(dem)) + '</strong></td>' +
               '<td>' + escapeHtml(dem.tipo) + '</td>' +
               '<td><strong style="color:#0f172a;">' + escapeHtml(equipamentoTxt) + '</strong></td>' +
               '<td style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + escapeHtml(obsTecTxt) + '">' + escapeHtml(obsTecTxt) + '</td>' +
@@ -4335,8 +4342,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if ($('unico-opcoes')) $('unico-opcoes').style.display = 'block';
         if ($('grp-data-atend')) $('grp-data-atend').style.display = (comServico || legado) ? '' : 'none';
         if ($('demand-recorrente-wrap')) $('demand-recorrente-wrap').style.display = editando ? 'none' : 'block';
-        if ($('tec-hint')) $('tec-hint').style.display = legado ? 'none' : '';
-        if ($('lbl-tecnico')) $('lbl-tecnico').innerHTML = (legado ? 'Técnico' : 'Técnico responsável') + ' <span class="req-star">*</span>';
+        if ($('tec-hint')) $('tec-hint').style.display = 'none';
+        // O campo "Técnico" só aparece onde ele É o executor: demandas antigas e lançamentos semanais.
+        if ($('grp-tecnico')) $('grp-tecnico').style.display = (legado || rec) ? '' : 'none';
+        if ($('lbl-tecnico')) $('lbl-tecnico').innerHTML = 'Técnico <span class="req-star">*</span>';
       }
 
       function resetDemandForm() {
@@ -4695,7 +4704,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var diff = getDiffDays(d.dataPrev);
             var pc = pendNaColuna[d.id] || {};
             if ((diff < 0 && pc.atrasado) || (diff === 0 && pc.hoje)) return;
-            var item = { kind: temServ ? 'entrega' : 'dem', dem: d, tec: tecDe(d.tecnico) };
+            // Demanda com serviço pendente já aparece pelo executor; a entrega fica visível dentro do cartão do serviço.
+            if (d.usaServicos && temServ && servicosPorDem[d.id].some(function(x) { return x.status === 'Em andamento'; })) return;
+            var item = { kind: temServ ? 'entrega' : 'dem', dem: d, tec: tecDe(tecDem(d)) };
             if (diff < 0) { item.diff = Math.abs(diff); overdueDemandas.push(item); }
             else if (diff === 0) { todayDemandas.push(item); }
             else if (!temServ) { item.diff = diff; item.dataRef = d.dataPrev; upcomingAll.push(item); }
@@ -4731,7 +4742,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           // C) Demandas concluídas com entrega prevista para hoje também ficam verdes (se ainda não aparecem pelos serviços)
           appData.demandas.forEach(function(d) {
             if (d.status === 'Concluída' && d.dataPrev === hojeISO && !comCartaoHoje[d.id]) {
-              todayDemandas.push({ kind: 'dem', dem: d, tec: tecDe(d.tecnico), done: true });
+              todayDemandas.push({ kind: 'dem', dem: d, tec: tecDe(tecDem(d)), done: true });
             }
           });
 
@@ -4768,7 +4779,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var mapa = {};
             var ordem = [];
             lista.forEach(function(item) {
-              var nome = (painelVisao === 'cli' && !isTvMode) ? (item.dem.cliente || 'Sem cliente') : (item.tec || ((item.dem.tecnico || '') + '').trim() || 'Sem técnico');
+              var nome = (painelVisao === 'cli' && !isTvMode) ? (item.dem.cliente || 'Sem cliente') : (item.tec || ((tecDem(item.dem) || '') + '').trim() || 'Sem técnico');
               if (!mapa[nome]) { mapa[nome] = []; ordem.push(nome); }
               mapa[nome].push(item);
             });
@@ -4908,11 +4919,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var ss = pend[d.id] || [];
           if (d.usaServicos && ss.length) {
             if (d.status === 'Concluída') return;
-            if (ss.some(function(x) { return x.status === 'Em andamento' && (x.data === d.dataPrev || (x.data < h && d.dataPrev < h)); })) return;
+            if (ss.some(function(x) { return x.status === 'Em andamento'; })) return;
           }
           var done = d.status === 'Concluída';
           if (done && d.dataPrev !== h) return;
-          its.push({ dem: d, tec: d.tecnico || 'Sem técnico', data: d.dataPrev, cliente: d.cliente, equip: d.equipamento || '', tarefa: d.obsTecnicas || d.obs || d.tipo || '',
+          its.push({ dem: d, tec: tecDem(d) || 'Sem técnico', data: d.dataPrev, cliente: d.cliente, equip: d.equipamento || '', tarefa: d.obsTecnicas || d.obs || d.tipo || '',
                      entrega: d.dataPrev, done: done, entregaItem: true, resp: !!d.usaServicos });
         });
         return its;
@@ -5016,9 +5027,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
             var itemsHtml = matches.map(function(i) {
               var cls = 'cal-demand-item' + ((!i.done && getDiffDays(i.data) < 0) ? ' is-overdue' : '');
-              var rotulo = escapeHtml(i.cliente) + ' · ' + (i.entregaItem && i.resp ? '📦 ' : '') + escapeHtml(i.tec);
+              var rotulo = escapeHtml(i.cliente) + ' · ' + ((i.entregaItem && i.resp) ? '📦 entrega' : escapeHtml(i.tec));
               var estilo = i.done ? ' style="border-left-color:#16a34a; background:#f0fdf4;"' : '';
-              return '<div class="' + cls + '"' + estilo + ' data-action="view-demand" data-id="' + i.dem.id + '" title="' + escapeHtml(i.cliente) + ' — ' + (i.entregaItem && i.resp ? 'entrega ao cliente (responsável: ' : 'executor: ') + escapeHtml(i.tec) + (i.entregaItem && i.resp ? ')' : '') + '">' + rotulo + '</div>';
+              return '<div class="' + cls + '"' + estilo + ' data-action="view-demand" data-id="' + i.dem.id + '" title="' + escapeHtml(i.cliente) + ' — ' + ((i.entregaItem && i.resp) ? 'entrega ao cliente (sem serviço pendente)' : 'executor: ' + escapeHtml(i.tec)) + '">' + rotulo + '</div>';
             }).join('');
 
             html += '<div class="cal-day-cell"><div class="cal-day-num">' + day + '</div>' + itemsHtml + '</div>';
@@ -5049,7 +5060,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var hojeIts = todos.filter(function(i) { return getDiffDays(i.data) <= 0 && (i.done ? i.data === todayISO : (i.data === todayISO)); });
         function linha(i, comData) {
           var dot = i.done ? '<span class="dot-indicator" style="background:#16a34a;"></span>' : '<span class="dot-indicator dot-orange"></span>';
-          var quem = (i.entregaItem && i.resp) ? '📦 entrega • resp. ' + escapeHtml(i.tec) : '👤 ' + escapeHtml(i.tec);
+          var quem = (i.entregaItem && i.resp) ? '📦 entrega ao cliente' : '👤 ' + escapeHtml(i.tec);
           return '<div class="cal-side-item" data-action="view-demand" data-id="' + i.dem.id + '">' +
             '<div class="cal-side-item-header"><span>' + escapeHtml(i.cliente) + '</span>' +
             (comData ? '<span style="font-size:0.72rem; color:var(--accent); font-weight:700;">' + formatDateBR(i.data) + '</span>' : dot) + '</div>' +
@@ -5115,7 +5126,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           }
 
           // 1) Demandas antigas (sem serviços diários): contam para o técnico da demanda, como sempre.
-          // 2) Demandas novas: o responsável NÃO conta; contam os serviços lançados para cada técnico.
+          // 2) Demandas novas: contam os serviços lançados para cada técnico executor.
           var demPorIdRk = {};
           appData.demandas.forEach(function(d) {
             demPorIdRk[d.id] = d;
@@ -5210,7 +5221,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var filtradas = appData.demandas.filter(function(d) {
             if (fCli && normalizeStr(d.cliente).indexOf(fCli) === -1) return false;
             if (fCanal && normalizeStr(d.canal).indexOf(fCanal) === -1) return false;
-            if (fTec && normalizeStr(d.tecnico || '').indexOf(fTec) === -1) return false;
+            if (fTec && normalizeStr(tecsExec(d)).indexOf(fTec) === -1) return false;
             if (fTipo && normalizeStr(d.tipo).indexOf(fTipo) === -1) return false;
 
             if (fStatus) {
@@ -5268,7 +5279,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<td><strong>' + escapeHtml(dem.cliente) + '</strong>' + recBadgeHist + '</td>' +
               '<td>' + escapeHtml(dem.canal) + '</td>' +
               '<td>' + escapeHtml(dem.solicitante) + '</td>' +
-              '<td><strong>' + escapeHtml(dem.tecnico || '-') + '</strong></td>' +
+              '<td><strong>' + escapeHtml(tecsExec(dem)) + '</strong></td>' +
               '<td>' + escapeHtml(dem.tipo) + '</td>' +
               '<td><strong style="color:#0f172a;">' + escapeHtml(equipamentoTxt) + '</strong></td>' +
               '<td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + escapeHtml(obsTecTxt) + '">' + escapeHtml(obsTecTxt) + '</td>' +
@@ -5301,7 +5312,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           '<div class="modal-row"><span class="modal-label">Cliente:</span><span class="modal-value"><strong>' + escapeHtml(dem.cliente) + '</strong></span></div>' +
           '<div class="modal-row"><span class="modal-label">Canal de Contato:</span><span class="modal-value">' + escapeHtml(dem.canal) + '</span></div>' +
           '<div class="modal-row"><span class="modal-label">Solicitante:</span><span class="modal-value">' + escapeHtml(dem.solicitante) + '</span></div>' +
-          '<div class="modal-row"><span class="modal-label">Técnico Responsável:</span><span class="modal-value"><strong>' + escapeHtml(dem.tecnico || '-') + '</strong></span></div>' +
+          '<div class="modal-row"><span class="modal-label">Técnico(s):</span><span class="modal-value"><strong>' + escapeHtml(tecsExec(dem)) + '</strong></span></div>' +
           '<div class="modal-row"><span class="modal-label">Tipo de Atendimento:</span><span class="modal-value">' + escapeHtml(dem.tipo) + '</span></div>' +
           '<div class="modal-row" style="background:#fff7ed; padding:0.6rem; border-radius:4px; border:1px solid #ffedd5; margin-bottom:0.75rem;"><span class="modal-label" style="color:var(--accent); font-weight:800;">Equipamento:</span><span class="modal-value"><strong style="font-size:0.95rem; color:#0f172a;">' + escapeHtml(dem.equipamento || 'Não informado') + '</strong></span></div>' +
           '<div class="modal-row" style="background:#f8fafc; padding:0.6rem; border-radius:4px; border:1px solid #e2e8f0; margin-bottom:0.75rem;"><span class="modal-label" style="font-weight:800; color:#334155;">Observações Técnicas:</span><span class="modal-value" style="white-space:pre-wrap; color:#1e293b; line-height:1.4;">' + escapeHtml(dem.obsTecnicas || dem.obs || 'Nenhuma observação técnica informada.') + '</span></div>' +
@@ -5491,7 +5502,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           '</tr>';
         }).join('');
         el.innerHTML = '<div class="table-container" style="max-height:38vh;"><table class="table-pls"><thead><tr>' +
-          '<th>Dia</th><th>Técnico (resp.)</th><th>Serviço</th><th>Situação</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+          '<th>Dia</th><th>Técnico(s)</th><th>Serviço</th><th>Situação</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>';
       }
 
       function atualizarTelasDeServicos() {
@@ -5600,7 +5611,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var ok = n.filter(function(sv) { return sv.status === 'Concluída'; }).length;
           return '<div class="srv-resumo" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">' +
             '<div><strong>' + escapeHtml(d.equipamento || '-') + '</strong> • ' + escapeHtml(d.tipo || '') + '<br>' +
-            '<span style="font-size:0.78rem; color:#64748b;">Resp.: ' + escapeHtml(d.tecnico || '-') + ' • entrega ' + (d.dataPrev ? formatDateBR(d.dataPrev) : '-') + ' • serviços ' + ok + '/' + n.length + '</span></div>' +
+            '<span style="font-size:0.78rem; color:#64748b;">Técnico(s): ' + escapeHtml(tecsExec(d)) + ' • entrega ' + (d.dataPrev ? formatDateBR(d.dataPrev) : '-') + ' • serviços ' + ok + '/' + n.length + '</span></div>' +
             '<button type="button" class="btn-pls-primary" data-action="dup-add" data-id="' + d.id + '">➕ Adicionar nesta</button></div>';
         }).join('');
         document.getElementById('modal-dup').classList.add('active');
@@ -5630,9 +5641,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (d.status === 'Concluída' || d.status === 'Cancelado' || !d.dataPrev) return;
           var diff = getDiffDays(d.dataPrev);
           var pend = pendPorDem[d.id] || [];
+          if (d.usaServicos && pend.length) return;
           if (diff < 0 && pend.some(function(sv) { return getDiffDays(sv.data) < 0; })) return;
           if (diff >= 0 && pend.some(function(sv) { return sv.data === d.dataPrev; })) return;
-          itens.push({ tec: nomeTecItem(d.tecnico), data: d.dataPrev, diff: diff, cliente: d.cliente, equip: d.equipamento || '',
+          itens.push({ tec: nomeTecItem(tecDem(d)), data: d.dataPrev, diff: diff, cliente: d.cliente, equip: d.equipamento || '',
             tarefa: d.obsTecnicas || d.obs || d.tipo || '', entrega: d.dataPrev, entregaItem: true,
             futuraComServ: diff > 0 && !!(servPorDem[d.id] && servPorDem[d.id].length) });
         });
@@ -6488,7 +6500,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var canal = document.getElementById('demand-canal').value;
               var solicitante = document.getElementById('demand-solicitante').value.trim();
               var tecnico = document.getElementById('demand-tecnico').value;
-              var tecnicosSel = tecnico ? [tecnico] : [];
+              var tecnicosSel = tecnico ? [tecnico] : [];  // (recorrente: o técnico escolhido executa)
               var tipo = document.getElementById('demand-tipo').value;
               var equipamento = document.getElementById('demand-equipamento').value.trim();
               var obsTecnicas = document.getElementById('demand-obs-tecnicas').value.trim();
@@ -6496,6 +6508,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var dataAtend = document.getElementById('demand-data-atend').value;
               var dataPrev = document.getElementById('demand-data-prev').value;
               var status = document.getElementById('demand-status').value;
+
+              // Sem "técnico responsável": em demandas novas o valor interno é o 1º executor; ao editar, mantém o que já existe.
+              (function() {
+                if (tecnico) return;
+                var chkR0 = document.getElementById('demand-recorrente');
+                if (id) {
+                  var dm0 = appData.demandas.find(function(d) { return d.id === id; });
+                  if (dm0 && dm0.usaServicos) tecnico = dm0.tecnico || '-';
+                } else if (!(chkR0 && chkR0.checked)) {
+                  var ex1 = document.getElementById('demand-exec-1').value;
+                  if (!ex1) { alert('Escolha pelo menos um técnico executor para o primeiro serviço.'); document.getElementById('demand-exec-1').focus(); tecnico = null; return; }
+                  tecnico = ex1;
+                }
+              })();
+              if (tecnico === null) return;
 
               if (!cliente || !canal || !solicitante || !tecnico || !tipo || !equipamento) {
                 if (!equipamento) {
@@ -6537,7 +6564,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   dem.cliente = cliente;
                   dem.canal = canal;
                   dem.solicitante = solicitante;
-                  dem.tecnico = tecnico;
+                  if (!dem.usaServicos) dem.tecnico = tecnico;
                   dem.tipo = tipo;
                   dem.equipamento = equipamento;
                   dem.obsTecnicas = obsTecnicas;

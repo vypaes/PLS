@@ -177,6 +177,13 @@ function toast(m,ms){var t=$('toast');t.textContent=m;t.classList.add('on');clea
 function chk(p){return p.then(function(r){if(r.error)throw r.error;return r;});}
 function erro(e){var m=(e&&e.message)||String(e);if(/row-level|permission|policy/i.test(m))return 'Você não tem permissão para isso.';if(/fetch|network|load failed/i.test(m))return 'Não foi possível conectar ao servidor. Abra o app pelo endereço plsdemandas.vercel.app/app.html e confira a internet.';return m;}
 function uuid(){return (crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);});}
+/* Não existe "técnico responsável": só conta quem EXECUTA o serviço. */
+function tecDem(d){return d.usaServicos?'':(d.tecnico||'');}
+function tecsExec(d){
+  if(!d.usaServicos)return d.tecnico||'-';
+  var n=[];D.servicos.forEach(function(s){if(s.demandaId===d.id&&s.tecnico&&n.indexOf(s.tecnico)===-1)n.push(s.tecnico);});
+  return n.length?n.join(', '):'-';
+}
 function ehAdmin(){return !!perfil&&perfil.papel==='admin';}
 function pode(k){return ehAdmin()||!!(perfil&&perfil.permissoes&&perfil.permissoes[k]===true);}
 
@@ -223,11 +230,11 @@ function itens(){
     var ss=(pend[d.id]||[]);
     if(d.usaServicos&&ss.length){ /* execução vem dos serviços; mostra a entrega só se nenhum serviço cobre */
       if(d.status==='Concluída')return;
-      if(ss.some(function(s){return s.status==='Em andamento'&&(s.data===d.dataPrev||(s.data<hoje()&&d.dataPrev<hoje()));}))return;
+      if(ss.some(function(s){return s.status==='Em andamento';}))return;
     }
     var done=d.status==='Concluída';
     if(done&&d.dataPrev!==h)return;
-    its.push({id:'d'+d.id,dem:d,tec:d.tecnico||'Sem técnico',data:d.dataPrev,cli:d.cliente,equip:d.equipamento,tarefa:d.obs||d.tipo||'',entrega:d.dataPrev,done:done,entregaItem:true});
+    its.push({id:'d'+d.id,dem:d,tec:tecDem(d)||'Sem técnico',data:d.dataPrev,cli:d.cliente,equip:d.equipamento,tarefa:d.obs||d.tipo||'',entrega:d.dataPrev,done:done,entregaItem:true});
   });
   return its;
 }
@@ -254,7 +261,7 @@ function cardItem(i,openId){
   var df=diff(i.data),cls='card'+(i.done?' done':df<0?' late':df===0?' today':'');
   var b=i.done?'<span class="badge grn">✔ Concluída</span>':df<0?'<span class="badge red">Atrasada '+curto(i.data)+'</span>':df===0?'<span class="badge org">Hoje</span>':'<span class="badge blu">'+curto(i.data)+'</span>';
   return '<div class="'+cls+'" data-open="'+esc(i.dem.id)+'"><div class="t1"><div class="cli">'+esc(i.cli)+'</div>'+b+'</div>'
-   +'<div class="sub">'+esc(i.equip||'')+(i.tec?' · 👤 '+esc(i.tec):'')+'</div>'
+   +'<div class="sub">'+esc(i.equip||'')+((i.entregaItem&&i.dem.usaServicos)?' · 📦 só entrega':(i.tec?' · 👤 '+esc(i.tec):''))+'</div>'
    +(i.tarefa?'<div class="task">'+(i.srv?'🔧 ':'')+esc(i.tarefa)+'</div>':'')
    +(i.entrega?'<div class="sub">Entrega: '+br(i.entrega)+'</div>':'')+'</div>';
 }
@@ -305,10 +312,10 @@ function telaPainel(){
 function listaDemandas(){
   var q=busca.trim().toLowerCase();
   return D.demandas.filter(function(d){
-    if(fTec&&d.tecnico!==fTec)return false;
+    if(fTec&&tecsExec(d).split(', ').indexOf(fTec)===-1)return false;
     if(fStatus==='abertas'&&d.status!=='Em andamento')return false;
     if(fStatus==='concluidas'&&d.status!=='Concluída')return false;
-    if(q&&(d.cliente+' '+d.equipamento+' '+d.tecnico+' '+d.solicitante+' '+d.obs).toLowerCase().indexOf(q)===-1)return false;
+    if(q&&(d.cliente+' '+d.equipamento+' '+tecsExec(d)+' '+d.solicitante+' '+d.obs).toLowerCase().indexOf(q)===-1)return false;
     return true;
   }).sort(function(a,b){return (a.dataPrev||'9999').localeCompare(b.dataPrev||'9999');});
 }
@@ -316,7 +323,7 @@ function cardDem(d){
   var df=d.dataPrev?diff(d.dataPrev):0,done=d.status==='Concluída',canc=d.status==='Cancelado';
   var cls='card'+(done?' done':canc?' canc':df<0?' late':df===0?' today':'');
   var b=done?'<span class="badge grn">Concluída</span>':canc?'<span class="badge">Cancelada</span>':df<0?'<span class="badge red">Atrasada</span>':df===0?'<span class="badge org">Hoje</span>':'<span class="badge blu">'+curto(d.dataPrev)+'</span>';
-  return '<div class="'+cls+'" data-open="'+esc(d.id)+'"><div class="t1"><div class="cli">'+esc(d.cliente)+'</div>'+b+'</div><div class="sub">'+esc(d.equipamento||'')+' · 👤 '+esc(d.tecnico||'-')+'</div>'
+  return '<div class="'+cls+'" data-open="'+esc(d.id)+'"><div class="t1"><div class="cli">'+esc(d.cliente)+'</div>'+b+'</div><div class="sub">'+esc(d.equipamento||'')+' · 👤 '+esc(tecsExec(d))+'</div>'
    +'<div class="sub">'+esc(d.tipo||'')+(d.dataPrev?' · entrega '+br(d.dataPrev):'')+'</div></div>';
 }
 function telaDemandas(){
@@ -335,7 +342,6 @@ function telaLancar(){
   var opt=function(a,ph){return '<option value="">'+ph+'</option>'+a.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');};
   return '<form id="f-lanc" autocomplete="off">'
    +'<div class="fld"><label>Cliente *</label><input id="l-cli" list="dl-cli" placeholder="Digite para buscar" required><datalist id="dl-cli">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
-   +'<div class="fld"><label>Técnico responsável *</label><select id="l-tec" required>'+opt(D.tecnicos,'Escolha...')+'</select></div>'
    +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="l-tipo" required>'+opt(D.tipos,'Escolha...')+'</select></div>'
    +'<div class="fld"><label>Canal *</label><select id="l-canal" required>'+opt(D.canais,'Escolha...')+'</select></div></div>'
    +'<div class="fld"><label>Data prevista de entrega ao cliente *</label><input id="l-prev" type="date" value="'+hoje()+'" required></div>'
@@ -407,7 +413,7 @@ function abrirDem(id,view){
       h+='<div class="addsrv" id="addsrv"><div class="sec" style="margin:0 0 8px">'+(se?'✏️ Editar serviço de '+esc(se.tecnico||'')+' — '+curto(se.data):'＋ Lançar serviço')+'</div>'
        +'<div class="fld"><label>Data</label><input id="s-data" type="date" value="'+(se?esc(se.data):hoje())+'"></div>'
        +'<div class="fld"><label>Serviço</label><input id="s-desc" placeholder="O que será feito" value="'+(se?esc(se.descricao):'')+'"></div>'
-       +'<div class="fld"><label>'+(se?'Técnicos (toque para incluir mais, até 4)':'Quem executa (até 4)')+'</label>'+picker('pk-srv',se?[se.tecnico]:(d.tecnico?[d.tecnico]:[]))+'</div>'
+       +'<div class="fld"><label>'+(se?'Técnicos (toque para incluir mais, até 4)':'Quem executa (até 4)')+'</label>'+picker('pk-srv',se?[se.tecnico]:(d.usaServicos?[]:(d.tecnico?[d.tecnico]:[])))+'</div>'
        +(se?'<div class="hint">Os técnicos incluídos recebem o mesmo serviço e o mesmo dia.</div>':'')
        +'<button class="btn" type="button" id="s-add">'+(se?'💾 Salvar alteração':'Lançar serviço')+'</button>'
        +(se?'<button class="btn sec2" type="button" id="s-cancel" style="margin-top:8px">Cancelar edição</button>':'')+'</div>';
@@ -416,7 +422,7 @@ function abrirDem(id,view){
     var mostraAt=!d.usaServicos||d.servicoUnico;
     h=voltar+'<h2>✏️ Editar demanda</h2><form id="f-edit" autocomplete="off" style="margin-top:10px">'
      +'<div class="fld"><label>Cliente *</label><input id="e-cli" list="dl-cli-e" value="'+esc(d.cliente)+'" required><datalist id="dl-cli-e">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
-     +'<div class="fld"><label>Técnico'+(d.usaServicos?' responsável':'')+' *</label><select id="e-tec" required>'+selOpts(D.tecnicos,d.tecnico)+'</select></div>'
+     +(d.usaServicos?'':'<div class="fld"><label>Técnico *</label><select id="e-tec" required>'+selOpts(D.tecnicos,d.tecnico)+'</select></div>')
      +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="e-tipo" required>'+selOpts(D.tipos,d.tipo)+'</select></div>'
      +'<div class="fld"><label>Canal *</label><select id="e-canal" required>'+selOpts(D.canais,d.canal)+'</select></div></div>'
      +'<div class="fld"><label>Data prevista de entrega</label><input id="e-prev" type="date" value="'+esc(d.dataPrev)+'"></div>'
@@ -428,7 +434,7 @@ function abrirDem(id,view){
      +'<button class="btn" id="e-btn" type="submit">💾 Salvar alterações</button></form>';
   } else {
     h='<h2>'+esc(d.cliente)+'</h2><div class="sub" style="color:var(--mut);margin-bottom:8px">'+esc(d.status)+'</div>'
-     +[['Equipamento',d.equipamento],['Técnico'+(d.usaServicos?' responsável':''),d.tecnico],['Tipo',d.tipo],['Canal',d.canal],['Solicitante',d.solicitante],['Lançada em',br(d.dataCad)],['Entrega prevista',br(d.dataPrev)]].map(function(r){return '<div class="kv"><span>'+r[0]+'</span><span>'+esc(r[1]||'-')+'</span></div>';}).join('');
+     +[['Equipamento',d.equipamento],['Técnico(s)',tecsExec(d)],['Tipo',d.tipo],['Canal',d.canal],['Solicitante',d.solicitante],['Lançada em',br(d.dataCad)],['Entrega prevista',br(d.dataPrev)]].map(function(r){return '<div class="kv"><span>'+r[0]+'</span><span>'+esc(r[1]||'-')+'</span></div>';}).join('');
     if(d.obs)h+='<div class="kv"><span>Obs.</span><span>'+esc(d.obs)+'</span></div>';
     h+='<div style="margin-top:16px;display:grid;gap:8px">'
      +'<button class="btn" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74" data-view="srv">🔧 Serviços'+(srv.length?' ('+ok+'/'+srv.length+')':'')+'</button>';
@@ -447,7 +453,7 @@ function salvarEdicao(ev){
   var id=$('sheet').getAttribute('data-id'),d=D.demandas.find(function(x){return x.id===id;});if(!d)return;
   var cli=$('e-cli').value.trim();
   if(D.clientes.indexOf(cli)===-1&&cli!==d.cliente){toast('Escolha um cliente da lista cadastrada.',3500);return;}
-  var ch={cliente:cli,tecnico:$('e-tec').value,tipo:$('e-tipo').value,canal:$('e-canal').value,data_prev:$('e-prev').value||null,
+  var ch={cliente:cli,tecnico:$('e-tec')?$('e-tec').value:d.tecnico,tipo:$('e-tipo').value,canal:$('e-canal').value,data_prev:$('e-prev').value||null,
     equipamento:$('e-equip').value.trim()||'Empilhadeira',solicitante:$('e-sol').value.trim()||'-',obs_tecnicas:$('e-obs').value.trim()||null,status:$('e-status').value};
   if($('e-atend'))ch.data_atend=$('e-atend').value||null;
   var b=$('e-btn');b.disabled=true;b.textContent='Salvando...';
@@ -537,7 +543,7 @@ function addServico(){
 function abrirDup(cli,abertas){
   var h='<h2>⚠ '+esc(cli)+' já tem demanda em andamento</h2><div class="sub" style="color:var(--mut);margin:4px 0 10px">O ideal é <b>acrescentar o serviço</b> numa demanda existente em vez de abrir outra.</div>';
   abertas.forEach(function(d){var n=D.servicos.filter(function(x){return x.demandaId===d.id;}),ok=n.filter(function(x){return x.status==='Concluída';}).length;
-    h+='<div class="card"><div class="cli">'+esc(d.equipamento||'-')+' · '+esc(d.tipo||'')+'</div><div class="sub">Resp.: '+esc(d.tecnico||'-')+' · entrega '+br(d.dataPrev)+' · serviços '+ok+'/'+n.length+'</div>'
+    h+='<div class="card"><div class="cli">'+esc(d.equipamento||'-')+' · '+esc(d.tipo||'')+'</div><div class="sub">Técnico(s): '+esc(tecsExec(d))+' · entrega '+br(d.dataPrev)+' · serviços '+ok+'/'+n.length+'</div>'
      +'<button class="btn" style="margin-top:8px;padding:11px" data-dup-add="'+esc(d.id)+'">➕ Adicionar o serviço nesta</button></div>';});
   h+='<button class="btn sec2" style="margin-top:6px" id="dup-criar">Criar nova demanda mesmo assim</button><button class="btn sec2" style="margin-top:8px" id="fechar">Voltar ao formulário</button>';
   var sh=$('sheet');sh.innerHTML=h;sh.setAttribute('data-id','');sh.setAttribute('data-cur','dup');$('sheet-bg').classList.add('on');
@@ -550,7 +556,7 @@ function enviarLanc(ev){
   if(!atend){toast('Informe a data do serviço.');return;}
   if(!execs.length){toast('Escolha quem executa o serviço.');return;}
   var desc=$('l-desc').value.trim()||obs||($('l-tipo').value+' — '+equip);
-  var row={id:uuid(),cliente:cli,canal:$('l-canal').value,solicitante:$('l-sol').value.trim()||'-',tecnico:$('l-tec').value,tipo:$('l-tipo').value,
+  var row={id:uuid(),cliente:cli,canal:$('l-canal').value,solicitante:$('l-sol').value.trim()||'-',tecnico:execs[0],tipo:$('l-tipo').value,
     equipamento:equip,obs_tecnicas:obs||null,data_cad:hoje(),data_atend:atend,data_prev:prev,
     status:'Em andamento',recorrente:false,rec_dia:null,grupo_recorrencia:null,usa_servicos:true,servico_unico:unico};
   var btn=$('l-btn');
