@@ -101,7 +101,7 @@ input.q{margin-bottom:8px}
 .pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .alerta{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;font-weight:600}
 .eqc{background:#fff;border:1px solid var(--line);border-left:5px solid #94a3b8;border-radius:12px;padding:11px 12px;margin-bottom:8px}
-.eqc.ocupado{border-left-color:var(--acc)}.eqc.terminou{border-left-color:var(--grn);background:#f0fdf4}.eqc.livre,.eqc.sem{border-left-color:var(--red);background:#fef2f2}
+.eqc.ocupado{border-left-color:var(--acc)}.eqc.terminou{border-left-color:var(--grn);background:#f0fdf4}.eqc.livre,.eqc.sem,.eqc.atrasada{border-left-color:var(--red);background:#fef2f2}
 .eqc .n{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px}
 .eqc .m{display:flex;gap:14px;margin-top:6px;font-size:13px;color:var(--mut)}
 .eqc .m b{color:var(--ink);font-size:15px}
@@ -243,11 +243,11 @@ function resumoEquipe(its){
     var at=meus.filter(function(i){return !i.done&&diff(i.data)<0;}).length;
     var fe=meus.filter(function(i){return i.done;}).length;
     var fut=meus.filter(function(i){return !i.done&&diff(i.data)>0;}).sort(function(a,b){return a.data.localeCompare(b.data);});
-    var est=(hj+at>0)?'ocupado':(fe>0?'terminou':(fut.length?'livre':'sem'));
+    var est=hj>0?'ocupado':(at>0?'atrasada':(fe>0?'terminou':(fut.length?'livre':'sem')));
     return{tec:t,hoje:hj,atrasadas:at,feitas:fe,proximo:fut.length?fut[0].data:'',estado:est};
   });
 }
-function ociosos(eq){return eq.filter(function(e){return (e.estado==='sem'||e.estado==='livre')&&!/externo/i.test(e.tec);});}
+function ociosos(eq){return eq.filter(function(e){return (e.estado==='sem'||e.estado==='livre'||e.estado==='atrasada')&&!/externo/i.test(e.tec);});}
 
 /* ---------- componentes ---------- */
 function cardItem(i,openId){
@@ -269,12 +269,12 @@ function telaPainel(){
   var todos=itens();
   var eq=resumoEquipe(todos),oc=ociosos(eq);
   var seg='<div class="pseg"><button data-pv="tec" class="'+(pv==='tec'?'on':'')+'">👤 Por técnico</button><button data-pv="cli" class="'+(pv==='cli'?'on':'')+'">🏢 Por cliente</button><button data-pv="eq" class="'+(pv==='eq'?'on':'')+'">👥 Equipe</button></div>';
-  var alerta=oc.length?'<div class="alerta">⚠ Sem trabalho hoje: '+oc.map(function(e){return esc(e.tec);}).join(', ')+'</div>':'';
+  var alerta=oc.length?'<div class="alerta">⚠ Sem demanda para hoje: '+oc.map(function(e){return esc(e.tec)+(e.estado==='atrasada'?' (só atrasadas)':'');}).join(', ')+'</div>':'';
   if(pv==='eq'){
     var totFe=eq.reduce(function(a,e){return a+e.feitas;},0);
     var h=seg+alerta+'<div class="stats"><div class="stat org"><b>'+eq.reduce(function(a,e){return a+e.hoje;},0)+'</b><span>Pendentes hoje</span></div><div class="stat blu"><b>'+totFe+'</b><span>Feitas hoje</span></div><div class="stat red"><b>'+eq.reduce(function(a,e){return a+e.atrasadas;},0)+'</b><span>Atrasadas</span></div></div>';
-    eq.slice().sort(function(a,b){var o={sem:0,livre:1,ocupado:2,terminou:3};return o[a.estado]-o[b.estado]||a.tec.localeCompare(b.tec,'pt-BR');}).forEach(function(e){
-      var tag={ocupado:'<span class="badge org">Em campo</span>',terminou:'<span class="badge grn">✔ Terminou</span>',livre:'<span class="badge red">Livre hoje</span>',sem:'<span class="badge red">SEM DEMANDA</span>'}[e.estado];
+    eq.slice().sort(function(a,b){var o={sem:0,livre:1,atrasada:1,ocupado:2,terminou:3};return o[a.estado]-o[b.estado]||a.tec.localeCompare(b.tec,'pt-BR');}).forEach(function(e){
+      var tag={ocupado:'<span class="badge org">Em campo</span>',terminou:'<span class="badge grn">✔ Terminou</span>',livre:'<span class="badge red">Livre hoje</span>',atrasada:'<span class="badge red">Nada hoje · só atrasadas</span>',sem:'<span class="badge red">SEM DEMANDA</span>'}[e.estado];
       h+='<div class="eqc '+e.estado+'" data-eqtec="'+esc(e.tec)+'"><div class="n"><span>👤 '+esc(e.tec)+'</span>'+tag+'</div><div class="m"><span><b>'+e.hoje+'</b> hoje</span><span><b>'+e.feitas+'</b> feitas</span><span><b style="color:'+(e.atrasadas?'var(--red)':'inherit')+'">'+e.atrasadas+'</b> atrasadas</span>'+(e.proximo?'<span>próx. <b>'+curto(e.proximo)+'</b></span>':'')+'</div></div>';
     });
     return h+'<div class="hint" style="margin-top:6px">Toque num técnico para ver as demandas dele.</div>';
