@@ -1118,6 +1118,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     body.tv-mode-active .critical-subblock .critical-grid-6 .pill-demand.pill-done { background: rgba(22, 101, 52, 0.35) !important; border-color: #16a34a !important; }
     body.tv-mode-active .critical-subblock .critical-grid-6 .pill-demand.pill-done .pill-badge span { color: #4ade80 !important; }
 
+    /* ===== v24: EQUIPE HOJE ===== */
+    .eq-bar { margin-bottom: 0.9rem; }
+    .eq-title { font-weight: 800; font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+    .eq-alerta { background: #fee2e2; color: #991b1b; border-radius: 99px; padding: 2px 10px; font-size: 0.78rem; }
+    .eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.5rem; }
+    .eq-card { border: 1px solid; border-radius: 8px; padding: 0.45rem 0.65rem; display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; }
+    .eq-card b { font-size: 0.86rem; }
+    .eq-card span { color: #475569; }
+    body.tv-mode-active #painel-equipe { display: none !important; }
+
     /* ===== v22: IMPRESSÃO DAS DEMANDAS POR TÉCNICO ===== */
     .imp-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; }
     .imp-item { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.86rem; cursor: pointer; user-select: none; color: #0f172a; }
@@ -2230,7 +2240,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v23 — 26/10/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v24 — 31/10/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -2338,14 +2348,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               </select>
             </div>
 
-            <!-- SERVIÇO ÚNICO -->
+            <!-- QUEM VAI EXECUTAR (obrigatório em toda demanda nova) -->
             <div class="form-group full-width" id="demand-unico-wrap">
-              <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:0.75rem 0.9rem;">
-                <label style="display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:700; font-size:0.83rem; color:#0f172a; user-select:none;">
-                  <input type="checkbox" id="demand-unico" style="width:16px; height:16px; accent-color:var(--accent); cursor:pointer;">
-                  <span>⚡ Serviço único (um só atendimento, sem lançamentos diários)</span>
-                </label>
-                <div id="unico-opcoes" style="display:none; margin-top:0.75rem; padding-top:0.75rem; border-top:1px dashed #cbd5e1;">
+              <div style="background:#fff7ed; border:1px solid #fdba74; border-radius:6px; padding:0.75rem 0.9rem;">
+                <div style="font-weight:800; font-size:0.85rem; color:#9a3412; margin-bottom:0.6rem;">🔧 Primeiro serviço — quem vai executar e quando</div>
+                <div id="unico-opcoes">
                   <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.75rem;">
                     <div class="form-group" style="grid-column: 1 / -1;">
                       <label class="form-label" for="demand-unico-desc">Serviço a executar</label>
@@ -2357,9 +2364,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                     <div class="form-group"><label class="form-label" for="demand-exec-4">Técnico executor 4</label><select id="demand-exec-4" class="form-control"></select></div>
                   </div>
                   <div style="font-size:0.74rem; color:#64748b; margin-top:0.5rem; line-height:1.4;">
-                    ℹ️ Informe a <strong>Data do Atendimento</strong> acima. Cada executor recebe o serviço no painel e conta no ranking. Ao concluir o serviço, a demanda é concluída automaticamente.
+                    ℹ️ A <strong>Data do Atendimento</strong> acima é o dia deste primeiro serviço. Cada executor recebe o serviço no painel e conta no ranking. Para os outros dias, use o botão 🔧 Serviços da demanda.
                   </div>
                 </div>
+                <label style="display:inline-flex; align-items:center; gap:0.5rem; cursor:pointer; font-weight:700; font-size:0.83rem; color:#0f172a; user-select:none; margin-top:0.7rem;">
+                  <input type="checkbox" id="demand-unico" style="width:16px; height:16px; accent-color:var(--accent); cursor:pointer;">
+                  <span>⚡ Serviço de um dia só — concluir a demanda sozinha quando o serviço terminar</span>
+                </label>
               </div>
             </div>
 
@@ -2494,6 +2505,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     <!-- 2ª ABA: PAINEL -->
     <section id="tab-painel" class="tab-content">
       <div class="card-pls">
+        <div id="painel-equipe"></div>
         <!-- BARRA EXCLUSIVA DO MODO TV (VISÍVEL APENAS NA PROJEÇÃO COM IDENTIDADE PLS & MINI-INDICADORES) -->
         <div class="tv-header-bar" style="display:none;">
           <div class="tv-header-left">
@@ -3142,6 +3154,24 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
       <div class="modal-foot">
         <button type="button" class="btn-pls-secondary" data-action="close-servicos">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CLIENTE JÁ TEM DEMANDA EM ANDAMENTO -->
+  <div id="modal-dup" class="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal-card" style="max-width:640px; width:96vw;">
+      <div class="modal-head">
+        <h3>⚠ Este cliente já tem demanda em andamento</h3>
+        <button type="button" class="modal-close-btn" data-action="dup-cancel">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="dup-texto" style="margin:0 0 0.75rem; font-size:0.88rem;"></p>
+        <div id="dup-lista"></div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-pls-secondary" data-action="dup-cancel">Voltar ao formulário</button>
+        <button type="button" class="btn-pls-secondary" data-action="dup-criar">Criar nova demanda mesmo assim</button>
       </div>
     </div>
   </div>
@@ -4271,12 +4301,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var editando = !!dem;
         var legado = editando && !dem.usaServicos;
         var chkU = $('demand-unico'), chkR = $('demand-recorrente');
-        var unico = !editando && !!(chkU && chkU.checked);
         var rec = !editando && !!(chkR && chkR.checked);
-        if ($('demand-unico-wrap')) $('demand-unico-wrap').style.display = (editando || rec) ? 'none' : '';
-        if ($('unico-opcoes')) $('unico-opcoes').style.display = unico ? 'block' : 'none';
-        if ($('grp-data-atend')) $('grp-data-atend').style.display = (unico || legado) ? '' : 'none';
-        if ($('demand-recorrente-wrap')) $('demand-recorrente-wrap').style.display = (editando || unico) ? 'none' : 'block';
+        var comServico = !editando && !rec;   // demanda nova (não recorrente) sempre nasce com o primeiro serviço
+        if ($('demand-unico-wrap')) $('demand-unico-wrap').style.display = comServico ? '' : 'none';
+        if ($('unico-opcoes')) $('unico-opcoes').style.display = 'block';
+        if ($('grp-data-atend')) $('grp-data-atend').style.display = (comServico || legado) ? '' : 'none';
+        if ($('demand-recorrente-wrap')) $('demand-recorrente-wrap').style.display = editando ? 'none' : 'block';
         if ($('tec-hint')) $('tec-hint').style.display = legado ? 'none' : '';
         if ($('lbl-tecnico')) $('lbl-tecnico').innerHTML = (legado ? 'Técnico' : 'Técnico responsável') + ' <span class="req-star">*</span>';
       }
@@ -4501,6 +4531,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
       function renderPainelTab() {
         try {
+          renderEquipePainel();
           var selMes = document.getElementById('painel-filtro-mes');
           var selAno = document.getElementById('painel-filtro-ano');
           var mesVal = selMes ? parseInt(selMes.value, 10) : 0;
@@ -4830,6 +4861,68 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       // ABA 4: CALENDÁRIO
+      // Itens do dia a dia: um por serviço (com o técnico EXECUTOR) + a entrega ao cliente das demandas sem serviço no dia.
+      // Mesma lógica do painel e do app, para as telas não se contradizerem.
+      function itensAgenda() {
+        var h = getTodayISO(), porId = {}, pend = {}, its = [];
+        appData.demandas.forEach(function(d) { porId[d.id] = d; });
+        (appData.servicos || []).forEach(function(sv) { (pend[sv.demandaId] = pend[sv.demandaId] || []).push(sv); });
+        (appData.servicos || []).forEach(function(sv) {
+          var d = porId[sv.demandaId];
+          if (!d || !sv.data || d.status === 'Cancelado') return;
+          var emAnd = sv.status === 'Em andamento';
+          if (!emAnd && !(sv.status === 'Concluída' && sv.data === h)) return;
+          if (emAnd && d.status === 'Concluída') return;
+          its.push({ dem: d, tec: sv.tecnico || 'Sem técnico', data: sv.data, cliente: d.cliente, equip: d.equipamento || '', tarefa: sv.descricao, entrega: d.dataPrev, done: !emAnd, srv: true });
+        });
+        appData.demandas.forEach(function(d) {
+          if (!d.dataPrev || d.status === 'Cancelado') return;
+          var ss = pend[d.id] || [];
+          if (d.usaServicos && ss.length) {
+            if (d.status === 'Concluída') return;
+            if (ss.some(function(x) { return x.status === 'Em andamento' && (x.data === d.dataPrev || (x.data < h && d.dataPrev < h)); })) return;
+          }
+          var done = d.status === 'Concluída';
+          if (done && d.dataPrev !== h) return;
+          its.push({ dem: d, tec: d.tecnico || 'Sem técnico', data: d.dataPrev, cliente: d.cliente, equip: d.equipamento || '', tarefa: d.obsTecnicas || d.obs || d.tipo || '',
+                     entrega: d.dataPrev, done: done, entregaItem: true, resp: !!d.usaServicos });
+        });
+        return its;
+      }
+
+      // Situação de cada técnico hoje: ocupado, livre ou sem demanda nenhuma.
+      function resumoEquipe() {
+        var its = itensAgenda(), h = getTodayISO();
+        return appData.tecnicos.map(function(t) {
+          var meus = its.filter(function(i) { return i.tec === t; });
+          var hojePend = meus.filter(function(i) { return !i.done && getDiffDays(i.data) === 0; }).length;
+          var atras = meus.filter(function(i) { return !i.done && getDiffDays(i.data) < 0; }).length;
+          var feitas = meus.filter(function(i) { return i.done; }).length;
+          var fut = meus.filter(function(i) { return !i.done && getDiffDays(i.data) > 0; }).sort(function(a, b) { return a.data.localeCompare(b.data); });
+          var estado = (hojePend + atras > 0) ? 'ocupado' : (feitas > 0 ? 'terminou' : (fut.length ? 'livre' : 'sem'));
+          return { tec: t, hoje: hojePend, atrasadas: atras, feitas: feitas, proximo: fut.length ? fut[0].data : '', estado: estado };
+        });
+      }
+
+      function renderEquipePainel() {
+        var el = document.getElementById('painel-equipe');
+        if (!el) return;
+        var eq = resumoEquipe().filter(function(e) { return !/externo/i.test(e.tec); });
+        var ociosos = eq.filter(function(e) { return e.estado === 'sem' || e.estado === 'livre'; });
+        var cor = { ocupado: '#fff7ed;border-color:#fdba74', terminou: '#f0fdf4;border-color:#86efac', livre: '#fef2f2;border-color:#fca5a5', sem: '#fef2f2;border-color:#ef4444' };
+        var txt = function(e) {
+          if (e.estado === 'ocupado') return '🔧 ' + e.hoje + ' hoje' + (e.atrasadas ? ' • ⚠ ' + e.atrasadas + ' atrasada(s)' : '') + (e.feitas ? ' • ✔ ' + e.feitas + ' feita(s)' : '');
+          if (e.estado === 'terminou') return '✔ Fez ' + e.feitas + ' hoje — sem mais pendências';
+          if (e.estado === 'livre') return '⚠ Livre hoje • próxima demanda ' + formatDateBR(e.proximo);
+          return '⚠ SEM DEMANDA';
+        };
+        el.innerHTML = '<div class="eq-bar no-print"><div class="eq-title">👥 Equipe hoje' +
+          (ociosos.length ? ' <span class="eq-alerta">⚠ Sem trabalho hoje: ' + ociosos.map(function(e) { return escapeHtml(e.tec); }).join(', ') + '</span>' : '') + '</div>' +
+          '<div class="eq-grid">' + eq.map(function(e) {
+            return '<div class="eq-card" style="background:' + cor[e.estado] + ';"><b>' + escapeHtml(e.tec) + '</b><span>' + txt(e) + '</span></div>';
+          }).join('') + '</div></div>';
+      }
+
       function renderCalendarioTab() {
         try {
           var calTitle = document.getElementById('cal-title');
@@ -4850,6 +4943,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return '<div class="cal-header-day">' + dw + '</div>';
           }).join('');
 
+          var itensCal = itensAgenda();
           var firstDayIndex = new Date(year, month, 1).getDay();
           var daysInMonth = new Date(year, month + 1, 0).getDate();
           var prevDaysInMonth = new Date(year, month, 0).getDate();
@@ -4867,15 +4961,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var fullDateISO = year + '-' + mStr + '-' + dStr;
 
             // Filtrar demandas com data prevista neste dia
-            var matches = appData.demandas.filter(function(d) {
-              return d.dataPrev === fullDateISO;
-            });
+            var matches = itensCal.filter(function(i) { return i.data === fullDateISO; });
 
-            var itemsHtml = matches.map(function(d) {
-              var isOver = isDemandOverdue(d);
-              var cls = isOver ? 'cal-demand-item is-overdue' : 'cal-demand-item';
-              if (d.status === 'Cancelado') cls += ' is-cancelled';
-              return '<div class="' + cls + '" data-action="view-demand" data-id="' + d.id + '" title="' + escapeHtml(d.cliente) + ' (' + escapeHtml(d.tipo) + ')">' + escapeHtml(d.cliente) + '</div>';
+            var itemsHtml = matches.map(function(i) {
+              var cls = 'cal-demand-item' + ((!i.done && getDiffDays(i.data) < 0) ? ' is-overdue' : '');
+              var rotulo = escapeHtml(i.cliente) + ' · ' + (i.entregaItem && i.resp ? '📦 ' : '') + escapeHtml(i.tec);
+              var estilo = i.done ? ' style="border-left-color:#16a34a; background:#f0fdf4;"' : '';
+              return '<div class="' + cls + '"' + estilo + ' data-action="view-demand" data-id="' + i.dem.id + '" title="' + escapeHtml(i.cliente) + ' — ' + (i.entregaItem && i.resp ? 'entrega ao cliente (responsável: ' : 'executor: ') + escapeHtml(i.tec) + (i.entregaItem && i.resp ? ')' : '') + '">' + rotulo + '</div>';
             }).join('');
 
             html += '<div class="cal-day-cell"><div class="cal-day-num">' + day + '</div>' + itemsHtml + '</div>';
@@ -4902,75 +4994,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var todayListEl = document.getElementById('cal-today-list');
         var upcoming7dListEl = document.getElementById('cal-upcoming-7d-list');
 
-        // Demandas com entrega hoje
-        var demandsToday = appData.demandas.filter(function(d) {
-          return d.dataPrev === todayISO;
-        });
-
-        if (todayListEl) {
-          if (demandsToday.length === 0) {
-            todayListEl.innerHTML = '<div style="color:#64748b; font-size:0.78rem; padding:0.4rem 0;">Nenhum agendamento para hoje.</div>';
-          } else {
-            todayListEl.innerHTML = demandsToday.map(function(d) {
-              var statusDot = '<span class="dot-indicator dot-orange"></span>';
-              if (d.status === 'Concluída') {
-                statusDot = '<span class="dot-indicator" style="background:#16a34a;"></span>';
-              } else if (d.status === 'Cancelado') {
-                statusDot = '<span class="dot-indicator" style="background:#94a3b8;"></span>';
-              }
-              return (
-                '<div class="cal-side-item" data-action="view-demand" data-id="' + d.id + '">' +
-                  '<div class="cal-side-item-header">' +
-                    '<span>' + escapeHtml(d.cliente) + '</span>' +
-                    statusDot +
-                  '</div>' +
-                  '<div class="cal-side-item-sub">' +
-                    '<span>' + escapeHtml(d.tipo) + '</span>' +
-                    '<span>•</span>' +
-                    '<span>' + escapeHtml(d.tecnico || 'Sem técnico') + '</span>' +
-                  '</div>' +
-                '</div>'
-              );
-            }).join('');
-          }
+        var todos = itensAgenda();
+        var hojeIts = todos.filter(function(i) { return getDiffDays(i.data) <= 0 && (i.done ? i.data === todayISO : (i.data === todayISO)); });
+        function linha(i, comData) {
+          var dot = i.done ? '<span class="dot-indicator" style="background:#16a34a;"></span>' : '<span class="dot-indicator dot-orange"></span>';
+          var quem = (i.entregaItem && i.resp) ? '📦 entrega • resp. ' + escapeHtml(i.tec) : '👤 ' + escapeHtml(i.tec);
+          return '<div class="cal-side-item" data-action="view-demand" data-id="' + i.dem.id + '">' +
+            '<div class="cal-side-item-header"><span>' + escapeHtml(i.cliente) + '</span>' +
+            (comData ? '<span style="font-size:0.72rem; color:var(--accent); font-weight:700;">' + formatDateBR(i.data) + '</span>' : dot) + '</div>' +
+            '<div class="cal-side-item-sub"><span>' + quem + '</span>' + (i.tarefa ? '<span>•</span><span>' + escapeHtml(String(i.tarefa).slice(0, 48)) + '</span>' : '') + '</div></div>';
         }
-
-        // Demandas dos próximos 7 dias (excluindo hoje ou incluindo de amanhã até +7 dias)
+        if (todayListEl) {
+          todayListEl.innerHTML = hojeIts.length ? hojeIts.sort(function(a, b) { return a.tec.localeCompare(b.tec, 'pt-BR'); }).map(function(i) { return linha(i, false); }).join('')
+            : '<div style="color:#64748b; font-size:0.78rem; padding:0.4rem 0;">Nenhum agendamento para hoje.</div>';
+        }
         if (upcoming7dListEl) {
-          var upcoming7 = [];
-          appData.demandas.forEach(function(d) {
-            if (!d.dataPrev || d.status === 'Cancelado') return;
-            var diff = getDiffDays(d.dataPrev);
-            if (diff >= 1 && diff <= 7) {
-              upcoming7.push({ dem: d, diff: diff });
-            }
-          });
-
-          upcoming7.sort(function(a, b) { return a.diff - b.diff; });
-
-          if (upcoming7.length === 0) {
-            upcoming7dListEl.innerHTML = '<div style="color:#64748b; font-size:0.78rem; padding:0.4rem 0;">Nenhum agendamento previsto para os próximos 7 dias.</div>';
-          } else {
-            upcoming7dListEl.innerHTML = upcoming7.map(function(item) {
-              var d = item.dem;
-              var dotCls = item.diff <= 2 ? 'dot-orange' : 'dot-indicator';
-              var dotStyle = item.diff <= 2 ? '' : 'style="background:#3b82f6;"';
-              return (
-                '<div class="cal-side-item" data-action="view-demand" data-id="' + d.id + '">' +
-                  '<div class="cal-side-item-header">' +
-                    '<span>' + escapeHtml(d.cliente) + '</span>' +
-                    '<span style="font-size:0.72rem; color:var(--accent); font-weight:700;">' + formatDateBR(d.dataPrev) + '</span>' +
-                  '</div>' +
-                  '<div class="cal-side-item-sub">' +
-                    '<span class="dot-indicator ' + dotCls + '" ' + dotStyle + '></span>' +
-                    '<span>em ' + item.diff + ' dia(s)</span>' +
-                    '<span>•</span>' +
-                    '<span>' + escapeHtml(d.tipo) + '</span>' +
-                  '</div>' +
-                '</div>'
-              );
-            }).join('');
-          }
+          var prox = todos.filter(function(i) { var df = getDiffDays(i.data); return !i.done && df >= 1 && df <= 7; })
+            .sort(function(a, b) { return a.data.localeCompare(b.data) || a.tec.localeCompare(b.tec, 'pt-BR'); });
+          upcoming7dListEl.innerHTML = prox.length ? prox.map(function(i) { return linha(i, true); }).join('')
+            : '<div style="color:#64748b; font-size:0.78rem; padding:0.4rem 0;">Nenhum agendamento previsto para os próximos 7 dias.</div>';
         }
       }
 
@@ -5453,6 +5495,23 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         atualizarDicaCfgPainel();
       }
 
+      // CLIENTE COM DEMANDA EM ANDAMENTO: oferece acrescentar o serviço na demanda existente
+      var pendenteDup = null;
+      function abrirModalDup(cliente, abertas) {
+        document.getElementById('dup-texto').innerHTML = '<strong>' + escapeHtml(cliente) + '</strong> já tem ' + abertas.length + ' demanda(s) em andamento. ' +
+          'O ideal é <strong>acrescentar o serviço na demanda existente</strong>, em vez de abrir outra. O serviço que você preencheu (dia, executores e descrição) será lançado nela.';
+        document.getElementById('dup-lista').innerHTML = abertas.map(function(d) {
+          var n = (appData.servicos || []).filter(function(sv) { return sv.demandaId === d.id; });
+          var ok = n.filter(function(sv) { return sv.status === 'Concluída'; }).length;
+          return '<div class="srv-resumo" style="display:flex; justify-content:space-between; align-items:center; gap:0.75rem; margin-bottom:0.5rem;">' +
+            '<div><strong>' + escapeHtml(d.equipamento || '-') + '</strong> • ' + escapeHtml(d.tipo || '') + '<br>' +
+            '<span style="font-size:0.78rem; color:#64748b;">Resp.: ' + escapeHtml(d.tecnico || '-') + ' • entrega ' + (d.dataPrev ? formatDateBR(d.dataPrev) : '-') + ' • serviços ' + ok + '/' + n.length + '</span></div>' +
+            '<button type="button" class="btn-pls-primary" data-action="dup-add" data-id="' + d.id + '">➕ Adicionar nesta</button></div>';
+        }).join('');
+        document.getElementById('modal-dup').classList.add('active');
+      }
+      function fecharModalDup() { document.getElementById('modal-dup').classList.remove('active'); }
+
       // IMPRESSÃO DAS DEMANDAS POR TÉCNICO
       function nomeTecItem(t) { return ((t || '') + '').trim() || 'Sem técnico'; }
 
@@ -5847,6 +5906,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
 
         // IMPRIMIR ABA ATIVA (BOTÃO PRESENTE EM TODAS AS ABAS)
+        if (action === 'dup-cancel') { fecharModalDup(); pendenteDup = null; return; }
+        if (action === 'dup-criar') { var pd = pendenteDup; fecharModalDup(); pendenteDup = null; if (pd) pd.criar(); return; }
+        if (action === 'dup-add') { var pd2 = pendenteDup, idD = target.getAttribute('data-id'); fecharModalDup(); pendenteDup = null; if (pd2) pd2.adicionar(idD); return; }
         if (action === 'open-imprimir') { abrirImprimirModal(); return; }
         if (action === 'close-imprimir') { fecharImprimirModal(); return; }
         if (action === 'confirmar-imprimir') { imprimirDemandas(); return; }
@@ -6350,14 +6412,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var vE = document.getElementById(idE).value;
                 if (vE && execsUnico.indexOf(vE) === -1) execsUnico.push(vE);
               });
-              if (isUnico) {
+              var novoComServico = !id && !isRecorrente;
+              if (novoComServico) {
                 if (!dataAtend) {
-                  alert('Serviço único: informe a Data do Atendimento.');
+                  alert('Informe a Data do Atendimento (dia do primeiro serviço).');
                   document.getElementById('demand-data-atend').focus();
                   return;
                 }
                 if (execsUnico.length === 0) {
-                  alert('Serviço único: escolha pelo menos um técnico executor.');
+                  alert('Escolha pelo menos um técnico executor para o primeiro serviço.');
                   document.getElementById('demand-exec-1').focus();
                   return;
                 }
@@ -6484,41 +6547,48 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 return;
               }
 
-              // Criar nova demanda: o técnico é só o RESPONSÁVEL. A execução é lançada em "Serviços".
-              var novaDem = {
-                id: 'dem_' + Date.now(),
-                cliente: cliente,
-                canal: canal,
-                solicitante: solicitante,
-                tecnico: tecnico,
-                tipo: tipo,
-                equipamento: equipamento,
-                obsTecnicas: obsTecnicas,
-                obs: obsTecnicas, // retrocompatibilidade
-                dataCad: dataCad,
-                dataAtend: isUnico ? dataAtend : '',
-                dataPrev: dataPrev,
-                status: status,
-                usaServicos: true,
-                servicoUnico: !!isUnico
-              };
-              appData.demandas.unshift(novaDem);
-
-              if (isUnico) {
-                var descUn = document.getElementById('demand-unico-desc').value.trim() || obsTecnicas || (tipo + ' — ' + equipamento);
+              // Criar nova demanda: o técnico é só o RESPONSÁVEL. Todo lançamento nasce com o primeiro serviço (quem executa e quando).
+              var descNova = document.getElementById('demand-unico-desc').value.trim() || obsTecnicas || (tipo + ' — ' + equipamento);
+              function criarNovaDemanda() {
+                var novaDem = {
+                  id: 'dem_' + Date.now(),
+                  cliente: cliente, canal: canal, solicitante: solicitante, tecnico: tecnico, tipo: tipo,
+                  equipamento: equipamento, obsTecnicas: obsTecnicas, obs: obsTecnicas,
+                  dataCad: dataCad, dataAtend: dataAtend, dataPrev: dataPrev, status: status,
+                  usaServicos: true, servicoUnico: !!isUnico
+                };
+                appData.demandas.unshift(novaDem);
                 if (!appData.servicos) appData.servicos = [];
                 execsUnico.forEach(function(tx) {
-                  appData.servicos.push({ id: novoUUID(), demandaId: novaDem.id, data: dataAtend, tecnico: tx, descricao: descUn, status: 'Em andamento' });
+                  appData.servicos.push({ id: novoUUID(), demandaId: novaDem.id, data: dataAtend, tecnico: tx, descricao: descNova, status: 'Em andamento' });
                 });
+                showToast((isUnico ? 'Serviço único' : 'Demanda') + ' lançado(a) para ' + execsUnico.join(', ') + '!');
+                saveData();
+                resetDemandForm();
+                renderLancamentosTab();
+                setLancView('lista');
               }
-              showToast(isUnico
-                ? 'Serviço único lançado para ' + execsUnico.join(', ') + '!'
-                : 'Nova demanda cadastrada! Use o botão 🔧 Serviços para lançar o trabalho de cada dia.');
-
-              saveData();
-              resetDemandForm();
-              renderLancamentosTab();
-              if (!isUnico) setLancView('lista');
+              // Já existe demanda em andamento deste cliente? Oferece acrescentar o serviço nela.
+              var abertas = appData.demandas.filter(function(d) { return d.cliente === cliente && d.status === 'Em andamento'; });
+              if (abertas.length) {
+                pendenteDup = {
+                  criar: criarNovaDemanda,
+                  adicionar: function(demId) {
+                    if (!appData.servicos) appData.servicos = [];
+                    execsUnico.forEach(function(tx) {
+                      appData.servicos.push({ id: novoUUID(), demandaId: demId, data: dataAtend, tecnico: tx, descricao: descNova, status: 'Em andamento' });
+                    });
+                    saveData();
+                    resetDemandForm();
+                    renderLancamentosTab();
+                    setLancView('lista');
+                    showToast('Serviço adicionado à demanda que já estava em andamento (' + execsUnico.join(', ') + ').');
+                  }
+                };
+                abrirModalDup(cliente, abertas);
+                return;
+              }
+              criarNovaDemanda();
             });
           }
 
@@ -6527,9 +6597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (chkUnicoEl) chkUnicoEl.addEventListener('change', function() {
             if (this.checked) {
               var rr = document.getElementById('demand-recorrente');
-              if (rr) rr.checked = false;
-              var e1 = document.getElementById('demand-exec-1'), tr = document.getElementById('demand-tecnico');
-              if (e1 && !e1.value && tr && tr.value) e1.value = tr.value;
+              if (rr) { rr.checked = false; var bx = document.getElementById('recorrencia-opcoes'); if (bx) bx.style.display = 'none'; }
             }
             ajustarFormModo();
           });
@@ -6551,6 +6619,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               document.getElementById('imp-data-chk').checked = true;
             }
             atualizarResumoImprimir();
+          });
+          var selRespEl = document.getElementById('demand-tecnico');
+          if (selRespEl) selRespEl.addEventListener('change', function() {
+            var e1 = document.getElementById('demand-exec-1');
+            if (e1 && !e1.value && this.value) e1.value = this.value;
           });
           var cfgModo = document.getElementById('cfg-painel-modo');
           if (cfgModo) cfgModo.addEventListener('change', atualizarDicaCfgPainel);

@@ -72,6 +72,7 @@ header img{width:34px;height:34px;border-radius:8px;flex:0 0 auto}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .box{background:#fff7ed;border:1px dashed #fdba74;border-radius:12px;padding:12px;margin-bottom:12px}
 .box.off{display:none}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600;margin-top:10px}.chk input{width:20px;height:20px;margin-top:1px;flex:0 0 auto}
 .picker{display:flex;flex-wrap:wrap;gap:6px}
 .addsrv{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px}
 input.q,.fld input,.fld select,.fld textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:16px}
@@ -95,6 +96,15 @@ input.q{margin-bottom:8px}
 .cal .d .c{display:block;font-size:10px;font-weight:700;margin-top:3px;border-radius:99px;padding:0 5px;background:#e2e8f0;color:var(--ink);width:fit-content;margin-left:auto;margin-right:auto}
 .cal .d .c.late{background:var(--red);color:#fff}
 .cal .d.sel .c{background:#fff;color:var(--dark)}
+.pseg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:10px}
+.pseg button{border:0;background:transparent;border-radius:9px;padding:9px 2px;font-size:13px;font-weight:600;color:var(--mut)}
+.pseg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.alerta{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:14px;font-weight:600}
+.eqc{background:#fff;border:1px solid var(--line);border-left:5px solid #94a3b8;border-radius:12px;padding:11px 12px;margin-bottom:8px}
+.eqc.ocupado{border-left-color:var(--acc)}.eqc.terminou{border-left-color:var(--grn);background:#f0fdf4}.eqc.livre,.eqc.sem{border-left-color:var(--red);background:#fef2f2}
+.eqc .n{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:16px}
+.eqc .m{display:flex;gap:14px;margin-top:6px;font-size:13px;color:var(--mut)}
+.eqc .m b{color:var(--ink);font-size:15px}
 .sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none;align-items:flex-end}
 .sheet-bg.on{display:flex}
 .sheet{background:#fff;width:100%;max-height:88%;overflow-y:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(16px + var(--sab))}
@@ -150,7 +160,7 @@ var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'pls-auth'}});
 
 var perfil=null, D={tecnicos:[],clientes:[],canais:[],tipos:[],demandas:[],servicos:[]};
-var svEdit=null, lancModo='simples', tab='painel', fTec='', fStatus='abertas', busca='', calMes=null, calSel=null, rtTimer=null, rtLigado=false;
+var pv='tec', pendDup=null, svEdit=null, lancModo='simples', tab='painel', fTec='', fStatus='abertas', busca='', calMes=null, calSel=null, rtTimer=null, rtLigado=false;
 var $=function(id){return document.getElementById(id);};
 var DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
 var MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -226,6 +236,19 @@ function porTecnico(lista){
   return Object.keys(g).sort(function(a,b){return a==='Sem técnico'?1:b==='Sem técnico'?-1:a.localeCompare(b,'pt-BR');}).map(function(n){return{n:n,l:g[n].sort(function(a,b){return (a.data||'').localeCompare(b.data||'')||a.cli.localeCompare(b.cli,'pt-BR');})};});
 }
 
+function resumoEquipe(its){
+  return D.tecnicos.map(function(t){
+    var meus=its.filter(function(i){return i.tec===t;});
+    var hj=meus.filter(function(i){return !i.done&&diff(i.data)===0;}).length;
+    var at=meus.filter(function(i){return !i.done&&diff(i.data)<0;}).length;
+    var fe=meus.filter(function(i){return i.done;}).length;
+    var fut=meus.filter(function(i){return !i.done&&diff(i.data)>0;}).sort(function(a,b){return a.data.localeCompare(b.data);});
+    var est=(hj+at>0)?'ocupado':(fe>0?'terminou':(fut.length?'livre':'sem'));
+    return{tec:t,hoje:hj,atrasadas:at,feitas:fe,proximo:fut.length?fut[0].data:'',estado:est};
+  });
+}
+function ociosos(eq){return eq.filter(function(e){return (e.estado==='sem'||e.estado==='livre')&&!/externo/i.test(e.tec);});}
+
 /* ---------- componentes ---------- */
 function cardItem(i,openId){
   var df=diff(i.data),cls='card'+(i.done?' done':df<0?' late':df===0?' today':'');
@@ -243,23 +266,41 @@ function chipsTec(){
 
 /* ---------- telas ---------- */
 function telaPainel(){
-  var all=itens().filter(function(i){return !fTec||i.tec===fTec;});
+  var todos=itens();
+  var eq=resumoEquipe(todos),oc=ociosos(eq);
+  var seg='<div class="pseg"><button data-pv="tec" class="'+(pv==='tec'?'on':'')+'">👤 Por técnico</button><button data-pv="cli" class="'+(pv==='cli'?'on':'')+'">🏢 Por cliente</button><button data-pv="eq" class="'+(pv==='eq'?'on':'')+'">👥 Equipe</button></div>';
+  var alerta=oc.length?'<div class="alerta">⚠ Sem trabalho hoje: '+oc.map(function(e){return esc(e.tec);}).join(', ')+'</div>':'';
+  if(pv==='eq'){
+    var totFe=eq.reduce(function(a,e){return a+e.feitas;},0);
+    var h=seg+alerta+'<div class="stats"><div class="stat org"><b>'+eq.reduce(function(a,e){return a+e.hoje;},0)+'</b><span>Pendentes hoje</span></div><div class="stat blu"><b>'+totFe+'</b><span>Feitas hoje</span></div><div class="stat red"><b>'+eq.reduce(function(a,e){return a+e.atrasadas;},0)+'</b><span>Atrasadas</span></div></div>';
+    eq.slice().sort(function(a,b){var o={sem:0,livre:1,ocupado:2,terminou:3};return o[a.estado]-o[b.estado]||a.tec.localeCompare(b.tec,'pt-BR');}).forEach(function(e){
+      var tag={ocupado:'<span class="badge org">Em campo</span>',terminou:'<span class="badge grn">✔ Terminou</span>',livre:'<span class="badge red">Livre hoje</span>',sem:'<span class="badge red">SEM DEMANDA</span>'}[e.estado];
+      h+='<div class="eqc '+e.estado+'" data-eqtec="'+esc(e.tec)+'"><div class="n"><span>👤 '+esc(e.tec)+'</span>'+tag+'</div><div class="m"><span><b>'+e.hoje+'</b> hoje</span><span><b>'+e.feitas+'</b> feitas</span><span><b style="color:'+(e.atrasadas?'var(--red)':'inherit')+'">'+e.atrasadas+'</b> atrasadas</span>'+(e.proximo?'<span>próx. <b>'+curto(e.proximo)+'</b></span>':'')+'</div></div>';
+    });
+    return h+'<div class="hint" style="margin-top:6px">Toque num técnico para ver as demandas dele.</div>';
+  }
+  var all=todos.filter(function(i){return !fTec||i.tec===fTec;});
   var atr=all.filter(function(i){return !i.done&&diff(i.data)<0;});
   var hj=all.filter(function(i){return diff(i.data)===0;});
   var fut=all.filter(function(i){return !i.done&&diff(i.data)>0;});
   var prox={};fut.forEach(function(i){var d=diff(i.data);if(prox[i.tec]===undefined||d<prox[i.tec])prox[i.tec]=d;});
   var proximos=fut.filter(function(i){return diff(i.data)===prox[i.tec];});
   var feitas=hj.filter(function(i){return i.done;}).length;
-  var h=chipsTec()+'<div class="stats"><div class="stat red"><b>'+atr.length+'</b><span>Atrasadas</span></div><div class="stat org"><b>'+(hj.length-feitas)+'</b><span>Hoje</span></div><div class="stat blu"><b>'+feitas+'</b><span>Feitas hoje</span></div></div>';
-  function bloco(tit,cls,l,mostraData){
+  var h2=seg+alerta+chipsTec()+'<div class="stats"><div class="stat red"><b>'+atr.length+'</b><span>Atrasadas</span></div><div class="stat org"><b>'+(hj.length-feitas)+'</b><span>Hoje</span></div><div class="stat blu"><b>'+feitas+'</b><span>Feitas hoje</span></div></div>';
+  function bloco(tit,cls,l){
     if(!l.length)return '';
-    var s='<div class="sec '+cls+'">'+tit+' <span class="n">'+l.length+'</span></div>';
-    porTecnico(l).forEach(function(g){s+='<div class="tech"><span>👤 '+esc(g.n)+'</span><span>'+g.l.length+'</span></div>'+g.l.map(cardItem).join('');});
-    return s;
+    var x='<div class="sec '+cls+'">'+tit+' <span class="n">'+l.length+'</span></div>';
+    if(pv==='cli'){
+      var g={};l.forEach(function(i){(g[i.cli]=g[i.cli]||[]).push(i);});
+      Object.keys(g).sort(function(a,b){return a.localeCompare(b,'pt-BR');}).forEach(function(c){x+='<div class="tech"><span>🏢 '+esc(c)+'</span><span>'+g[c].length+'</span></div>'+g[c].map(cardItem).join('');});
+    } else {
+      porTecnico(l).forEach(function(g){x+='<div class="tech"><span>👤 '+esc(g.n)+'</span><span>'+g.l.length+'</span></div>'+g.l.map(cardItem).join('');});
+    }
+    return x;
   }
-  h+=bloco('⚠ Atrasadas','red',atr)+bloco('📅 Hoje','',hj)+bloco('➡ Próximo dia de cada técnico','',proximos);
-  if(!atr.length&&!hj.length&&!proximos.length)h+='<div class="empty">Nada pendente 🎉</div>';
-  return h;
+  h2+=bloco('⚠ Atrasadas','red',atr)+bloco('📅 Hoje','',hj)+bloco('➡ Próximo dia de cada técnico','',proximos);
+  if(!atr.length&&!hj.length&&!proximos.length)h2+='<div class="empty">Nada pendente 🎉</div>';
+  return h2;
 }
 function listaDemandas(){
   var q=busca.trim().toLowerCase();
@@ -293,29 +334,20 @@ function telaLancar(){
   if(!pode('lancar'))return '<div class="empty">Você não tem permissão para lançar demandas.</div>';
   var opt=function(a,ph){return '<option value="">'+ph+'</option>'+a.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');};
   return '<form id="f-lanc" autocomplete="off">'
-   +'<div class="seg" id="seg"><button type="button" data-modo="simples" class="on">Demanda</button><button type="button" data-modo="unico">⚡ Serviço único</button><button type="button" data-modo="diarios">🔧 Serv. diários</button></div>'
    +'<div class="fld"><label>Cliente *</label><input id="l-cli" list="dl-cli" placeholder="Digite para buscar" required><datalist id="dl-cli">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
-   +'<div class="fld"><label id="l-tec-lbl">Técnico *</label><select id="l-tec" required>'+opt(D.tecnicos,'Escolha...')+'</select></div>'
+   +'<div class="fld"><label>Técnico responsável *</label><select id="l-tec" required>'+opt(D.tecnicos,'Escolha...')+'</select></div>'
    +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="l-tipo" required>'+opt(D.tipos,'Escolha...')+'</select></div>'
    +'<div class="fld"><label>Canal *</label><select id="l-canal" required>'+opt(D.canais,'Escolha...')+'</select></div></div>'
-   +'<div class="box off" id="bx-unico"><div class="fld"><label>Data do serviço *</label><input id="l-atend" type="date" value="'+hoje()+'"></div>'
-   +'<div class="fld"><label>Serviço a executar</label><input id="l-desc" placeholder="Ex.: troca de óleo (vazio = usa o campo abaixo)"></div>'
-   +'<div class="fld" style="margin-bottom:0"><label>Quem executa (até 4) *</label>'+picker('pk-unico',[])+'</div></div>'
-   +'<div class="hint off" id="ht-diarios" style="display:none">O técnico acima é o responsável. Ao lançar, você já cadastra os serviços de cada dia e de cada técnico.</div>'
-   +'<div class="fld"><label>Data prevista de entrega *</label><input id="l-prev" type="date" value="'+hoje()+'" required></div>'
+   +'<div class="fld"><label>Data prevista de entrega ao cliente *</label><input id="l-prev" type="date" value="'+hoje()+'" required></div>'
    +'<div class="fld"><label>Equipamento</label><input id="l-equip" placeholder="Ex.: Hyster 2,5t"></div>'
    +'<div class="fld"><label>Solicitante</label><input id="l-sol" placeholder="Quem pediu"></div>'
-   +'<div class="fld"><label>Observações / o que precisa ser feito</label><textarea id="l-obs" rows="3"></textarea></div>'
+   +'<div class="fld"><label>Observações</label><textarea id="l-obs" rows="2"></textarea></div>'
+   +'<div class="box"><div class="sec" style="margin:0 0 8px">🔧 Primeiro serviço — quem vai executar</div>'
+   +'<div class="fld"><label>Data do serviço *</label><input id="l-atend" type="date" value="'+hoje()+'" required></div>'
+   +'<div class="fld"><label>Serviço a executar</label><input id="l-desc" placeholder="Vazio = usa as observações"></div>'
+   +'<div class="fld"><label>Quem executa (até 4) *</label>'+picker('pk-unico',[])+'</div>'
+   +'<label class="chk"><input type="checkbox" id="l-unico"> <span>⚡ Serviço de um dia só — concluir a demanda sozinha quando terminar</span></label></div>'
    +'<button class="btn" id="l-btn" type="submit">Lançar demanda</button></form>';
-}
-function setModo(m){
-  lancModo=m;
-  [].forEach.call(document.querySelectorAll('#seg button'),function(b){b.classList.toggle('on',b.getAttribute('data-modo')===m);});
-  $('bx-unico').classList.toggle('off',m!=='unico');
-  $('ht-diarios').style.display=m==='diarios'?'block':'none';
-  $('l-tec-lbl').textContent=m==='simples'?'Técnico *':'Técnico responsável *';
-  $('l-btn').textContent=m==='unico'?'Lançar serviço único':m==='diarios'?'Lançar e cadastrar serviços':'Lançar demanda';
-  if(m==='unico'){var t=$('l-tec').value;if(t&&!escolhidos('pk-unico').length){var c=document.querySelector('#pk-unico .chip[data-pick="'+t.replace(/"/g,'\\"')+'"]');if(c)c.classList.add('on');}}
 }
 function telaCal(){
   if(!calMes){var n=new Date();calMes={a:n.getFullYear(),m:n.getMonth()};}
@@ -347,7 +379,7 @@ function render(){
   if(foco==='busca'){var b=$('busca');if(b){b.focus();var v=b.value;b.value='';b.value=v;}}
   [].forEach.call(document.querySelectorAll('#nav button'),function(b){b.classList.toggle('on',b.getAttribute('data-t')===tab);});
 }
-function ir(t){tab=t;if(t==='lancar'){var f=$('f-lanc');if(f)f.remove();lancModo='simples';}$('main').scrollTop=0;render();}
+function ir(t){pendDup=null;tab=t;if(t==='lancar'){var f=$('f-lanc');if(f)f.remove();lancModo='simples';}$('main').scrollTop=0;render();}
 
 /* ---------- detalhe ---------- */
 function selOpts(lista,atual,ph){
@@ -502,41 +534,55 @@ function addServico(){
 }
 
 /* ---------- lançar ---------- */
+function abrirDup(cli,abertas){
+  var h='<h2>⚠ '+esc(cli)+' já tem demanda em andamento</h2><div class="sub" style="color:var(--mut);margin:4px 0 10px">O ideal é <b>acrescentar o serviço</b> numa demanda existente em vez de abrir outra.</div>';
+  abertas.forEach(function(d){var n=D.servicos.filter(function(x){return x.demandaId===d.id;}),ok=n.filter(function(x){return x.status==='Concluída';}).length;
+    h+='<div class="card"><div class="cli">'+esc(d.equipamento||'-')+' · '+esc(d.tipo||'')+'</div><div class="sub">Resp.: '+esc(d.tecnico||'-')+' · entrega '+br(d.dataPrev)+' · serviços '+ok+'/'+n.length+'</div>'
+     +'<button class="btn" style="margin-top:8px;padding:11px" data-dup-add="'+esc(d.id)+'">➕ Adicionar o serviço nesta</button></div>';});
+  h+='<button class="btn sec2" style="margin-top:6px" id="dup-criar">Criar nova demanda mesmo assim</button><button class="btn sec2" style="margin-top:8px" id="fechar">Voltar ao formulário</button>';
+  var sh=$('sheet');sh.innerHTML=h;sh.setAttribute('data-id','');sh.setAttribute('data-cur','dup');$('sheet-bg').classList.add('on');
+}
 function enviarLanc(ev){
   ev.preventDefault();
   var cli=$('l-cli').value.trim();
   if(D.clientes.indexOf(cli)===-1){toast('Escolha um cliente da lista cadastrada.',3500);return;}
-  var prev=$('l-prev').value,modo=lancModo,obs=$('l-obs').value.trim(),equip=$('l-equip').value.trim()||'Empilhadeira';
-  var execs=[],atend=null,desc='';
-  if(modo==='unico'){
-    execs=escolhidos('pk-unico');atend=$('l-atend').value;
-    if(!atend){toast('Informe a data do serviço.');return;}
-    if(!execs.length){toast('Escolha quem executa o serviço.');return;}
-    desc=$('l-desc').value.trim()||obs||($('l-tipo').value+' — '+equip);
-  }
+  var prev=$('l-prev').value,obs=$('l-obs').value.trim(),equip=$('l-equip').value.trim()||'Empilhadeira',atend=$('l-atend').value,execs=escolhidos('pk-unico'),unico=$('l-unico').checked;
+  if(!atend){toast('Informe a data do serviço.');return;}
+  if(!execs.length){toast('Escolha quem executa o serviço.');return;}
+  var desc=$('l-desc').value.trim()||obs||($('l-tipo').value+' — '+equip);
   var row={id:uuid(),cliente:cli,canal:$('l-canal').value,solicitante:$('l-sol').value.trim()||'-',tecnico:$('l-tec').value,tipo:$('l-tipo').value,
-    equipamento:equip,obs_tecnicas:obs||null,data_cad:hoje(),data_atend:modo==='simples'?prev:(modo==='unico'?atend:null),data_prev:prev,
-    status:'Em andamento',recorrente:false,rec_dia:null,grupo_recorrencia:null,usa_servicos:modo!=='simples',servico_unico:modo==='unico'};
-  var btn=$('l-btn'),txt=btn.textContent;btn.disabled=true;btn.textContent='Enviando...';
-  chk(sb.from('demandas').insert(row)).then(function(){
-    D.demandas.unshift(mapDem(row));
-    if(modo!=='unico')return;
-    var rows=execs.map(function(t){return{id:uuid(),demanda_id:row.id,data:atend,tecnico:t,descricao:desc,status:'Em andamento'};});
-    return chk(sb.from('servicos').insert(rows)).then(function(){rows.forEach(function(r){D.servicos.push(mapSrv(r));});});
-  }).then(function(){
-    var f=$('f-lanc');if(f)f.remove();
-    fTec='';lancModo='simples';
-    if(modo==='diarios'){tab='painel';render();abrirDem(row.id,'srv');toast('Demanda lançada ✔ Agora cadastre os serviços.',3500);return;}
-    toast(modo==='unico'?'Serviço único lançado para '+execs.join(', ')+' ✔':'Demanda lançada ✔');tab='painel';render();
-  }).catch(function(e){toast('⚠ '+erro(e),5000);btn.disabled=false;btn.textContent=txt;});
+    equipamento:equip,obs_tecnicas:obs||null,data_cad:hoje(),data_atend:atend,data_prev:prev,
+    status:'Em andamento',recorrente:false,rec_dia:null,grupo_recorrencia:null,usa_servicos:true,servico_unico:unico};
+  var btn=$('l-btn');
+  function mkRows(demId){return execs.map(function(t){return{id:uuid(),demanda_id:demId,data:atend,tecnico:t,descricao:desc,status:'Em andamento'};});}
+  function fim(msg){var f=$('f-lanc');if(f)f.remove();fecharSheet();fTec='';tab='painel';pv='tec';render();toast(msg,3200);}
+  function criar(){
+    btn.disabled=true;btn.textContent='Enviando...';
+    chk(sb.from('demandas').insert(row)).then(function(){
+      D.demandas.unshift(mapDem(row));var rows=mkRows(row.id);
+      return chk(sb.from('servicos').insert(rows)).then(function(){rows.forEach(function(r){D.servicos.push(mapSrv(r));});});
+    }).then(function(){fim((unico?'Serviço único':'Demanda')+' lançado(a) para '+execs.join(', ')+' ✔');})
+    .catch(function(e){toast('⚠ '+erro(e),5000);btn.disabled=false;btn.textContent='Lançar demanda';});
+  }
+  function adicionar(demId){
+    var rows=mkRows(demId);
+    chk(sb.from('servicos').insert(rows)).then(function(){rows.forEach(function(r){D.servicos.push(mapSrv(r));});fim('Serviço adicionado à demanda em andamento ✔');})
+    .catch(function(e){toast('⚠ '+erro(e),5000);});
+  }
+  var abertas=D.demandas.filter(function(d){return d.cliente===cli&&d.status==='Em andamento';});
+  if(abertas.length){pendDup={criar:criar,adicionar:adicionar};abrirDup(cli,abertas);return;}
+  criar();
 }
 
 /* ---------- eventos ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-edit-srv],#s-cancel,[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
+  var t=e.target.closest('[data-pv],[data-eqtec],[data-dup-add],#dup-criar,[data-edit-srv],#s-cancel,[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
   if(t.id==='fechar'){fecharSheet();return;}
-  if(t.hasAttribute('data-modo')){setModo(t.getAttribute('data-modo'));return;}
   if(t.id==='s-add'){addServico();return;}
+  if(t.hasAttribute('data-pv')){pv=t.getAttribute('data-pv');render();return;}
+  if(t.hasAttribute('data-eqtec')){fTec=t.getAttribute('data-eqtec');pv='tec';render();return;}
+  if(t.hasAttribute('data-dup-add')){var pd=pendDup;pendDup=null;if(pd)pd.adicionar(t.getAttribute('data-dup-add'));return;}
+  if(t.id==='dup-criar'){var pc=pendDup;pendDup=null;fecharSheet();if(pc)pc.criar();return;}
   if(t.hasAttribute('data-edit-srv')){svEdit=t.getAttribute('data-edit-srv');abrirDem($('sheet').getAttribute('data-id'),'srv');var a=$('addsrv');if(a)a.scrollIntoView({behavior:'smooth',block:'center'});return;}
   if(t.id==='s-cancel'){svEdit=null;abrirDem($('sheet').getAttribute('data-id'),'srv');return;}
   if(t.hasAttribute('data-view')){abrirDem($('sheet').getAttribute('data-id'),t.getAttribute('data-view'));return;}
@@ -556,6 +602,9 @@ document.addEventListener('click',function(e){
   if(t.hasAttribute('data-open')){abrirDem(t.getAttribute('data-open'));return;}
 });
 $('sheet-bg').addEventListener('click',function(e){if(e.target===this)fecharSheet();});
+document.addEventListener('change',function(e){
+  if(e.target.id==='l-tec'&&e.target.value&&!escolhidos('pk-unico').length){var c=document.querySelector('#pk-unico .chip[data-pick="'+e.target.value.replace(/"/g,'\\"')+'"]');if(c)c.classList.add('on');}
+});
 document.addEventListener('input',function(e){if(e.target.id==='busca'){busca=e.target.value;var l=listaDemandas();$('lista').innerHTML=l.length?l.slice(0,80).map(cardDem).join(''):'<div class="empty">Nenhuma demanda.</div>';}});
 document.addEventListener('submit',function(e){if(e.target.id==='f-lanc')enviarLanc(e);if(e.target.id==='f-edit')salvarEdicao(e);});
 $('b-reload').addEventListener('click',function(){carregar().then(function(){render();toast('Atualizado');}).catch(function(e){toast('⚠ '+erro(e),4000);});});
