@@ -2362,7 +2362,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v33 — 02/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v34 — 02/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7320,13 +7320,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           });
           return out;
         }
-        // Alertas: envio hoje ou já passado (a partir de out/2026), sem marcação de enviada e ainda não vencida.
+        // Alertas: envio hoje ou já passado (a partir de out/2026) e sem marcação de enviada — igual à lista de faturas.
         function alertas() {
           var out = { hoje: [], atraso: [] }, cur = compAtual(), t = hoje();
           L.itens.filter(cobravel).forEach(function(it) {
             for (var k = -2; k <= 8; k++) {
               var o = mkOcc(it, addMes(cur, k));
-              if (o.S > t || o.S < PRIMEIRO_ENVIO || o.V < t || enviadaOcc(o)) continue;
+              if (o.S > t || o.S < PRIMEIRO_ENVIO || enviadaOcc(o)) continue;
               (o.S === t ? out.hoje : out.atraso).push(o);
             }
           });
