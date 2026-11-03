@@ -2362,7 +2362,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v32 — 02/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v33 — 02/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7307,24 +7307,26 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (o.S < t) return { c: 'atraso', t: 'Atrasada há ' + n + (n === 1 ? ' dia' : ' dias') };
           return { c: 'espera', t: 'Enviar em ' + fd(o.S).slice(0, 5) + ' (em ' + (-n) + 'd)' };
         }
-        // faturas cujo ENVIO cai no mês M (e, no mês atual, as que ficaram para trás sem enviar)
+        // Só valem faturas com envio a partir de outubro/2026 (histórico anterior descartado).
+        var PRIMEIRO_ENVIO = '2026-10-01';
+        // Faturas cujo ENVIO cai no mês M. O vencimento é só informação.
         function occsDoMes(M) {
-          var out = [], cur = compAtual(), limite = hoje();
+          var out = [];
           L.itens.filter(cobravel).forEach(function(it) {
             for (var k = -2; k <= 8; k++) {
               var o = mkOcc(it, addMes(M, k));
-              if (o.S.slice(0, 7) === M) out.push(o);
-              else if (M === cur && o.S < M + '-01' && o.V >= limite && !enviadaOcc(o)) out.push(o);
+              if (o.S.slice(0, 7) === M && o.S >= PRIMEIRO_ENVIO) out.push(o);
             }
           });
           return out;
         }
+        // Alertas: envio hoje ou já passado (a partir de out/2026), sem marcação de enviada e ainda não vencida.
         function alertas() {
-          var out = { hoje: [], atraso: [] }, cur = compAtual(), t = hoje(), limite = t;
+          var out = { hoje: [], atraso: [] }, cur = compAtual(), t = hoje();
           L.itens.filter(cobravel).forEach(function(it) {
             for (var k = -2; k <= 8; k++) {
               var o = mkOcc(it, addMes(cur, k));
-              if (o.S > t || o.V < limite || enviadaOcc(o)) continue;
+              if (o.S > t || o.S < PRIMEIRO_ENVIO || o.V < t || enviadaOcc(o)) continue;
               (o.S === t ? out.hoje : out.atraso).push(o);
             }
           });
@@ -7409,12 +7411,18 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (subLoc === 'faturas') renderFaturas(); else if (subLoc === 'locacoes') renderContratos(); else renderServicos();
         }
 
-        function itensFaturas() {
+        // faturas do mês respeitando Tipo e Busca (base dos indicadores)
+        function baseFaturas() {
           var q = norm(L.fBusca);
           return occsDoMes(L.comp).filter(function(o) {
             var it = o.it;
             if (L.fTipo && it.tipo !== L.fTipo) return false;
             if (q && norm(it.cliente + ' ' + it.equipamento + ' ' + it.dono).indexOf(q) < 0) return false;
+            return true;
+          });
+        }
+        function itensFaturas() {
+          return baseFaturas().filter(function(o) {
             var s = situacao(o);
             if (L.fSit === 'pend' && s.c === 'ok') return false;
             if (L.fSit === 'ok' && s.c !== 'ok') return false;
@@ -7429,7 +7437,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
         function renderFaturas() {
           var t = $('lo-mes-txt'); if (t) t.textContent = nomeMes(L.comp);
-          var todos = occsDoMes(L.comp), tot = 0, env = 0, nHoje = 0, vHoje = 0, nAt = 0, vAt = 0, nOk = 0;
+          var todos = baseFaturas(), tot = 0, env = 0, nHoje = 0, vHoje = 0, nAt = 0, vAt = 0, nOk = 0;
           todos.forEach(function(o) {
             var s = situacao(o), v = Number(o.it.valor || 0);
             tot += v;
@@ -8402,7 +8410,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           switch (k) {
             case 'setor': setSetor(a.getAttribute('data-setor')); break;
             case 'lo-sub': subLoc = a.getAttribute('data-v'); renderLoc(); break;
-            case 'lo-mes': { var d = parseInt(a.getAttribute('data-d'), 10); L.comp = d === 0 ? compAtual() : addMes(L.comp, d); carregarLoc().then(renderFaturas); renderFaturas(); break; }
+            case 'lo-mes': { var d = parseInt(a.getAttribute('data-d'), 10); L.comp = d === 0 ? compAtual() : addMes(L.comp, d); if (L.comp < '2026-10') L.comp = '2026-10'; carregarLoc().then(renderFaturas); renderFaturas(); break; }
             case 'lo-novo': abrirItem(null, a.getAttribute('data-tipo')); break;
             case 'lo-editar': abrirItem(id); break;
             case 'lo-excluir': excluirItem(id); break;
