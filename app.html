@@ -202,7 +202,7 @@ function paginar(tabela,ord){
 function nomes(t,ord){return chk(sb.from(t).select('nome').order(ord).order('nome')).then(function(r){return r.data.map(function(x){return x.nome;});});}
 function carregar(){
   return Promise.all([
-    nomes('tecnicos','created_at'),nomes('canais','ordem'),nomes('tipos_atendimento','ordem'),
+    chk(sb.from('tecnicos').select('nome,ativo').order('created_at').order('nome')).then(function(r){return r.data.filter(function(x){return x.ativo!==false&&x.nome!=='Sem técnico';}).map(function(x){return x.nome;});}),nomes('canais','ordem'),nomes('tipos_atendimento','ordem'),
     paginar('clientes',function(q){return q.order('nome');}),
     paginar('demandas',function(q){return q.order('data_prev',{ascending:false}).order('id');}),
     paginar('servicos',function(q){return q.order('data');}).catch(function(){return[];})
