@@ -2369,6 +2369,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       body.print-rh #rh-print-area, body.print-sx #sx-print-area { display: block !important; }
       body.print-rh, body.print-sx { background: #fff !important; display: block !important; }
     }
+    .cl { height: 137mm; box-sizing: border-box; padding: 2.5mm 0 1.5mm; margin-bottom: 3mm; font-family: Arial, Helvetica, sans-serif; color: #000; page-break-inside: avoid; break-inside: avoid; border-top: 1px dashed #000; border-bottom: 1px dashed #000; }
+    .cl-box { border: 1px solid #000; padding: 1.5mm 2.5mm; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+    .cl-h1 { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; font-size: 10.5pt; } .cl-h1 b { font-size: 10.5pt; white-space: nowrap; }
+    .cl-h2 { font-size: 10pt; } .cl-h3 { display: flex; justify-content: space-between; font-size: 10pt; } .cl-h3 span:nth-child(2) { flex: 1; text-align: center; }
+    .cl-h4 { display: flex; justify-content: space-between; font-size: 10pt; border-top: 1px solid #000; margin: 1mm -2.5mm 0; padding: 0.8mm 2.5mm; }
+    .cl-tab { width: 100%; border-collapse: collapse; font-size: 10pt; }
+    .cl-box > .cl-tab { margin-bottom: auto; }
+    .cl-tab th { font-weight: 400; font-size: 8.5pt; text-align: center; border: 1px solid #000; border-left: 0; border-right: 0; padding: 0.5mm 1mm; }
+    .cl-tab td { padding: 0.3mm 1.5mm; border-left: 1px solid #000; } .cl-tab td:first-child { border-left: 0; } .cl-tab td.c { text-align: center; } .cl-tab td.r { text-align: right; }
+    .cl-tab tfoot td { border-top: 1px solid #000; } .cl-tab tfoot td.cl-sp { border: 0; }
+    .cl-bases { width: 100%; border-collapse: collapse; font-size: 7.5pt; text-align: center; border-top: 1px solid #000; } .cl-bases th { font-weight: 400; font-size: 7pt; padding-top: 0.6mm; } .cl-bases td { font-size: 9.5pt; padding: 0.3mm 0 0.8mm; }
+    .cl-decl { font-size: 8.5pt; border-top: 1px solid #000; padding-top: 0.8mm; }
+    .cl-ass { display: flex; gap: 10mm; align-items: flex-end; margin-top: 2.5mm; padding-bottom: 0.5mm; text-align: center; } .cl-ass > div { flex: 1; } .cl-ass > div:first-child { flex: 0.6; } .cl-ass span { display: block; } .cl-ass i { display: block; border-top: 1px solid #000; margin-bottom: 0.5mm; } .cl-ass small { font-size: 7.5pt; }
     .rc-page { page-break-after: always; break-after: page; }
     .rc-page:last-child { page-break-after: auto; break-after: auto; }
     .rc { height: 137mm; box-sizing: border-box; border: 1.2px solid #000; padding: 3mm 5mm; margin-bottom: 3mm; overflow: hidden; font-family: Arial, Helvetica, sans-serif; font-size: 10.5pt; color: #000; page-break-inside: avoid; break-inside: avoid; display: flex; flex-direction: column; }
@@ -2459,7 +2472,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v36 — 04/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v38 — 05/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7851,7 +7864,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         function compPadraoRh() { var d = parseInt(hoje().slice(8, 10), 10); return d <= 10 ? addMes(compAtual(), -1) : compAtual(); }
         var R = { empresas: [], colab: [], lanc: [], rec: [], ferias: [], prest: [], pjpag: [], arq: [], compPj: compPadraoRh(), comp: compPadraoRh(), compL: compPadraoRh(),
-                  fSit: 'ativos', fBusca: '', lFiltroColab: '', rEmpresa: '', over: {}, sel: {} };
+                  fSit: 'ativos', fBusca: '', lFiltroColab: '', rEmpresa: '', over: {}, sel: {}, dec: [], decAno: parseInt(hoje().slice(0, 4), 10), decModo: {}, decSel: {}, decEmp: '' };
         var CAT = {
           vale:   { cod: 115, desc: 'Vales', nat: 'desconto', t: 'Vale / adiantamento em dinheiro' },
           refeicao: { cod: 118, desc: 'Adiantamento Refeição', nat: 'desconto', t: 'Adiantamento de refeição' },
@@ -7870,9 +7883,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('rh_ferias').select('*').order('inicio', { ascending: false })),
             chk(sb.from('rh_prestadores').select('*').order('nome')),
             buscarTudo('rh_pj_pagamentos', function(q) { return q.order('competencia', { ascending: false }); }),
-            buscarTudo('rh_arquivos', function(q) { return q.order('created_at', { ascending: false }); })
+            buscarTudo('rh_arquivos', function(q) { return q.order('created_at', { ascending: false }); }),
+            chk(sb.from('rh_decimo').select('*'))
           ]).then(function(r) {
             R.arq = r[7] || [];
+            R.dec = (r[8].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); return x; });
             R.prest = (r[5].data || []).map(function(p) { p.servicos = Array.isArray(p.servicos) ? p.servicos : []; return p; }); R.pjpag = (r[6] || []).map(function(g) { g.total = Number(g.total || 0); g.itens = Array.isArray(g.itens) ? g.itens : []; return g; });
             R.empresas = r[0].data || []; R.colab = r[1].data || []; R.lanc = r[2] || []; R.rec = r[3] || []; R.ferias = r[4].data || [];
             R.colab.forEach(function(c) { c.salario = Number(c.salario || 0); c.beneficios = Array.isArray(c.beneficios) ? c.beneficios : []; });
@@ -7894,6 +7909,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="lanc">✏ Descontos e vales</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="recibos">🧾 Recibos de pagamento</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="ferias">🏖 Férias</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="dec">🎄 13º salário</button>' +
             '</div>' +
             '<div id="rh-p-colab" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -7938,6 +7954,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div id="rh-r-kpis" class="kpi-grid"></div>' +
               '<div class="table-container" id="rh-r-tabela"></div>' +
             '</div>' +
+            '<div id="rh-p-dec" class="sx-pane">' +
+              '<div class="sx-toolbar">' +
+                '<div class="sx-mes"><button type="button" class="btn-pls-secondary" data-sx="rh-d-ano" data-d="-1">◀</button><b id="rh-d-ano"></b><button type="button" class="btn-pls-secondary" data-sx="rh-d-ano" data-d="1">▶</button></div>' +
+                '<select id="rh-d-emp" class="form-control sx-w"></select>' +
+                '<select id="rh-d-qual" class="form-control sx-w"><option value="nov">Imprimir: pagamento de novembro (1ª parcela ou integral)</option><option value="dez">Imprimir: pagamento de dezembro (2ª parcela)</option></select>' +
+                '<label class="sx-chkl"><input type="checkbox" id="rh-d-vias"> 2 vias</label>' +
+                '<button type="button" class="btn-pls-secondary" data-sx="rh-d-todos">Marcar todos</button>' +
+                '<button type="button" class="btn-pls-primary" data-sx="rh-d-imprimir">🖨 Gerar e imprimir selecionados</button>' +
+              '</div>' +
+              '<div class="sx-dica"><b>Como é calculado:</b> salário combinado × avos ÷ 12 (cada mês com 15 dias ou mais trabalhados conta 1 avo). <b>1ª parcela</b> = 50%, paga até 30/11; <b>2ª parcela</b> = o restante, paga até 20/12 (o recibo mostra o 13º inteiro e desconta a 1ª parcela). <b>Integral</b> = tudo de uma vez, até 30/11. O FGTS de 8% é separado como nos recibos atuais (quando marcado no cadastro). Benefícios como transporte e alimentação não entram. Use <b>Ajustar</b> para mudar avos, valores ou incluir descontos só naquele recibo.</div>' +
+              '<div id="rh-d-kpis" class="kpi-grid"></div>' +
+              '<div class="table-container" id="rh-d-tabela"></div>' +
+            '</div>' +
             '<div id="rh-p-ferias" class="sx-pane">' +
               '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="rh-fer-novo">➕ Lançar férias</button></div>' +
               '<div class="sx-dica">Período aquisitivo = 12 meses desde a admissão. Depois dele, a empresa tem mais 12 meses (período concessivo) para conceder as férias; passou disso, ficam <b>vencidas</b>.</div>' +
@@ -7955,9 +7984,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderRh() {
           montarRh();
-          ['colab', 'pj', 'lanc', 'recibos', 'ferias'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
+          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
           document.querySelectorAll('#setor-rh .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === subRh); });
-          if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else renderFerias();
+          if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else renderFerias();
         }
 
         // ---------- férias ----------
@@ -8049,7 +8078,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             f('func', 'Função / cargo', c.funcao) + f('adm', 'Data de admissão', c.admissao, 'date') + f('dem', 'Data de demissão', c.demissao, 'date') + f('mdem', 'Motivo da demissão', c.motivo_demissao, 'text', { full: true }) +
             '<div class="form-group"><label class="form-label">Salário combinado (R$)</label><input id="rh-m-sal" class="form-control" inputmode="decimal" value="' + numStr(c.salario) + '"></div>' +
             '<div class="form-group"><label class="form-label">Tem direito a férias?</label><select id="rh-m-gf" class="form-control">' + opts([{ v: '1', t: 'Sim, goza férias' }, { v: '0', t: 'Não — trabalho contínuo' }], c.goza_ferias === false ? '0' : '1') + '</select></div>' +
-            '<div class="form-group"><label class="form-label">FGTS no recibo</label><select id="rh-m-fgts" class="form-control">' + opts([{ v: '1', t: 'Separar 8% do valor combinado (como nos recibos atuais)' }, { v: '0', t: 'Não separar' }], c.fgts_separado ? '1' : '0') + '</select></div></div>' +
+            '<div class="form-group"><label class="form-label">Carteira assinada?</label><select id="rh-m-clt" class="form-control">' + opts([{ v: '0', t: 'Não — pago tudo ao colaborador (FGTS dentro do recibo)' }, { v: '1', t: 'Sim — carteira assinada (recibo no padrão do contador: INSS, IRRF e FGTS pela empresa)' }], c.carteira_assinada ? '1' : '0') + '</select></div>' +
+            f('dep', 'Setor / departamento (recibo com carteira)', c.departamento) + f('mat', 'Matrícula (recibo com carteira; vazio = automática)', c.matricula) +
+            '<div class="form-group"><label class="form-label">FGTS no recibo (só sem carteira assinada)</label><select id="rh-m-fgts" class="form-control">' + opts([{ v: '1', t: 'Separar 8% do valor combinado (como nos recibos atuais)' }, { v: '0', t: 'Não separar' }], c.fgts_separado ? '1' : '0') + '</select></div></div>' +
             '<div class="sx-sec">Documentos e pagamento</div><div class="form-grid">' + f('pis', 'PIS', c.pis) + f('ctps', 'CTPS', c.ctps) + f('pix', 'PIX / conta para pagamento', c.pix, 'text', { full: true }) + '</div>' +
             '<div class="sx-sec">Benefícios (entram todo mês no recibo)</div><div id="rh-bens">' + c.beneficios.map(benRow).join('') + '</div>' +
             '<div class="sx-bens-add"><button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="transp">+ Transporte (por dia)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="alim">+ Alimentação (fixo)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="outro">+ Outro</button></div>' +
@@ -8069,7 +8100,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               nascimento: $('rh-m-nasc').value || null, telefone: $('rh-m-tel').value.trim() || null, endereco: $('rh-m-end').value.trim() || null,
               empresa_id: $('rh-m-emp').value || null, funcao: $('rh-m-func').value.trim() || null,
               admissao: $('rh-m-adm').value || null, demissao: $('rh-m-dem').value || null, motivo_demissao: $('rh-m-mdem').value.trim() || null,
-              goza_ferias: $('rh-m-gf').value === '1', salario: r2(parseValor($('rh-m-sal').value)), fgts_separado: $('rh-m-fgts').value === '1',
+              goza_ferias: $('rh-m-gf').value === '1', salario: r2(parseValor($('rh-m-sal').value)), fgts_separado: $('rh-m-fgts').value === '1', carteira_assinada: $('rh-m-clt').value === '1', departamento: $('rh-m-dep').value.trim() || null, matricula: $('rh-m-mat').value.trim() || null,
               pis: $('rh-m-pis').value.trim() || null, ctps: $('rh-m-ctps').value.trim() || null, pix: $('rh-m-pix').value.trim() || null,
               beneficios: bens, obs: $('rh-m-obs').value.trim() || null
             };
@@ -8177,7 +8208,77 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (c.demissao && c.demissao.slice(0, 7) === comp) { var dd = parseInt(c.demissao.slice(8, 10), 10); d2 = dd >= diasNoMes(comp) ? 30 : Math.min(dd, 30); }
           return Math.max(0, d2 - d1 + 1);
         }
+
+        // ---------- carteira assinada (padrão do contador): INSS, IRRF, bases ----------
+        var INSS_FX = [[1621.00, 0.075], [2902.84, 0.09], [4354.27, 0.12], [8475.55, 0.14]];
+        var IRRF_FX = [[2428.80, 0, 0], [2826.65, 0.075, 182.16], [3751.05, 0.15, 394.16], [4664.68, 0.225, 675.49], [Infinity, 0.275, 908.73]];
+        function trunc2(x) { return Math.floor(x * 100 + 1e-7) / 100; }
+        function calcInss(base) {
+          base = Math.min(Math.max(0, base), 8475.55); var ant = 0, tot = 0;
+          INSS_FX.forEach(function(f) { if (base > ant) tot += (Math.min(base, f[0]) - ant) * f[1]; ant = f[0]; });
+          return trunc2(tot);
+        }
+        function calcIrrf(bruto, inss) {
+          var ded = Math.max(inss, 607.20), base = Math.max(0, r2(bruto - ded)), imp = 0, aliq = 0;
+          for (var i = 0; i < IRRF_FX.length; i++) if (base <= IRRF_FX[i][0]) { aliq = IRRF_FX[i][1]; imp = Math.max(0, base * aliq - IRRF_FX[i][2]); break; }
+          if (bruto <= 5000) imp = 0; else if (bruto <= 7350) imp = Math.max(0, imp - Math.max(0, 978.62 - 0.133145 * bruto));
+          imp = trunc2(imp);
+          return { base: base, imposto: imp, aliq: imp > 0 ? aliq * 100 : 0 };
+        }
+        function cltCalc(c, comp) {
+          var dias = rhDias(c, comp), base = r2(c.salario * dias / 30), horas = Math.round(220 * dias / 30), it = [], trib = 0;
+          it.push({ cod: 1, desc: 'Salário Base', ref: horas + ':00', venc: base, dsc: 0 });
+          if (dias > 0) c.beneficios.forEach(function(b) {
+            var ref = null, v;
+            if (b.modo === 'por_dia') { ref = b.ref || 0; v = r2(ref * b.valor); } else v = r2(b.valor);
+            it.push({ cod: b.cod || codBen(b.desc), desc: b.desc, ref: ref, venc: b.natureza === 'desconto' ? 0 : v, dsc: b.natureza === 'desconto' ? v : 0 });
+          });
+          R.lanc.forEach(function(l) {
+            if (l.colaborador_id === c.id && l.competencia === comp) {
+              it.push({ cod: l.codigo || 199, desc: l.descricao, ref: null, venc: l.natureza === 'provento' ? l.valor : 0, dsc: l.natureza === 'desconto' ? l.valor : 0 });
+              if (l.natureza === 'provento') trib += l.valor;
+            }
+          });
+          var bInss = r2(base + trib), inss = calcInss(bInss), ir = calcIrrf(bInss, inss);
+          if (inss > 0) it.push({ cod: 903, desc: 'INSS Folha', ref: null, venc: 0, dsc: inss });
+          if (ir.imposto > 0) it.push({ cod: 904, desc: 'IRRF Folha', ref: null, venc: 0, dsc: ir.imposto });
+          it = it.filter(function(x) { return x.venc > 0; }).concat(it.filter(function(x) { return !(x.venc > 0); }));
+          var liq = totais(it).l, cents = r2(liq - Math.floor(liq));
+          if (cents > 0.004) it.push({ cod: 610, desc: 'Arredondamento', ref: null, venc: 0, dsc: cents });
+          return { itens: it, bases: { salario: base, inss: bInss, difInss: 0, fgts: bInss, fgtsMes: r2(bInss * 0.08), difFgts: 0, irrf: ir.base, aliq: ir.aliq } };
+        }
+        function matriculaDe(c) {
+          if (c.matricula) return c.matricula;
+          var ord = R.colab.slice().sort(function(a, b) { return String(a.created_at).localeCompare(String(b.created_at)); });
+          return String(ord.indexOf(c) + 1).padStart(6, '0');
+        }
+        function reciboCltHtml(c, comp, itens, op) {
+          var e = empPorId(c.empresa_id) || { nome: 'PLS EMPILHADEIRAS', documento: '', endereco: '' };
+          var t = totais(itens), ult = comp + '-' + String(diasNoMes(comp)).padStart(2, '0'), b = (op && op.bases) || cltCalc(c, comp).bases;
+          function m(n) { return Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+          var linhas = itens.map(function(i) {
+            return '<tr><td class="c">' + String(i.cod || '').padStart(3, '0') + '</td><td>' + esc(i.desc) + '</td><td class="r">' + (i.ref == null || i.ref === '' ? '' : esc(i.ref)) + '</td><td class="r">' + (i.venc ? m(i.venc) : '') + '</td><td class="r">' + (i.dsc ? m(i.dsc) : '') + '</td></tr>';
+          });
+          while (linhas.length < 7) linhas.push('<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>');
+          var doc = String(e.documento || '').replace(/\D/g, '');
+          return '<div class="cl"><div class="cl-box">' +
+            '<div class="cl-h1"><span>' + esc(String(e.nome).toUpperCase()) + '</span><b>' + esc(op && op.titulo ? op.titulo : 'Demonstrativo de Pagamento de Salário') + '</b></div>' +
+            '<div class="cl-h2">' + esc(String(e.endereco || '').toUpperCase()) + '</div>' +
+            '<div class="cl-h3"><span>' + (op && op.periodo ? esc(op.periodo) : fd(comp + '-01') + ' a ' + fd(ult)) + '</span><span>' + esc(c.departamento || '') + '</span><span>' + esc(doc) + '</span></div>' +
+            '<div class="cl-h4"><span>' + esc(matriculaDe(c)) + ' ' + esc(c.nome) + '</span><span>' + esc(c.funcao || '') + '</span></div>' +
+            '<table class="cl-tab"><thead><tr><th style="width:8%">Cód.</th><th>Descrição</th><th style="width:15%">Referência</th><th style="width:17%">Vencimentos</th><th style="width:17%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
+            '<tfoot><tr><td colspan="3" class="cl-sp"></td><td class="r">' + m(t.v) + '</td><td class="r">' + m(t.d) + '</td></tr><tr><td colspan="3" class="cl-sp"></td><td class="r"><b>Valor Líquido</b></td><td class="r"><b>' + m(t.l) + '</b></td></tr></tfoot></table>' +
+            '<table class="cl-bases"><thead><tr><th>Salário Base</th><th>Sal. Contri. INSS</th><th>Base INSS Dif. Sal.</th><th>Base Cál. FGTS</th><th>F.G.T.S do mês</th><th>Base FGTS Dif. Sal.</th><th>Base Cálc. IRRF</th><th>Alíq. IRRF</th></tr></thead><tbody><tr><td>' + m(b.salario) + '</td><td>' + m(b.inss) + '</td><td>' + m(b.difInss) + '</td><td>' + m(b.fgts) + '</td><td>' + m(b.fgtsMes) + '</td><td>' + m(b.difFgts) + '</td><td>' + m(b.irrf) + '</td><td>' + m(b.aliq) + ' %</td></tr></tbody></table>' +
+            '<div class="cl-decl">DECLARO TER RECEBIDO A IMPORTÂNCIA LÍQUIDA DISCRIMINADA NESTE RECIBO</div>' +
+            '<div class="cl-ass"><div><span>___/___/___</span><small>DATA</small></div><div><i></i><small>ASSINATURA DO FUNCIONÁRIO</small></div></div></div></div>';
+        }
+        function decBases(c, p) {
+          var pt = decPartes(c), valor = p === '2' ? pt.bruto - pt['1'] : (p === '1' ? pt['1'] : pt.U), tem = p !== '1', inss = tem ? calcInss(pt.bruto) : 0, ir = tem ? calcIrrf(pt.bruto, inss) : { base: 0, aliq: 0 };
+          return { salario: c.salario, inss: tem ? pt.bruto : 0, difInss: 0, fgts: r2(valor), fgtsMes: r2(valor * 0.08), difFgts: 0, irrf: ir.base, aliq: ir.aliq };
+        }
+
         function itensCalc(c, comp) {
+          if (c.carteira_assinada) return cltCalc(c, comp).itens;
           var dias = rhDias(c, comp), it = [], bruto = r2(c.salario * dias / 30);
           if (c.fgts_separado) { var fg = r2(bruto * 0.08); it.push({ cod: 100, desc: 'Salário', ref: dias, venc: r2(bruto - fg), dsc: 0 }); it.push({ cod: 104, desc: 'FGTS', ref: null, venc: fg, dsc: 0 }); }
           else it.push({ cod: 100, desc: 'Salário', ref: dias, venc: bruto, dsc: 0 });
@@ -8213,7 +8314,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             else sit = '<span class="sx-pill sx-espera">Não gerado</span>';
             if (arqDe('colaborador', c.id).some(function(a) { return a.categoria === 'recibo' && a.competencia === R.comp; })) sit += ' <span class="sx-pill sx-ok">assinado ✔</span>';
             return '<tr><td style="text-align:center"><input type="checkbox" class="sx-chk" data-sx="rh-r-sel" data-id="' + c.id + '"' + (R.sel[c.id] ? ' checked' : '') + '></td>' +
-              '<td><b>' + esc(c.nome) + '</b>' + (R.over[c.id + '|' + R.comp] ? ' <span class="sx-pill sx-hoje">ajustado</span>' : '') + '</td><td>' + esc((empPorId(c.empresa_id) || {}).nome ? empPorId(c.empresa_id).nome.split(' ').slice(0, 2).join(' ') : '— sem empresa —') + '</td>' +
+              '<td><b>' + esc(c.nome) + '</b>' + (c.carteira_assinada ? ' <span class="sx-pill sx-ok">CLT</span>' : '') + (R.over[c.id + '|' + R.comp] ? ' <span class="sx-pill sx-hoje">ajustado</span>' : '') + '</td><td>' + esc((empPorId(c.empresa_id) || {}).nome ? empPorId(c.empresa_id).nome.split(' ').slice(0, 2).join(' ') : '— sem empresa —') + '</td>' +
               '<td style="text-align:right">' + brl(t.v) + '</td><td style="text-align:right;color:var(--pls-red)">' + brl(t.d) + '</td><td style="text-align:right;font-weight:800">' + brl(t.l) + '</td><td>' + sit + '</td>' +
               '<td class="sx-acoes">' + btnPasta('colaborador', c.id, 'recibo', R.comp, '📎 Assinado') + '<button type="button" class="btn-pls-secondary" data-sx="rh-r-ajustar" data-id="' + c.id + '">Ajustar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-r-um" data-id="' + c.id + '">🖨</button> ' +
               (s && s.pago ? '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="0">Desfazer pago</button>' : '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="1">Marcar pago</button>') + '</td></tr>';
@@ -8222,19 +8323,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           $('rh-r-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Empresa</th><th style="text-align:right">Vencimentos</th><th style="text-align:right">Descontos</th><th style="text-align:right">Líquido</th><th>Situação</th><th></th></tr></thead><tbody>' + linhas.join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum colaborador com salário neste mês.</div>';
         }
 
-        function abrirAjuste(id) {
+        function abrirAjuste(id, ov) {
           var c = colabPorId(id); if (!c) return;
-          var itens = itensRecibo(c, R.comp).map(function(x) { return Object.assign({}, x); });
+          var itens = (ov ? ov.itens : itensRecibo(c, R.comp)).map(function(x) { return Object.assign({}, x); });
           function linha(x) {
             return '<tr><td><input class="form-control aj-cod" style="width:60px" value="' + esc(x.cod || '') + '"></td><td><input class="form-control aj-desc" value="' + esc(x.desc) + '"></td>' +
               '<td><input class="form-control aj-ref" style="width:70px" value="' + esc(x.ref == null ? '' : x.ref) + '"></td><td><input class="form-control aj-venc" style="width:100px" value="' + (x.venc ? numStr(x.venc) : '') + '"></td>' +
               '<td><input class="form-control aj-dsc" style="width:100px" value="' + (x.dsc ? numStr(x.dsc) : '') + '"></td><td><button type="button" class="btn-pls-secondary sx-del" data-sx="rh-aj-del">✕</button></td></tr>';
           }
           R._ajLinha = linha;
-          abrirModal('Ajustar recibo — ' + c.nome + ' (' + nomeMes(R.comp) + ')',
+          abrirModal('Ajustar recibo — ' + c.nome + ' (' + (ov ? ov.titulo : nomeMes(R.comp)) + ')',
             '<div class="sx-dica" style="margin-top:0">Vale só para este recibo. Para algo que se repete, use o cadastro (benefícios) ou “Descontos e vales”.</div>' +
             '<div class="table-container"><table class="table-pls"><thead><tr><th>Cód</th><th>Descrição</th><th>Ref.</th><th>Vencimento</th><th>Desconto</th><th></th></tr></thead><tbody id="aj-corpo">' + itens.map(linha).join('') + '</tbody></table></div>' +
-            '<button type="button" class="btn-pls-secondary" data-sx="rh-aj-add" style="margin-top:.5rem">+ Linha</button> <button type="button" class="btn-pls-secondary" data-sx="rh-aj-reset" data-id="' + c.id + '" style="margin-top:.5rem">Voltar ao cálculo automático</button>',
+            '<button type="button" class="btn-pls-secondary" data-sx="rh-aj-add" style="margin-top:.5rem">+ Linha</button> <button type="button" class="btn-pls-secondary" data-sx="rh-aj-reset" data-id="' + c.id + '" data-k="' + (ov ? esc(ov.key) : '') + '" style="margin-top:.5rem">Voltar ao cálculo automático</button>',
             'Aplicar', function() {
               var novos = [];
               document.querySelectorAll('#aj-corpo tr').forEach(function(tr) {
@@ -8242,11 +8343,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var ref = tr.querySelector('.aj-ref').value.trim();
                 novos.push({ cod: parseInt(tr.querySelector('.aj-cod').value, 10) || 199, desc: desc, ref: ref === '' ? null : (isNaN(Number(ref)) ? ref : Number(ref)), venc: r2(parseValor(tr.querySelector('.aj-venc').value)), dsc: r2(parseValor(tr.querySelector('.aj-dsc').value)) });
               });
-              R.over[c.id + '|' + R.comp] = novos; renderRecibos();
+              if (ov) { R.over[ov.key] = novos; renderDecimo(); } else { R.over[c.id + '|' + R.comp] = novos; renderRecibos(); }
             });
         }
 
-        function reciboHtml(c, comp, itens) {
+        function reciboHtml(c, comp, itens, op) {
+          if (c.carteira_assinada) return reciboCltHtml(c, comp, itens, op);
           var e = empPorId(c.empresa_id) || { nome: 'PLS EMPILHADEIRAS', documento: '', endereco: '' };
           var t = totais(itens), ult = comp + '-' + String(diasNoMes(comp)).padStart(2, '0');
           var linhas = itens.map(function(i) {
@@ -8255,9 +8357,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           while (linhas.length < 6) linhas.push('<tr><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>');
           function m(n) { return numStr(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
           return '<div class="rc">' +
-            '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">RECIBO DE PAGAMENTO</div></div>' +
+            '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">' + esc(op && op.titulo ? op.titulo : 'RECIBO DE PAGAMENTO') + '</div></div>' +
             '<div class="rc-emp"><div><b>' + esc(e.nome) + '</b><br>' + esc(e.endereco || '') + (e.endereco ? '<br>' : '') + esc(e.documento || '') + '</div>' +
-            '<div class="rc-per"><span>Período de serviço</span><b>' + fd(comp + '-01') + ' a ' + fd(ult) + '</b></div></div>' +
+            '<div class="rc-per"><span>' + (op && op.rotulo ? esc(op.rotulo) : 'Período de serviço') + '</span><b>' + (op && op.periodo ? esc(op.periodo) : fd(comp + '-01') + ' a ' + fd(ult)) + '</b></div></div>' +
             '<div class="rc-nome"><div><span>Nome completo</span><b>' + esc(c.nome) + '</b></div><div><span>CPF</span><b>' + esc(c.cpf || '') + '</b></div></div>' +
             '<table class="rc-tab"><thead><tr><th style="width:9%">Cód</th><th>Descrição</th><th style="width:12%">Referência</th><th style="width:19%">Vencimento</th><th style="width:19%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
             '<tfoot><tr><td colspan="3" class="r">Total de vencimentos / descontos</td><td class="r"><b>' + m(t.v) + '</b></td><td class="r"><b>' + m(t.d) + '</b></td></tr>' +
@@ -8285,6 +8387,126 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var c = colabPorId(id), it = itensRecibo(c, R.comp), t = totais(it), s = recSalvo(id, R.comp);
           var row = { colaborador_id: id, competencia: R.comp, itens: s ? s.itens : it, total_vencimentos: s ? s.total_vencimentos : t.v, total_descontos: s ? s.total_descontos : t.d, liquido: s ? s.liquido : t.l, pago: pago, data_pagamento: pago ? hoje() : null };
           chk(sb.from('rh_recibos').upsert(row, { onConflict: 'colaborador_id,competencia' })).then(carregarRh).then(renderRecibos)
+            .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+
+        // ---------- 13º salário ----------
+        var DEC_VENC = { '1': '11-30', '2': '12-20', 'U': '11-30' };
+        var DEC_TIT = { '1': '13º SALÁRIO — 1ª PARCELA', '2': '13º SALÁRIO — 2ª PARCELA', 'U': '13º SALÁRIO — INTEGRAL' };
+        function decDias(ini, fim) { return Math.round((Date.parse(fim + 'T12:00:00') - Date.parse(ini + 'T12:00:00')) / 86400000) + 1; }
+        function decAvos(c, ano) {
+          var n = 0;
+          for (var m = 1; m <= 12; m++) {
+            var mm = String(m).padStart(2, '0'), ini = ano + '-' + mm + '-01', fim = ano + '-' + mm + '-' + String(diasNoMes(ano + '-' + mm)).padStart(2, '0');
+            var a = c.admissao && c.admissao > ini ? c.admissao : ini, b = c.demissao && c.demissao < fim ? c.demissao : fim;
+            if (a <= b && decDias(a, b) >= 15) n++;
+          }
+          return n;
+        }
+        function decRow(cid, ano, p) { return R.dec.filter(function(r) { return r.colaborador_id === cid && r.ano === ano && r.parcela === p; })[0]; }
+        function decModoDe(c) {
+          var a = R.decAno;
+          if (decRow(c.id, a, 'U')) return 'integral';
+          if (decRow(c.id, a, '1') || decRow(c.id, a, '2')) return 'duas';
+          return R.decModo[c.id] || 'duas';
+        }
+        function decPartes(c) {
+          var b = r2(c.salario * decAvos(c, R.decAno) / 12), modo = decModoDe(c);
+          if (modo === 'integral') return { modo: modo, bruto: b, U: b };
+          var p1 = r2(b / 2); return { modo: modo, bruto: b, '1': p1, '2': r2(b - p1) };
+        }
+        function decItens(c, p) {
+          var ano = R.decAno, pt = decPartes(c), ref = decAvos(c, ano) + '/12', valor = p === '2' ? pt.bruto : (p === '1' ? pt['1'] : pt.U), it = [];
+          if (c.carteira_assinada) {
+            it.push({ cod: 1, desc: p === '1' ? '13º Salário – 1ª parcela' : p === '2' ? '13º Salário – 2ª parcela' : '13º Salário (integral)', ref: ref, venc: r2(valor), dsc: 0 });
+            if (p !== '1') {
+              var inss = calcInss(pt.bruto), ir = calcIrrf(pt.bruto, inss);
+              if (inss > 0) it.push({ cod: 903, desc: 'INSS Folha 13º', ref: null, venc: 0, dsc: inss });
+              if (ir.imposto > 0) it.push({ cod: 904, desc: 'IRRF 13º', ref: null, venc: 0, dsc: ir.imposto });
+              if (p === '2') it.push({ cod: 151, desc: 'Adiantamento 13º – 1ª parcela', ref: null, venc: 0, dsc: pt['1'] });
+            }
+            return it;
+          }
+          var fg = c.fgts_separado ? r2(valor * 0.08) : 0;
+          it.push({ cod: 150, desc: p === '1' ? '13º Salário – 1ª parcela' : p === '2' ? '13º Salário' : '13º Salário (integral)', ref: ref, venc: r2(valor - fg), dsc: 0 });
+          if (fg) it.push({ cod: 104, desc: 'FGTS', ref: null, venc: fg, dsc: 0 });
+          if (p === '2') it.push({ cod: 151, desc: 'Adiantamento 13º – 1ª parcela', ref: null, venc: 0, dsc: pt['1'] });
+          return it;
+        }
+        function decKey(c, p) { return c.id + '|13-' + R.decAno + '-' + p; }
+        function decItensRec(c, p) { return R.over[decKey(c, p)] || decItens(c, p); }
+        function decLista() {
+          return R.colab.filter(function(c) { return decAvos(c, R.decAno) > 0 && (!R.decEmp || c.empresa_id === R.decEmp); })
+            .sort(function(a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
+        }
+        function renderDecimo() {
+          var ano = R.decAno; $('rh-d-ano').textContent = ano;
+          var se = $('rh-d-emp'); se.innerHTML = opts(R.empresas.map(function(e) { return { v: e.id, t: e.nome }; }), R.decEmp, 'Todas as empresas');
+          var lista = decLista(), kTot = 0, kNov = 0, kDez = 0, pagos = 0;
+          function cel(c, p) {
+            var it = decItensRec(c, p), t = totais(it), s = decRow(c.id, ano, p), sit;
+            if (s && s.pago) { sit = '<span class="sx-pill sx-ok">Pago ' + fd(s.data_pagamento) + '</span>'; pagos++; }
+            else if (s) sit = '<span class="sx-pill sx-hoje">Gerado</span>' + (Math.abs(Number(s.liquido) - t.l) > 0.009 ? ' <span class="sx-pill sx-atraso" title="O cálculo mudou depois de gerar">alterado</span>' : '');
+            else sit = '<span class="sx-pill sx-espera">Não gerado</span>';
+            return '<td><b>' + brl(t.l) + '</b>' + (R.over[decKey(c, p)] ? ' <span class="sx-pill sx-hoje">ajustado</span>' : '') + '<br><small class="sx-muted">pagar até ' + fd(ano + '-' + DEC_VENC[p]) + '</small><br>' + sit +
+              '<div class="sx-acoes" style="margin-top:.3rem"><button type="button" class="btn-pls-secondary" data-sx="rh-d-ajustar" data-id="' + c.id + '" data-p="' + p + '">Ajustar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-d-um" data-id="' + c.id + '" data-p="' + p + '">🖨</button> ' +
+              (s && s.pago ? '<button type="button" class="btn-pls-secondary" data-sx="rh-d-pago" data-id="' + c.id + '" data-p="' + p + '" data-v="0">Desfazer</button>' : '<button type="button" class="btn-pls-secondary" data-sx="rh-d-pago" data-id="' + c.id + '" data-p="' + p + '" data-v="1">Marcar pago</button>') + '</div></td>';
+          }
+          var linhas = lista.map(function(c) {
+            var pt = decPartes(c), av = decAvos(c, ano);
+            kTot += pt.bruto; if (pt.modo === 'integral') kNov += totais(decItensRec(c, 'U')).l; else { kNov += totais(decItensRec(c, '1')).l; kDez += totais(decItensRec(c, '2')).l; }
+            return '<tr><td style="text-align:center"><input type="checkbox" class="sx-chk" data-sx="rh-d-sel" data-id="' + c.id + '"' + (R.decSel[c.id] ? ' checked' : '') + '></td>' +
+              '<td><b>' + esc(c.nome) + '</b>' + (c.carteira_assinada ? ' <span class="sx-pill sx-ok">CLT</span>' : '') + '<br><small class="sx-muted">Salário ' + brl(c.salario) + ' · ' + av + '/12 avos' + (c.demissao && c.demissao.slice(0, 4) === String(ano) ? ' · desligado em ' + fd(c.demissao) : '') + '</small></td>' +
+              '<td style="text-align:right;font-weight:800">' + brl(pt.bruto) + '</td>' +
+              '<td><select class="form-control" data-sx="rh-d-modo" data-id="' + c.id + '" style="min-width:150px"><option value="duas"' + (pt.modo === 'duas' ? ' selected' : '') + '>2 parcelas (nov + dez)</option><option value="integral"' + (pt.modo === 'integral' ? ' selected' : '') + '>Integral (1 pagamento)</option></select></td>' +
+              (pt.modo === 'integral' ? cel(c, 'U') + '<td class="sx-muted">— pago integral —</td>' : cel(c, '1') + cel(c, '2')) + '</tr>';
+          });
+          $('rh-d-kpis').innerHTML = kpi('Colaboradores', lista.length, pagos + ' parcela(s) paga(s)', '#334155') + kpi('Total do 13º ' + ano, brl(kTot), '', 'var(--accent)') + kpi('A pagar em novembro', brl(kNov), 'até 30/11 (1ª parcela ou integral)', '#16a34a') + kpi('A pagar em dezembro', brl(kDez), 'até 20/12 (2ª parcela)', '#2563eb');
+          $('rh-d-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th style="width:36px"></th><th>Colaborador</th><th style="text-align:right">13º bruto</th><th>Forma de pagamento</th><th>1ª parcela / Integral</th><th>2ª parcela</th></tr></thead><tbody>' + linhas.join('') + '</tbody></table>'
+            : '<div class="sx-vazio">Nenhum colaborador com direito ao 13º em ' + ano + '.</div>';
+        }
+        function abrirAjusteDec(id, p) {
+          var c = colabPorId(id); if (!c) return;
+          abrirAjuste(id, { key: decKey(c, p), itens: decItensRec(c, p), titulo: DEC_TIT[p] + ' ' + R.decAno });
+        }
+        function mudarModoDec(id, modo) {
+          var c = colabPorId(id), ano = R.decAno, rows = R.dec.filter(function(r) { return r.colaborador_id === id && r.ano === ano; });
+          if (rows.some(function(r) { return r.pago; })) { showToast('Já existe parcela paga — não dá para mudar a forma de pagamento.', 4500); renderDecimo(); return; }
+          function troca() { R.decModo[id] = modo; ['1', '2', 'U'].forEach(function(p) { delete R.over[decKey(c, p)]; }); renderDecimo(); }
+          if (!rows.length) { troca(); return; }
+          if (!confirm('Já foram gerados recibos de 13º para ' + c.nome + '. Mudar a forma de pagamento apaga esses recibos (ainda não pagos) para gerar de novo. Continuar?')) { renderDecimo(); return; }
+          chk(sb.from('rh_decimo').delete().eq('colaborador_id', id).eq('ano', ano)).then(carregarRh).then(troca).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function gerarDecimo(pares) {
+          var vias = $('rh-d-vias') && $('rh-d-vias').checked, htmls = [], snaps = [], ano = R.decAno;
+          pares.forEach(function(x) {
+            var c = colabPorId(x.id); if (!c) return;
+            var it = decItensRec(c, x.p), t = totais(it);
+            var h = reciboHtml(c, ano + '-12', it, { titulo: c.carteira_assinada ? 'Demonstrativo de Pagamento de ' + DEC_TIT[x.p].replace('13º SALÁRIO — ', '13º Salário — ') : DEC_TIT[x.p], rotulo: 'Referente ao ano', periodo: c.carteira_assinada ? '13º Salário ' + ano + ' (' + decAvos(c, ano) + '/12 avos)' : ano + ' (' + decAvos(c, ano) + '/12 avos)', bases: c.carteira_assinada ? decBases(c, x.p) : null });
+            htmls.push(h); if (vias) htmls.push(h);
+            snaps.push({ colaborador_id: c.id, ano: ano, parcela: x.p, itens: it, total_vencimentos: t.v, total_descontos: t.d, liquido: t.l });
+          });
+          if (!htmls.length) { showToast('Selecione pelo menos um colaborador.'); return; }
+          var pag = '';
+          for (var i = 0; i < htmls.length; i += 2) pag += '<div class="rc-page">' + htmls[i] + (htmls[i + 1] || '') + '</div>';
+          $('rh-print-area').innerHTML = pag;
+          chk(sb.from('rh_decimo').upsert(snaps, { onConflict: 'colaborador_id,ano,parcela' })).then(carregarRh).then(function() { renderDecimo(); })
+            .catch(function(e) { showToast('O recibo foi montado, mas não consegui gravar o registro: ' + (e.message || e), 5000); });
+          imprimirArea('print-rh', 'portrait');
+        }
+        function imprimirDecimoSel() {
+          var qual = $('rh-d-qual').value, pares = [];
+          Object.keys(R.decSel).filter(function(i) { return R.decSel[i]; }).forEach(function(id) {
+            var c = colabPorId(id); if (!c) return; var pt = decPartes(c);
+            if (qual === 'nov') pares.push({ id: id, p: pt.modo === 'integral' ? 'U' : '1' }); else if (pt.modo !== 'integral') pares.push({ id: id, p: '2' });
+          });
+          if (!pares.length) { showToast(qual === 'dez' ? 'Marque colaboradores que pagam em 2 parcelas.' : 'Marque pelo menos um colaborador.', 4000); return; }
+          gerarDecimo(pares);
+        }
+        function marcarPagoDec(id, p, pago) {
+          var c = colabPorId(id), it = decItensRec(c, p), t = totais(it), s = decRow(id, R.decAno, p);
+          var row = { colaborador_id: id, ano: R.decAno, parcela: p, itens: s ? s.itens : it, total_vencimentos: s ? s.total_vencimentos : t.v, total_descontos: s ? s.total_descontos : t.d, liquido: s ? s.liquido : t.l, pago: pago, data_pagamento: pago ? hoje() : null };
+          chk(sb.from('rh_decimo').upsert(row, { onConflict: 'colaborador_id,ano,parcela' })).then(carregarRh).then(renderDecimo)
             .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
 
@@ -9611,9 +9833,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'rh-r-um': gerarRecibos([id]); break;
             case 'rh-r-ajustar': abrirAjuste(id); break;
             case 'rh-r-pago': marcarPago(id, a.getAttribute('data-v') === '1'); break;
+            case 'rh-d-ano': R.decAno += parseInt(a.getAttribute('data-d'), 10); R.decSel = {}; renderDecimo(); break;
+            case 'rh-d-todos': { var ld = decLista(), tod = ld.every(function(c) { return R.decSel[c.id]; }); R.decSel = {}; if (!tod) ld.forEach(function(c) { R.decSel[c.id] = true; }); renderDecimo(); break; }
+            case 'rh-d-imprimir': imprimirDecimoSel(); break;
+            case 'rh-d-um': gerarDecimo([{ id: id, p: a.getAttribute('data-p') }]); break;
+            case 'rh-d-ajustar': abrirAjusteDec(id, a.getAttribute('data-p')); break;
+            case 'rh-d-pago': marcarPagoDec(id, a.getAttribute('data-p'), a.getAttribute('data-v') === '1'); break;
             case 'rh-aj-add': $('aj-corpo').insertAdjacentHTML('beforeend', R._ajLinha({ cod: 199, desc: '', ref: null, venc: 0, dsc: 0 })); break;
             case 'rh-aj-del': a.closest('tr').remove(); break;
-            case 'rh-aj-reset': delete R.over[id + '|' + R.comp]; fecharModal(); renderRecibos(); break;
+            case 'rh-aj-reset': { var kk = a.getAttribute('data-k'); if (kk) { delete R.over[kk]; fecharModal(); renderDecimo(); } else { delete R.over[id + '|' + R.comp]; fecharModal(); renderRecibos(); } break; }
             case 'rh-fer-novo': abrirFerias(id); break;
             case 'rh-pasta': abrirPasta(a.getAttribute('data-ent'), id, a.getAttribute('data-cat'), a.getAttribute('data-comp')); break;
             case 'rh-arq-abrir': abrirArquivo(id); break;
@@ -9638,6 +9866,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var t = evt.target, a = t.closest ? t.closest('[data-sx]') : null;
           if (a && a.getAttribute('data-sx') === 'lo-enviar') { marcarEnviada(a.getAttribute('data-id'), a.getAttribute('data-x'), a.checked); return; }
           if (a && a.getAttribute('data-sx') === 'rh-r-sel') { R.sel[a.getAttribute('data-id')] = a.checked; return; }
+          if (a && a.getAttribute('data-sx') === 'rh-d-sel') { R.decSel[a.getAttribute('data-id')] = a.checked; return; }
+          if (a && a.getAttribute('data-sx') === 'rh-d-modo') { mudarModoDec(a.getAttribute('data-id'), a.value); return; }
           switch (t.id) {
             case 'lo-f-tipo': L.fTipo = t.value; renderFaturas(); break;
             case 'lo-f-sit': L.fSit = t.value; renderFaturas(); break;
@@ -9645,6 +9875,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'rh-f-sit': R.fSit = t.value; renderColab(); break;
             case 'rh-l-colab': R.lFiltroColab = t.value; renderLanc(); break;
             case 'rh-r-emp': R.rEmpresa = t.value; renderRecibos(); break;
+            case 'rh-d-emp': R.decEmp = t.value; renderDecimo(); break;
           }
         });
         document.addEventListener('input', function(evt) {
