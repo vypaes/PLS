@@ -2363,7 +2363,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     }
 
     /* ===== Manutenção (v39) ===== */
-    body.setor-manutencao #setor-manutencao { display: block; }
+    body.setor-manutencao #setor-manutencao, body.setor-clientes #setor-clientes { display: block; }
     #setor-manutencao .form-grid .form-group.full-width { grid-column: 1 / -1; }
     #setor-manutencao textarea.form-control { resize: vertical; line-height: 1.4; }
     #setor-manutencao .sx-acoes { white-space: nowrap; }
@@ -2556,10 +2556,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     <nav class="pls-tabs">
       <button type="button" class="pls-tab-btn active" data-action="switch-tab" data-tab="lancamentos">1ª Lançamento e Demandas</button>
       <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="painel">2ª Painel</button>
-      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="clientes">3ª Cadastro de Cliente</button>
-      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="calendario">4ª Calendário</button>
-      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="ranking">5ª Ranking por Técnico</button>
-      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="historico">6ª Gestão</button>
+      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="calendario">3ª Calendário</button>
+      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="ranking">4ª Ranking por Técnico</button>
+      <button type="button" class="pls-tab-btn" data-action="switch-tab" data-tab="historico">5ª Gestão</button>
     </nav>
   </header>
 
@@ -2592,7 +2591,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               <label class="form-label" for="demand-cliente">Cliente <span class="req-star">*</span></label>
               <div style="display:flex; gap:0.25rem;">
                 <select id="demand-cliente" class="form-control" required></select>
-                <button type="button" class="btn-pls-secondary" title="Cadastrar cliente rápido" data-action="quick-new-client" style="padding:0 0.5rem;">+</button>
               </div>
             </div>
 
@@ -3453,6 +3451,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     <section id="setor-rh" class="setor-sec"></section>
     <section id="setor-comercial" class="setor-sec"></section>
     <section id="setor-manutencao" class="setor-sec"></section>
+    <section id="setor-clientes" class="setor-sec"></section>
     <div id="setor-nenhum"><h3>Sem acesso a nenhum setor</h3><p>Fale com o administrador para liberar o seu acesso.</p></div>
   </main>
   <div id="rh-print-area"></div>
@@ -7443,6 +7442,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           { k: 'rh', t: 'RH', ic: '👥' },
           { k: 'comercial', t: 'Comercial', ic: '💼' },
           { k: 'manutencao', t: 'Manutenção', ic: '🔧' },
+          { k: 'clientes', t: 'Clientes', ic: '🏢' },
           { k: 'gerencial', t: 'Gerencial', ic: '⚙' }
         ];
         var setorAtual = 'demandas';
@@ -7521,7 +7521,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function setSetor(k, sub) {
           if (!permitido(k)) { var l = setoresPermitidos(); k = l.length ? l[0].k : null; }
           var b = document.body;
-          b.classList.remove('setor-demandas', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-manutencao', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
+          b.classList.remove('setor-demandas', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-manutencao', 'setor-clientes', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
           if (!k) { b.classList.add('setor-nenhum', 'setor-fora'); setorAtual = null; desenharRail(); return; }
           setorAtual = k;
           b.classList.add('setor-' + k);
@@ -7533,6 +7533,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           else if (k === 'rh') { if (sub) subRh = sub; entrarRh(); }
           else if (k === 'comercial') { if (sub) C.sub = sub; entrarCom(); }
           else if (k === 'manutencao') { if (sub) M.sub = sub; entrarMan(); }
+          else if (k === 'clientes') { entrarCli(); }
           else if (k === 'gerencial') { try { switchTab('config'); } catch (e) { console.error(e); } }
           else { try { if (activeTab === 'config') activeTab = 'lancamentos'; switchTab(activeTab); } catch (e) {} }
           desenharRail();
@@ -9937,7 +9938,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return chk(sb.from('clientes').insert(novos)).then(function() {
             novos.forEach(function(n) { appData.clientes.push({ id: n.id, nome: n.nome, canal: n.canal, status: n.status, obs: '', cnpj: '', contato: '', telefone: '', email: '', endereco: '' }); });
             try { populateSelects(); } catch (e) {}
-            if (setorAtual === 'manutencao') renderMan();
+            if (setorAtual === 'manutencao') renderMan(); if (setorAtual === 'clientes') renderClientesMan();
           }).catch(console.error).then(function() { sincCli = false; });
         }
         function todosClientes() {
@@ -10018,7 +10019,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="vencimentos">🔔 Vencimentos</button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="equip">🚜 Equipamentos dos clientes</button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="clientes">👥 Clientes</button>' +
             '</div>' +
             '<div id="mn-p-vencimentos" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -10035,12 +10035,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="pl-novo">➕ Novo plano</button>' +
               '<input id="mn-p-busca" class="form-control sx-w2" placeholder="Buscar plano, marca ou modelo…"></div>' +
               '<div class="table-container" id="mn-planos"></div>' +
-            '</div>' +
-            '<div id="mn-p-clientes" class="sx-pane">' +
-              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="cli-novo">➕ Novo cliente</button>' +
-              '<input id="mn-c-busca" class="form-control sx-w2" placeholder="Buscar cliente, CNPJ ou contato…"></div>' +
-              '<p class="sx-muted" style="margin:0 0 0.6rem">Cadastro único: os mesmos clientes valem para Demandas, Locações, Comercial e Manutenção.</p>' +
-              '<div class="table-container" id="mn-clientes"></div>' +
             '</div>';
         }
         function entrarMan() {
@@ -10050,9 +10044,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderMan() {
           montarMan();
-          ['vencimentos', 'equip', 'planos', 'clientes'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
+          ['vencimentos', 'equip', 'planos'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
           document.querySelectorAll('#setor-manutencao .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === M.sub); });
-          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'planos') renderPlanosMan(); else renderClientesMan();
+          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else renderPlanosMan();
         }
         function pillSev(s) { return s === 2 ? '<span class="sx-pill sx-atraso">VENCIDA</span>' : s === 1 ? '<span class="sx-pill sx-hoje">PERTO DE VENCER</span>' : '<span class="sx-pill sx-st-ok">EM DIA</span>'; }
         function renderVenc() {
@@ -10111,38 +10105,62 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 '<button type="button" class="btn-pls-secondary" data-man="pl-del" data-id="' + p.id + '">🗑</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum plano cadastrado. Envie a marca, o modelo e o número de série à Claude para ela pesquisar e cadastrar o plano pronto.</div>';
         }
+        // ---------- setor Clientes (cadastro único) ----------
+        function montarCli() {
+          var el = $('setor-clientes'); if (!el || el.getAttribute('data-ok')) return;
+          el.setAttribute('data-ok', '1');
+          el.innerHTML = '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="cli-novo">➕ Novo cliente</button>' +
+            '<input id="mn-c-busca" class="form-control sx-w2" placeholder="Buscar cliente, CNPJ, contato ou telefone…"></div>' +
+            '<p class="sx-muted" style="margin:0 0 0.6rem">Cadastro único: os mesmos clientes valem para Demandas, Locações, Comercial e Manutenção. O cliente só é cadastrado aqui.</p>' +
+            '<div id="cl-kpis" class="kpi-grid"></div><div class="table-container" id="mn-clientes"></div>';
+        }
+        function entrarCli() {
+          montarCli(); renderClientesMan();
+          if (permitido('manutencao')) carregarMan().then(renderClientesMan).catch(function() {});
+        }
         function renderClientesMan() {
-          var q = norm(M.cBusca), cont = {};
+          montarCli();
+          var q = norm(M.cBusca), cont = {}, lista0 = (appData && appData.clientes) || [];
           M.equip.forEach(function(e) { var k = norm(e.cliente); cont[k] = (cont[k] || 0) + 1; });
-          var lista = ((appData && appData.clientes) || []).filter(function(c) { return !q || norm(c.nome + ' ' + (c.cnpj || '') + ' ' + (c.contato || '') + ' ' + (c.telefone || '')).indexOf(q) >= 0; })
+          var lista = lista0.filter(function(c) { return !q || norm(c.nome + ' ' + (c.cnpj || '') + ' ' + (c.contato || '') + ' ' + (c.telefone || '')).indexOf(q) >= 0; })
             .sort(function(a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
-          $('mn-clientes').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Equip.</th><th></th></tr></thead><tbody>' +
+          var semCnpj = lista0.filter(function(c) { return !c.cnpj; }).length;
+          $('cl-kpis').innerHTML = kpi('Clientes', lista0.length, '', '#2563eb') + kpi('Sem CNPJ', semCnpj, 'complete quando puder', '#64748b');
+          $('mn-clientes').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Canal / status</th><th></th></tr></thead><tbody>' +
             lista.map(function(c) {
-              return '<tr><td><b>' + esc(c.nome) + '</b>' + (c.endereco ? '<br><span class="sx-muted">' + esc(c.endereco) + '</span>' : '') + '</td><td>' + esc(c.cnpj || '—') + '</td><td>' + esc(c.contato || '—') + '</td><td>' + esc(c.telefone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
-                '<td>' + (cont[norm(c.nome)] || 0) + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="cli-ed" data-id="' + esc(c.id) + '">✏ Editar</button></td></tr>';
+              return '<tr><td><b>' + esc(c.nome) + '</b>' + (c.endereco ? '<br><span class="sx-muted">' + esc(c.endereco) + '</span>' : '') + (c.obs ? '<br><span class="sx-muted">' + esc(c.obs) + '</span>' : '') + '</td><td>' + esc(c.cnpj || '—') + '</td><td>' + esc(c.contato || '—') + '</td><td>' + esc(c.telefone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
+                '<td>' + esc(c.canal || '—') + '<br><span class="sx-muted">' + esc(c.status || '') + '</span></td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="cli-ed" data-id="' + esc(c.id) + '">✏ Editar</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="cli-del" data-id="' + esc(c.id) + '">🗑</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum cliente encontrado.</div>';
         }
-
-        // ---------- clientes ----------
         function abrirCliente(id) {
-          var c = id ? ((appData.clientes || []).filter(function(x) { return x.id === id; })[0]) : { nome: '' };
+          var c = id ? ((appData.clientes || []).filter(function(x) { return x.id === id; })[0]) : { nome: '', canal: '', status: 'Ativo' };
           if (!c) return;
-          var f = function(i, l, v, extra) { return '<div class="form-group' + (extra || '') + '"><label class="form-label">' + l + '</label><input id="mn-c-' + i + '" class="form-control" value="' + esc(v || '') + '"' + (i === 'nome' && id ? ' readonly' : '') + '></div>'; };
+          var cfg = (appData && appData.config) || {}, canais = cfg.canais || ['WhatsApp'], sts = cfg.statusCadastral || ['Ativo', 'Inativo'];
+          var f = function(i, l, v, extra) { return '<div class="form-group' + (extra || '') + '"><label class="form-label">' + l + '</label><input id="mn-c-' + i + '" class="form-control" value="' + esc(v || '') + '"' + (i === 'nome' && id ? ' readonly title="O nome não pode ser alterado depois de cadastrado"' : '') + '></div>'; };
           abrirModal(id ? 'Dados do cliente' : 'Novo cliente',
-            '<div class="form-grid">' + f('nome', 'Nome / Razão social', c.nome, ' full-width') + f('cnpj', 'CNPJ', c.cnpj) + f('contato', 'Pessoa de contato', c.contato) + f('telefone', 'Telefone / WhatsApp', c.telefone) + f('email', 'E-mail', c.email) + f('endereco', 'Endereço', c.endereco, ' full-width') + '</div>',
+            '<div class="form-grid">' + f('nome', 'Nome / Razão social <span class="req-star">*</span>', c.nome, ' full-width') + f('cnpj', 'CNPJ', c.cnpj) + f('contato', 'Pessoa de contato', c.contato) + f('telefone', 'Telefone / WhatsApp', c.telefone) + f('email', 'E-mail', c.email) + f('endereco', 'Endereço', c.endereco, ' full-width') +
+            '<div class="form-group"><label class="form-label">Canal principal</label><select id="mn-c-canal" class="form-control">' + opts(canais, c.canal || canais[0]) + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Status cadastral</label><select id="mn-c-status" class="form-control">' + opts(sts, c.status || sts[0]) + '</select></div>' +
+            f('obs', 'Observações', c.obs, ' full-width') + '</div>',
             'Salvar', function() {
               var nome = $('mn-c-nome').value.trim(); if (!nome) throw new Error('Informe o nome do cliente.');
               if (!id && cliPorNome(nome)) throw new Error('Este cliente já está cadastrado.');
-              var d = { cnpj: $('mn-c-cnpj').value.trim() || null, contato: $('mn-c-contato').value.trim() || null, telefone: $('mn-c-telefone').value.trim() || null, email: $('mn-c-email').value.trim() || null, endereco: $('mn-c-endereco').value.trim() || null };
-              var reg = id ? Object.assign({ id: id }, d) : Object.assign({ id: 'cli_' + Date.now(), nome: nome, canal: 'WhatsApp', status: 'Ativo', obs: null }, d);
-              var q = id ? sb.from('clientes').update(d).eq('id', id).select('id') : sb.from('clientes').insert(reg).select('id');
-              return chk(q).then(function(r) {
-                if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
-                if (id) { Object.keys(d).forEach(function(k) { c[k] = d[k] || ''; }); }
-                else { appData.clientes.push({ id: reg.id, nome: nome, canal: 'WhatsApp', status: 'Ativo', obs: '', cnpj: d.cnpj || '', contato: d.contato || '', telefone: d.telefone || '', email: d.email || '', endereco: d.endereco || '' }); try { populateSelects(); } catch (e) {} }
-                renderMan(); showToast('Cliente salvo.');
-              });
+              var d = { cnpj: $('mn-c-cnpj').value.trim(), contato: $('mn-c-contato').value.trim(), telefone: $('mn-c-telefone').value.trim(), email: $('mn-c-email').value.trim(), endereco: $('mn-c-endereco').value.trim(),
+                canal: $('mn-c-canal').value, status: $('mn-c-status').value, obs: $('mn-c-obs').value.trim() };
+              if (id) Object.keys(d).forEach(function(k) { c[k] = d[k]; });
+              else appData.clientes.push(Object.assign({ id: 'cli_' + Date.now(), nome: nome }, d));
+              saveData(); try { populateSelects(); } catch (e) {}
+              renderClientesMan(); showToast('Cliente salvo.');
             });
+        }
+        function excluirCliente(id) {
+          var c = (appData.clientes || []).filter(function(x) { return x.id === id; })[0]; if (!c) return;
+          var tem = M.equip.some(function(e) { return norm(e.cliente) === norm(c.nome); }) || L.itens.some(function(i) { return norm(i.cliente) === norm(c.nome); }) || (appData.demandas || []).some(function(d) { return norm(d.cliente) === norm(c.nome); });
+          if (!confirm('Excluir o cliente ' + c.nome + '?' + (tem ? '\n\nATENÇÃO: ele tem demandas, locações ou equipamentos lançados com esse nome. Eles continuam existindo, mas o cliente sai do cadastro.' : ''))) return;
+          appData.clientes = appData.clientes.filter(function(x) { return x.id !== id; });
+          saveData(); try { populateSelects(); } catch (e) {}
+          renderClientesMan(); showToast('Cliente removido.');
         }
 
         // ---------- equipamentos ----------
@@ -10492,6 +10510,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'pl-print': abrirImpressao(id, a.getAttribute('data-eq')); break;
             case 'cli-novo': abrirCliente(null); break;
             case 'cli-ed': abrirCliente(id); break;
+            case 'cli-del': excluirCliente(id); break;
           }
         });
         document.addEventListener('input', function(evt) {
@@ -10616,8 +10635,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         { k: 'setor_rh', g: 'setores', t: 'RH' },
         { k: 'setor_comercial', g: 'setores', t: 'Comercial' },
         { k: 'setor_manutencao', g: 'setores', t: 'Manutenção' },
+        { k: 'setor_clientes', g: 'setores', t: 'Clientes' },
         { k: 'ver_painel', g: 'abas', t: 'Painel e Modo TV' },
-        { k: 'ver_clientes', g: 'abas', t: 'Cadastro de Cliente' },
         { k: 'ver_calendario', g: 'abas', t: 'Calendário' },
         { k: 'ver_ranking', g: 'abas', t: 'Ranking por Técnico' },
         { k: 'ver_gestao', g: 'abas', t: 'Gestão' },
