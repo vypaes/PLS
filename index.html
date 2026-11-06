@@ -8929,7 +8929,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '• Na ausência de reajuste pactuado para o período, prevalecerá o índice acima.',
               '• O reajuste será aplicado mediante comunicação simples da LOCADORA à outra parte, com antecedência mínima de 30 (trinta) dias, acompanhada do demonstrativo de cálculo.',
               '• A renovação do contrato implica aceitação integral das condições atualizadas, incluindo o valor reajustado.'].join('\n') },
-            { id: 'l_vig', k: 'texto', t: 'DA VIGÊNCIA E RESCISÃO', x: 'Esta proposta tem validade de {VALIDADE} dias corridos a contar da emissão. Após a aceitação formal (assinatura ou confirmação por escrito), suas condições vigorarão durante toda a locação. A rescisão antecipada por iniciativa da LOCATÁRIA antes do prazo mínimo contratado implicará o pagamento das parcelas remanescentes ou, alternativamente, multa rescisória equivalente a 1 (uma) mensalidade.' },
+            { id: 'l_vig', k: 'texto', t: 'DA VIGÊNCIA E RESCISÃO', x: 'Esta proposta tem validade de {VALIDADE} dias corridos a contar da emissão. Após a aceitação formal (assinatura ou confirmação por escrito), suas condições vigorarão durante toda a locação. A rescisão antecipada por iniciativa da LOCATÁRIA antes do prazo mínimo contratado de {PRAZO_MIN} implicará o pagamento das parcelas remanescentes ou, alternativamente, multa rescisória equivalente a 1 (uma) mensalidade.' },
             { id: 'l_ger', k: 'texto', t: 'DAS DISPOSIÇÕES GERAIS', x: [
               '• Este documento, uma vez aceito, constitui título formal das condições acordadas, integrando o contrato de locação.',
               '• A tolerância quanto ao descumprimento de qualquer cláusula não implicará novação ou renúncia de direitos.',
@@ -9066,11 +9066,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         // DOCUMENTO (proposta / contrato) — HTML usado na pré-visualização e na impressão
         // =================================================================
-        function paras(texto, cliente, validade, tipo) {
+        function paras(texto, cliente, validade, tipo, pmin) {
           var out = [], buf = [];
           function fecha() { if (buf.length) { out.push('<p class="pp-p">' + buf.join('<br>') + '</p>'); buf = []; } }
           function fmt(t) {
-            t = esc(t.replace(/\{CLIENTE\}/g, cliente).replace(/\{VALIDADE\}/g, validade + ' (' + extInt(validade) + ')'));
+            t = esc(t.replace(/\{CLIENTE\}/g, cliente).replace(/\{VALIDADE\}/g, validade + ' (' + extInt(validade) + ')').replace(/\{PRAZO_MIN\}/g, pmin ? pmin + ' (' + extInt(pmin) + ') dias' : 'o prazo mínimo contratado'));
             return t.replace(/\b(LOCADORA|LOCADOR|LOCATÁRIA|LOCATÁRIO|CONTRATADA|CONTRATANTE)\b/g, '<b>$1</b>');
           }
           String(texto || '').split('\n').forEach(function(l) {
@@ -9110,6 +9110,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           // título + quadro de identificação
           var ident = [{ k: 'Proposta nº', v: p.codigo || '000-00' }, { k: 'Data de emissão', v: fd(p.emissao) }];
           if (loc) ident.push({ k: 'Validade da proposta', v: validade + ' (' + extInt(validade) + ') dias corridos' });
+          if (loc && d.periodoMin) ident.push({ k: 'Período mínimo de locação', v: d.periodoMin + ' (' + extInt(d.periodoMin) + ') dias' });
           ident.push({ k: 'Cliente', v: cliente });
           if (p.cliente_cnpj) ident.push({ k: 'CNPJ do cliente', v: p.cliente_cnpj });
           if (p.destinatario) ident.push({ k: 'A/C', v: p.destinatario });
@@ -9118,12 +9119,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           row('<div class="pp-titulo"><div class="pp-tit-sub">PLS EMPILHADEIRAS — ' + (loc ? 'Locação de empilhadeiras sem operador' : 'Serviços técnicos especializados') + '</div>' +
             '<div class="pp-tit-main">PROPOSTA COMERCIAL</div><div class="pp-tit-tipo">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div></div>');
           row('<div class="pp-keep">' + tabelaKV('Campo', 'Informação', ident) + '</div>');
-          paras(intro, cliente, validade, tipo).forEach(row);
+          paras(intro, cliente, validade, tipo, d.periodoMin).forEach(row);
 
           BLOCOS[tipo].forEach(function(b) {
             if (!b.nohead) head(b.t);
-            if (b.k === 'texto') { paras(textos[b.id], cliente, validade, tipo).forEach(row); }
-            else if (b.k === 'escopo') { paras(d.escopo, cliente, validade, tipo).forEach(row); }
+            if (b.k === 'texto') { paras(textos[b.id], cliente, validade, tipo, d.periodoMin).forEach(row); }
+            else if (b.k === 'escopo') { paras(d.escopo, cliente, validade, tipo, d.periodoMin).forEach(row); }
             else if (b.k === 'espec' && loc) {
               var its = d.itens || [];
               its.forEach(function(it, k) {
@@ -9142,7 +9143,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             else if (b.k === 'cond') {
               var n = (d.itens || []).length;
               row('<div class="pp-li">Quantidade: ' + String(n).padStart(2, '0') + ' (' + esc(extInt(n, true)) + ') unidade' + (n === 1 ? '' : 's') + '.</div>');
-              row('<div class="pp-li">Prazo mínimo de locação: 30 (trinta) dias, prorrogável por períodos iguais e sucessivos mediante manifestação de qualquer das partes.</div>');
+              var pm = Number(d.periodoMin) || 30;
+              row('<div class="pp-li">Prazo mínimo de locação: ' + pm + ' (' + esc(extInt(pm)) + ') dias, prorrogável por períodos iguais e sucessivos mediante manifestação de qualquer das partes.</div>');
               row('<div class="pp-li">Local de entrega e retirada: ' + esc(d.local || '[endereço completo]') + '.</div>');
               row('<div class="pp-li">A entrega e a retirada do equipamento serão registradas em checklist de vistoria assinado pelas partes, que integra esta proposta.</div>');
             }
@@ -9154,6 +9156,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   row('<div class="pp-keep"><table class="pp-tb"><thead><tr><th>Equipamento</th><th style="width:32mm">Valor mensal</th><th style="width:30mm">Mobilização</th><th style="width:34mm">Desmobilização</th></tr></thead><tbody>' +
                     its2.map(function(i) { return '<tr><td>' + esc(i.equipamento) + '</td><td class="r">' + moedaPP(i.valor) + '</td><td class="r">' + (Number(i.mob) ? moedaPP(i.mob) : '—') + '</td><td class="r">' + (Number(i.desmob) ? moedaPP(i.desmob) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>');
                 }
+                if (d.periodoMin) L2.push({ k: 'Período mínimo de locação', v: d.periodoMin + ' dias' });
                 L2.push({ k: its2.length > 1 ? 'Valor mensal da locação (soma)' : 'Valor mensal da locação', v: moedaPP(tot.bruto) });
                 if (tot.desc > 0) { L2.push({ k: rotDesc, v: '− ' + moedaPP(tot.desc) }); L2.push({ k: 'Valor mensal com desconto', v: moedaPP(tot.liq), b: 1 }); }
                 if (its2.length <= 1) { L2.push({ k: 'Mobilização', v: tot.mob ? moedaPP(tot.mob) : '—' }); L2.push({ k: 'Desmobilização', v: tot.des ? moedaPP(tot.des) : '—' }); }
@@ -9409,7 +9412,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return {
             id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', dest: '', abrev: '', emissao: hoje(), validade: 10,
             itens: [], man: [{ qtd: 1, equip: '', marca: '', tipo: '' }], inicio: '', termino: '', valorBase: 0, diaVenc: 15,
-            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false,
+            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false,
             textos: Object.assign({}, mod.textos), intro: mod.intro, auto: { escopo: true, pagto: true, compl: true, termino: true }
           };
         }
@@ -9417,7 +9420,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var d = p.dados || {}, e = novoEstado(p.tipo);
           e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.dest = p.destinatario || '';
           e.emissao = p.emissao; e.validade = p.validade_dias || 10;
-          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
+          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
           if (d.itens) e.itens = JSON.parse(JSON.stringify(d.itens));
           if (d.man) e.man = JSON.parse(JSON.stringify(d.man));
           if (d.textos) e.textos = Object.assign({}, e.textos, d.textos);
@@ -9425,7 +9428,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function objDe(E) {
           var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto };
-          if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.diasPagto = E.diasPagto; }
+          if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.diasPagto = E.diasPagto; }
           else { dados.man = E.man; dados.inicio = E.inicio; dados.termino = E.termino; dados.valorBase = E.valorBase; dados.diaVenc = E.diaVenc; }
           var p = { id: E.id, codigo: E.codigo, tipo: E.tipo, status: E.status, cliente_nome: E.cliente.trim(), cliente_cnpj: E.cnpj.trim() || null, destinatario: E.dest.trim() || null, emissao: E.emissao, validade_dias: E.validade, dados: dados };
           p.valor_mensal = totaisDe(p).liq; dados.liq = p.valor_mensal;
@@ -9449,6 +9452,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           document.querySelectorAll('#cm-editor .cm-tx').forEach(function(t) { E.textos[t.getAttribute('data-id')] = t.value; });
           if (E.tipo === 'locacao') {
             if (v('cm-entrega') != null) E.entrega = v('cm-entrega');
+            if (v('cm-periodo') != null) E.periodoMin = parseInt(v('cm-periodo'), 10) || 0;
             if (v('cm-local') != null) E.local = v('cm-local');
             if (v('cm-diaspagto') != null) E.diasPagto = parseInt(v('cm-diaspagto'), 10) || 0;
             document.querySelectorAll('#cm-editor .cm-it').forEach(function(tr) {
@@ -9550,6 +9554,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             h += '<div class="sx-sec">Equipamentos (só os DISPONÍVEIS da frota)</div><div id="cm-seletor">' + seletorEquip() + '</div><div class="table-container" id="cm-itens" style="margin-top:0.5rem">' + linhasItens() + '</div>' +
               '<div class="sx-sec">Entrega e pagamento</div><div class="form-grid">' +
                 '<div class="form-group"><label class="form-label">Prazo de entrega / início da locação <span class="req-star">*</span></label><input id="cm-entrega" type="date" class="form-control" value="' + esc(E.entrega) + '"></div>' +
+                '<div class="form-group"><label class="form-label">Período mínimo de locação (dias) <span class="req-star">*</span></label><input id="cm-periodo" type="number" min="1" max="3650" list="cm-dl-periodo" class="form-control" value="' + (E.periodoMin || '') + '"><datalist id="cm-dl-periodo"><option value="30"><option value="60"><option value="90"><option value="180"><option value="365"></datalist><small class="sx-muted">Ex.: 30, 60, 90, 365. Sai na proposta, no quadro de valores e na cláusula de vigência.</small></div>' +
                 '<div class="form-group"><label class="form-label">Local da entrega</label><input id="cm-local" class="form-control" value="' + esc(E.local) + '" placeholder="ex.: Rio das Ostras RJ"></div>' +
                 '<div class="form-group"><label class="form-label">Vencimento: quantos dias após a entrega</label><input id="cm-diaspagto" type="number" min="0" max="365" class="form-control" value="' + E.diasPagto + '"></div>' +
               '</div>';
@@ -9586,6 +9591,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (E.tipo === 'locacao') {
             if (!d.itens.length) { alert('Escolha pelo menos um equipamento disponível.'); return; }
             if (!d.entrega) { alert('Informe o prazo de entrega / início da locação.'); return; }
+            if (!(Number(d.periodoMin) > 0)) { alert('Informe o período mínimo de locação (em dias).'); return; }
             if (d.itens.some(function(i) { return !(Number(i.valor) > 0); })) { alert('Informe o valor mensal de todos os equipamentos.'); return; }
           } else {
             if (!d.inicio || !d.termino) { alert('Informe o início e o término do contrato.'); return; }
