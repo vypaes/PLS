@@ -2362,6 +2362,78 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       .pp-cover, .pp-cv-hero, .pp-cv-band, .pp-tb th, .pp-tb tr.pp-tb-b td, .pp-tb tbody tr:nth-child(even) td, .pp-titulo, .pp-h2 i, .pp-li::before, .pp-cv-hero img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
+    /* ===== Manutenção (v39) ===== */
+    body.setor-manutencao #setor-manutencao { display: block; }
+    #setor-manutencao .form-grid .form-group.full-width { grid-column: 1 / -1; }
+    #setor-manutencao textarea.form-control { resize: vertical; line-height: 1.4; }
+    #setor-manutencao .sx-acoes { white-space: nowrap; }
+    #setor-manutencao .sx-vazio { padding: 1.4rem; color: #64748b; text-align: center; }
+    .mpa, .mpb, .mpa *, .mpb * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+    .mpa { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 8.4pt; }
+    .mpa-head { display: flex; align-items: center; gap: 4mm; border-bottom: 2px solid #ea580c; padding-bottom: 2mm; margin-bottom: 2.5mm; }
+    .mpa-head img { height: 13mm; }
+    .mpa-head b { display: block; font-size: 14pt; letter-spacing: 0.2px; }
+    .mpa-head span { display: block; color: #ea580c; font-weight: 700; font-size: 9pt; margin-top: 0.5mm; }
+    .mpa-info { width: 100%; border-collapse: collapse; margin-bottom: 2mm; }
+    .mpa-info th, .mpa-info td { border: 1px solid #cbd5e1; padding: 1.3mm 2mm; text-align: left; font-size: 8pt; }
+    .mpa-info th { background: #f1f5f9; width: 25mm; font-size: 7.4pt; }
+    .mpa-fill { display: inline-block; min-width: 42mm; border-bottom: 1px solid #555; height: 3.2mm; }
+    .mpa-regra { font-size: 7.6pt; background: #fff7ed; border-left: 3px solid #ea580c; padding: 1.5mm 2.5mm; margin-bottom: 2.5mm; }
+    .mpa-etapa { break-inside: avoid; page-break-inside: avoid; margin-bottom: 2.5mm; }
+    .mpa-eh { background: #ea580c; color: #fff; font-weight: 700; padding: 1.2mm 2.5mm; font-size: 8.6pt; }
+    .mpa-eh.dk { background: #111827; }
+    .mpa-tb { width: 100%; border-collapse: collapse; }
+    .mpa-tb th { background: #f1f5f9; font-size: 7.2pt; text-align: left; padding: 1mm 2mm; border-bottom: 1px solid #cbd5e1; }
+    .mpa-tb td { padding: 1.1mm 2mm; border-bottom: 1px solid #e2e8f0; vertical-align: middle; font-size: 8.2pt; }
+    .mpa-tb .c { width: 11mm; text-align: center; }
+    .mpa-box { display: inline-block; width: 3.6mm; height: 3.6mm; border: 1.2px solid #333; vertical-align: middle; }
+    .mpa-reg td, .mpa-reg th { border: 1px solid #cbd5e1; }
+    .mpa-reg td { height: 8mm; }
+    .mpa-pts { margin: 1.5mm 0 0 4mm; padding: 0; font-size: 8pt; }
+    .mpa-pts li { margin-bottom: 0.8mm; }
+    .mpa-obs { font-size: 7.2pt; color: #555; margin: 1.5mm 0 0; }
+    .mpa-contato { text-align: center; font-size: 7.5pt; color: #444; border-top: 1px solid #ccc; padding-top: 1.5mm; margin-top: 2.5mm; }
+
+    .mpb { font-family: Arial, Helvetica, sans-serif; color: #111; width: 210mm; height: 296.5mm; position: relative; padding: 7mm 9mm 0; overflow: hidden; background: #fff; }
+    .mpb-top { display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #ea580c; padding-bottom: 2.5mm; }
+    .mpb-logo { height: 17mm; }
+    .mpb-tt { text-align: right; }
+    .mpb-tt b { display: block; font-size: 22pt; font-weight: 900; line-height: 1; }
+    .mpb-tt em { display: block; font-style: normal; font-weight: 800; color: #ea580c; font-size: 13pt; margin: 1mm 0 1.5mm; }
+    .mpb-tt span { display: inline-block; background: #111827; color: #fff; font-weight: 800; font-style: italic; font-size: 11pt; padding: 1mm 5mm; border-radius: 1mm; }
+    .mpb-mid { display: flex; gap: 4mm; margin: 1.5mm 0 1.5mm; align-items: center; }
+    .mpb-blocos { flex: 1.1; }
+    .mpb-bl { display: flex; gap: 2.5mm; margin: 0 0 0.9mm; align-items: flex-start; }
+    .mpb-bl i { font-style: normal; font-size: 12pt; color: #ea580c; width: 8mm; text-align: center; }
+    .mpb-bl b { font-size: 8.4pt; display: block; }
+    .mpb-bl p { margin: 0.2mm 0; font-size: 7.3pt; line-height: 1.25; }
+    .mpb-fotobox { flex: 1; display: flex; align-items: center; justify-content: center; height: 30mm; }
+    .mpb-foto { max-width: 100%; max-height: 30mm; }
+    .mpb-sec { background: #111827; color: #fff; font-weight: 800; font-size: 8.3pt; padding: 1.3mm 2.5mm; }
+    .mpb-tb { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .mpb-tb thead th { background: #ea580c; color: #fff; font-size: 6.8pt; padding: 1mm 0.5mm; border: 0.5px solid #fff; }
+    .mpb-tb td { font-size: var(--fs, 6.6pt); height: var(--rh, 4mm); border: 0.5px solid #cbd5e1; padding: 0 1mm; line-height: 1.1; overflow: hidden; }
+    .mpb-tb th:nth-child(1), .mpb-tb td.mpb-sis { width: 20mm; }
+    .mpb-tb td.c, .mpb-tb th.c { width: 10.5mm; text-align: center; font-weight: 700; }
+    .mpb-tb td.c.t { color: #ea580c; background: #fff7ed; font-size: calc(var(--fs, 6.6pt) + 1pt); }
+    .mpb-tb th.obsh, .mpb-tb td.obs { width: 17mm; }
+    .mpb-tb th.obsh { font-size: 5.4pt; letter-spacing: -0.2px; }
+    .mpb-tb td.mpb-sis { text-align: center; font-weight: 800; font-size: 6.4pt; background: #fff; }
+    .mpb-tb tr.g0 td { border-top: 1px solid #64748b; }
+    .mpb-tb td.mpb-it { text-align: left; white-space: nowrap; text-overflow: clip; }
+    .mpb-leg { font-size: 7.2pt; margin: 1mm 0 1.5mm; }
+    .mpb-low { display: flex; gap: 4mm; }
+    .mpb-fl { flex: 1.35; } .mpb-rg { flex: 1; }
+    .mpb-tb2 { width: 100%; border-collapse: collapse; }
+    .mpb-tb2 th { background: #ea580c; color: #fff; font-size: 6.2pt; padding: 0.8mm 1mm; text-align: left; }
+    .mpb-tb2 td { font-size: 6pt; line-height: 1.15; border: 0.5px solid #cbd5e1; padding: 0.7mm 1mm; }
+    .mpb-nt { font-size: 6.6pt; margin-top: 0.8mm; }
+    .mpb-rgb { border: 1px solid #111827; padding: 1.5mm 2.5mm; }
+    .mpb-rgb p { margin: 1.2mm 0; font-size: 6.6pt; }
+    .mpb-fill { display: inline-block; border-bottom: 1px solid #333; min-width: 38mm; height: 2.6mm; vertical-align: bottom; }
+    .mpb-foot { position: absolute; left: 0; right: 0; bottom: 0; height: 15mm; background: #111827; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 9mm; font-size: 7.6pt; line-height: 1.35; }
+    .mpb-foot span { opacity: 0.85; font-size: 6.8pt; }
+
     /* impressão: recibos (A4 retrato) e lista de faturas (A4 paisagem) */
     #rh-print-area, #sx-print-area { display: none; }
     @media print {
@@ -2472,7 +2544,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v38 — 05/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v39 — 06/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -3380,6 +3452,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     <section id="setor-locacoes" class="setor-sec"></section>
     <section id="setor-rh" class="setor-sec"></section>
     <section id="setor-comercial" class="setor-sec"></section>
+    <section id="setor-manutencao" class="setor-sec"></section>
     <div id="setor-nenhum"><h3>Sem acesso a nenhum setor</h3><p>Fale com o administrador para liberar o seu acesso.</p></div>
   </main>
   <div id="rh-print-area"></div>
@@ -3695,8 +3768,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         return { id: x.id, demanda_id: x.demandaId, data: x.data, tecnico: x.tecnico, descricao: x.descricao, status: x.status || 'Em andamento' };
       }
 
-      function cliFromDb(r) { return { id: r.id, nome: r.nome, canal: r.canal || '', status: r.status || '', obs: r.obs || '' }; }
-      function cliToDb(c) { return { id: c.id, nome: c.nome, canal: c.canal || null, status: c.status || null, obs: c.obs || null }; }
+      function cliFromDb(r) { return { id: r.id, nome: r.nome, canal: r.canal || '', status: r.status || '', obs: r.obs || '', cnpj: r.cnpj || '', contato: r.contato || '', telefone: r.telefone || '', email: r.email || '', endereco: r.endereco || '' }; }
+      function cliToDb(c) { return { id: c.id, nome: c.nome, canal: c.canal || null, status: c.status || null, obs: c.obs || null, cnpj: c.cnpj || null, contato: c.contato || null, telefone: c.telefone || null, email: c.email || null, endereco: c.endereco || null }; }
 
       function chk(p) {
         return p.then(function(r) { if (r.error) throw r.error; return r; });
@@ -4023,7 +4096,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         sb.channel('pls-dados')
           .on('postgres_changes', { event: '*', schema: 'public' }, function(p) {
             var t = (p && p.table) || '';
-            if (/^(loc|rh|com)_/.test(t)) SETORES.aoMudarBanco(t); else recarregar(700);
+            if (/^(loc|rh|com|man)_/.test(t)) SETORES.aoMudarBanco(t); else recarregar(700);
           })
           .subscribe();
       }
@@ -7369,10 +7442,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           { k: 'locacoes', t: 'Locações', ic: '🚜' },
           { k: 'rh', t: 'RH', ic: '👥' },
           { k: 'comercial', t: 'Comercial', ic: '💼' },
+          { k: 'manutencao', t: 'Manutenção', ic: '🔧' },
           { k: 'gerencial', t: 'Gerencial', ic: '⚙' }
         ];
         var setorAtual = 'demandas';
-        var carregado = { locacoes: false, rh: false, comercial: false };
+        var carregado = { locacoes: false, rh: false, comercial: false, manutencao: false };
         var subLoc = 'faturas', subRh = 'colab';
 
         // ---------- utilidades ----------
@@ -7437,17 +7511,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var rail = $('setor-rail'); if (!rail) return;
           var lista = setoresPermitidos();
           rail.innerHTML = '<div class="setor-titulo">Setores</div>' + lista.map(function(s) {
-            var bd = s.k === 'locacoes' ? contarAlertas() : 0;
+            var bd = s.k === 'locacoes' ? contarAlertas() : s.k === 'manutencao' ? contarMan() : 0;
             return '<button type="button" class="setor-btn' + (s.k === setorAtual ? ' active' : '') + '" data-sx="setor" data-setor="' + s.k + '" title="' + s.t + '">' +
               '<span class="setor-ic">' + s.ic + '</span><span class="setor-nm">' + s.t + '</span>' +
-              (bd ? '<span class="setor-badge" title="Faturas para enviar">' + bd + '</span>' : '') + '</button>';
+              (bd ? '<span class="setor-badge" title="' + (s.k === 'manutencao' ? 'Revisões vencidas' : 'Faturas para enviar') + '">' + bd + '</span>' : '') + '</button>';
           }).join('');
         }
 
         function setSetor(k, sub) {
           if (!permitido(k)) { var l = setoresPermitidos(); k = l.length ? l[0].k : null; }
           var b = document.body;
-          b.classList.remove('setor-demandas', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
+          b.classList.remove('setor-demandas', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-manutencao', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
           if (!k) { b.classList.add('setor-nenhum', 'setor-fora'); setorAtual = null; desenharRail(); return; }
           setorAtual = k;
           b.classList.add('setor-' + k);
@@ -7458,6 +7532,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (k === 'locacoes') { if (sub) subLoc = sub; entrarLoc(); }
           else if (k === 'rh') { if (sub) subRh = sub; entrarRh(); }
           else if (k === 'comercial') { if (sub) C.sub = sub; entrarCom(); }
+          else if (k === 'manutencao') { if (sub) M.sub = sub; entrarMan(); }
           else if (k === 'gerencial') { try { switchTab('config'); } catch (e) { console.error(e); } }
           else { try { if (activeTab === 'config') activeTab = 'lancamentos'; switchTab(activeTab); } catch (e) {} }
           desenharRail();
@@ -7473,11 +7548,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (permitido('locacoes') && setorAtual !== 'locacoes') {
             carregarLoc().then(function() { desenharRail(); avisoDoDia(); }).catch(function(e) { console.error(e); });
           }
+          if (permitido('manutencao') && setorAtual !== 'manutencao') {
+            carregarMan().then(function() { desenharRail(); avisoManutencao(); }).catch(function(e) { console.error(e); });
+          }
         }
         function atualizarRail() { desenharRail(); if (!permitido(setorAtual)) setSetor(null); }
         function aoMudarBanco(tabela) {
           if (/^loc_/.test(tabela)) { if (carregado.locacoes || permitido('locacoes')) carregarLoc().then(function() { desenharRail(); if (setorAtual === 'locacoes') renderLoc(); }).catch(console.error); }
           else if (/^com_/.test(tabela)) { if (carregado.comercial) carregarCom().then(function() { if (setorAtual === 'comercial' && !C.ed) renderCom(); }).catch(console.error); }
+          else if (/^man_/.test(tabela)) { if (carregado.manutencao) carregarMan().then(function() { desenharRail(); if (setorAtual === 'manutencao') renderMan(); }).catch(console.error); }
           else if (/^rh_/.test(tabela)) { if (carregado.rh) carregarRh().then(function() { if (setorAtual === 'rh') renderRh(); }).catch(console.error); }
         }
 
@@ -7495,6 +7574,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('com_propostas').select('id,codigo,tipo,status,assinado_path,assinado_nome')).catch(function() { return { data: [] }; })
           ]).then(function(res) {
             L.itens = res[0].data || [];
+            if (ehAdmin()) sincronizarClientes(L.itens.map(function(i) { return i.cliente; }));
             L.props = {}; (res[2].data || []).forEach(function(p) { L.props[p.id] = p; });
             L.fat = {};
             (res[1].data || []).forEach(function(f) { L.fat[f.item_id + '|' + f.competencia] = f; });
@@ -9236,6 +9316,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('com_config').select('chave,valor'))
           ]).then(function(res) {
             C.props = res[0].data || [];
+            if (ehAdmin()) sincronizarClientes(C.props.map(function(p) { return p.cliente_nome; }));
             C.cfg = {}; (res[1].data || []).forEach(function(r) { C.cfg[r.chave] = r.valor; });
             C.carregado = true; carregado.comercial = true;
           });
@@ -9801,6 +9882,635 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           resumoValores();
         });
 
+        var MAN_SEED = {"nome": "Empilhadeira diesel pesada FD120 / FD135 / FD150S / FD160S", "marca": "Hangcha", "modelos": "FD120 / FD135 / FD150S / FD160S", "combustivel": "Diesel", "etapas": [{"t": "DIÁRIA - A CADA 8 HORAS", "itens": ["Inspecionar visualmente toda a máquina: vazamentos de óleo, combustível, água e anormalidades.", "Verificar nível do óleo do motor.", "Verificar nível/condição do tanque de óleo hidráulico.", "Verificar iluminação, instrumentos, indicadores e buzina.", "Verificar pressão, desgaste e danos dos pneus.", "Conferir radiador/sistema de arrefecimento, combustível, transmissão, eixo motriz e linhas de freio quanto a vazamentos.", "Inspecionar mastro, garfos, cilindros, tubulações, correntes e conexões quanto a trincas, desgaste e folgas.", "Verificar terminais elétricos, bateria, correias e limpeza do radiador/motor."]}, {"t": "A CADA 50 HORAS OU 1 SEMANA", "itens": ["Apertar parafusos dos acoplamentos do eixo de transmissão dianteiro e traseiro.", "Verificar nível do óleo da caixa de engrenagens.", "Verificar folga/curso do freio.", "Testar freio de emergência e freio de estacionamento; ajustar se necessário.", "Rever pressão e condição dos pneus.", "Engraxar articulações do mastro, eixos, correntes e demais pontos de rolamento/articulação."]}, {"t": "A CADA 125 HORAS", "itens": ["Limpar cabeçote do motor e resfriador de óleo do conversor de torque.", "Verificar nível/estado da bateria; proteger terminais/juntas com fina camada de vaselina quando aplicável.", "Verificar novamente nível/condição do tanque hidráulico."]}, {"t": "A CADA 250 HORAS OU 1 MÊS", "itens": ["Verificar aperto da porca castelo da manga de eixo da roda traseira.", "Verificar torque dos parafusos de fixação dos aros.", "Verificar nível do óleo dos eixos/ponte.", "Inspecionar soldas e parafusos do mastro, estrutura e aros quanto a trincas e folgas.", "Substituir óleo do motor conforme qualidade do óleo e condição de uso.", "Verificar tensão e danos das correias do ventilador, alternador e compressor do ar-condicionado.", "Ajustar freio de serviço e freio de estacionamento.", "Drenar o tanque/reservatório de água conforme orientação do fabricante."]}, {"t": "A CADA 600 HORAS OU 3 MESES", "itens": ["Verificar condição do fluido da transmissão; limpar filtro, renovar óleo e limpar a carcaça/cárter da transmissão.", "Apertar eixos dianteiro/traseiro e parafusos da estrutura.", "Substituir óleo do motor e filtro de óleo.", "Verificar folga das válvulas do motor.", "Limpar filtros/elementos do circuito de combustível (tanque, abastecimento e sucção).", "Limpar filtros do tanque hidráulico, retorno e sucção."]}, {"t": "A CADA 1.200 HORAS OU 6 MESES", "itens": ["Substituir óleo da transmissão hidráulica; limpar filtro e cárter.", "Substituir filtro de combustível do motor.", "Verificar termômetros e manômetros.", "Verificar aperto dos tubos de admissão e escape e condição geral de funcionamento do motor.", "Substituir óleo hidráulico e limpar filtros/tubos de sucção conforme o manual.", "Substituir óleo de engrenagem dos eixos/ponte."]}, {"t": "A CADA 2.000 HORAS OU 1 ANO", "itens": ["Inspecionar freio de serviço e estacionamento; desmontar e verificar desgaste das placas de fricção se necessário.", "Verificar vedação do servo-freio e componentes de mola.", "Substituir fluido de freio e testar sensibilidade/eficiência do sistema.", "Verificar abatimento natural dos cilindros, válvula de distribuição e vedações dos cilindros de trabalho.", "Verificar flexibilidade, folgas e funcionamento do sistema de direção.", "Executar inspeção estrutural completa de mastro, garfos, chassi, rodas, eixos e sistemas de segurança."]}], "matriz": {"cols": ["8h", "50h", "125h", "250h", "600h", "1.200h", "2.000h"], "rows": [{"s": "GERAL", "t": "Inspecionar vazamentos (óleo, combustível, água) e anormalidades", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Verificar iluminação, instrumentos, indicadores e buzina", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Verificar pressão, desgaste e danos dos pneus", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Inspecionar mastro, garfos, cilindros, correntes e conexões", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Engraxar articulações do mastro, eixos, correntes e rolamentos", "m": {"8h": "", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Apertar parafusos dos acoplamentos do eixo de transmissão", "m": {"8h": "", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Inspecionar soldas e parafusos do mastro, estrutura e aros", "m": {"8h": "", "50h": "", "125h": "", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "GERAL", "t": "Inspeção estrutural completa (mastro, garfos, chassi, eixos)", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "", "2.000h": "I"}}, {"s": "SISTEMA ELÉTRICO", "t": "Verificar terminais elétricos, bateria e correias", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "SISTEMA ELÉTRICO", "t": "Verificar nível/estado da bateria; proteger terminais", "m": {"8h": "", "50h": "", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "SISTEMA ELÉTRICO", "t": "Verificar termômetros e manômetros", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Verificar nível do óleo do motor", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Limpar radiador/motor e conferir arrefecimento", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Limpar cabeçote do motor e resfriador de óleo do conversor", "m": {"8h": "", "50h": "", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Verificar tensão e danos das correias (ventilador, alternador, A/C)", "m": {"8h": "", "50h": "", "125h": "", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Trocar óleo do motor (conforme qualidade e condição de uso)", "m": {"8h": "", "50h": "", "125h": "", "250h": "T", "600h": "T", "1.200h": "T", "2.000h": ""}}, {"s": "MOTOR DIESEL", "t": "Trocar filtro de óleo do motor", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "T", "1.200h": "T", "2.000h": ""}}, {"s": "MOTOR DIESEL", "t": "Verificar folga das válvulas", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Limpar filtros/elementos do circuito de combustível", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "MOTOR DIESEL", "t": "Trocar filtro de combustível do motor", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "T", "2.000h": ""}}, {"s": "MOTOR DIESEL", "t": "Verificar aperto dos tubos de admissão/escape e funcionamento", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "I", "2.000h": "I"}}, {"s": "SISTEMA HIDRÁULICO", "t": "Verificar nível/condição do tanque de óleo hidráulico", "m": {"8h": "I", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "SISTEMA HIDRÁULICO", "t": "Limpar filtros do tanque, retorno e sucção", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "SISTEMA HIDRÁULICO", "t": "Trocar óleo hidráulico", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "T", "2.000h": ""}}, {"s": "SISTEMA HIDRÁULICO", "t": "Verificar abatimento dos cilindros, válvula e vedações", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "", "2.000h": "I"}}, {"s": "FREIOS E DIREÇÃO", "t": "Verificar folga do freio; testar freio de emergência/estacion.", "m": {"8h": "", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "FREIOS E DIREÇÃO", "t": "Ajustar freio de serviço e de estacionamento", "m": {"8h": "", "50h": "", "125h": "", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "FREIOS E DIREÇÃO", "t": "Inspecionar freios (placas de fricção) e vedação do servo-freio", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "", "2.000h": "I"}}, {"s": "FREIOS E DIREÇÃO", "t": "Trocar fluido de freio e testar eficiência", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "", "2.000h": "T"}}, {"s": "FREIOS E DIREÇÃO", "t": "Verificar flexibilidade, folgas e funcionamento da direção", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "", "2.000h": "I"}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Verificar nível do óleo da caixa de engrenagens", "m": {"8h": "", "50h": "I", "125h": "I", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Verificar nível do óleo dos eixos/ponte", "m": {"8h": "", "50h": "", "125h": "", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Verificar fluido da transmissão; limpar filtro e cárter", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Trocar óleo da transmissão hidráulica", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "T", "2.000h": ""}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Trocar óleo de engrenagem dos eixos/ponte", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "", "1.200h": "T", "2.000h": ""}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Verificar porca castelo da manga de eixo e torque dos aros", "m": {"8h": "", "50h": "", "125h": "", "250h": "I", "600h": "I", "1.200h": "I", "2.000h": "I"}}, {"s": "TRANSMISSÃO E EIXOS", "t": "Apertar eixos dianteiro/traseiro e parafusos da estrutura", "m": {"8h": "", "50h": "", "125h": "", "250h": "", "600h": "I", "1.200h": "I", "2.000h": "I"}}]}, "fluidos": [{"i": "Óleo do motor", "e": "CD40 / CD15W-40 / CD5W-30", "a": "25 L - motor diesel"}, {"i": "Óleo transmissão hidráulica", "e": "6# - Q/SH011-042-87(94)", "a": "21 L - conversor"}, {"i": "Óleo de engrenagem", "e": "Hipoidal HL57-18 - Q/SH011-009-94", "a": "15 kg - transmissão/eixos"}, {"i": "Óleo hidráulico", "e": "L-HV 68 - GB11118-94", "a": "Tanque hidráulico (180/200 L)"}, {"i": "Anticongelante", "e": "WANRUNJIA-35 TYPE - JT225-1996", "a": "45 L - arrefecimento"}, {"i": "Graxa", "e": "Albany 2/3 ou base de lítio 1/2", "a": "Pinos, roletes e articulações"}], "pontos": ["Filtro de papel: o manual orienta substituir; não limpar para reutilização.", "Não misturar marcas/tipos diferentes de óleo. Ao mudar o produto, renovar o óleo do sistema.", "Em ambiente com muita poeira, limpar o filtro de ar e o radiador com maior frequência e reduzir o intervalo dos filtros.", "Antes da manutenção: piso firme e plano, garfos no chão, comandos em neutro, freio de estacionamento aplicado e rodas calçadas.", "Após troca de óleo/filtro, verificar vazamentos, nível e presença de partículas metálicas."], "fonte": "Manual de Uso e Manutenção FD120/FD135/FD150S/FD160S (plano PLS). Motor Cummins 6BTAA5.9-C130; transmissão power shift.", "obs": "Para motor, ar-condicionado ou componente com manual próprio, prevalece a especificação do fabricante do componente.", "foto": "data:image/jpeg;base64,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"};
+        // =================================================================
+        // MANUTENÇÃO (v39): planos preventivos dos clientes, revisões e vencimentos
+        // =================================================================
+        var M = { planos: [], equip: [], rev: [], sub: 'vencimentos', fBusca: '', fSit: '', eBusca: '', pBusca: '', cBusca: '' };
+        var SEED_PLANO_OK = false;
+
+        function carregarMan() {
+          return Promise.all([
+            chk(sb.from('man_planos').select('*').order('nome')),
+            chk(sb.from('man_equip').select('*').order('cliente').order('created_at')),
+            chk(sb.from('man_revisoes').select('*').order('data', { ascending: false }))
+          ]).then(function(r) {
+            M.planos = r[0].data || []; M.equip = r[1].data || []; M.rev = r[2].data || [];
+            carregado.manutencao = true;
+            if (ehAdmin()) sincronizarClientes(M.equip.map(function(e) { return e.cliente; }));
+            return semearPlano();
+          });
+        }
+        function semearPlano() {
+          if (M.planos.length || SEED_PLANO_OK) return Promise.resolve();
+          SEED_PLANO_OK = true;
+          var d = JSON.parse(JSON.stringify(MAN_SEED));
+          return chk(sb.from('man_planos').insert(d).select()).then(function(r) { M.planos = r.data || []; }).catch(function(e) { console.error(e); });
+        }
+        function eqPorId(id) { return M.equip.filter(function(e) { return e.id === id; })[0]; }
+        function planoPorId(id) { return M.planos.filter(function(p) { return p.id === id; })[0]; }
+        function revPorId(id) { return M.rev.filter(function(r) { return r.id === id; })[0]; }
+        function cliPorNome(n) { return ((appData && appData.clientes) || []).filter(function(c) { return norm(c.nome) === norm(n); })[0]; }
+        function nomeEq(e) { return [e.marca, e.modelo].filter(Boolean).join(' ') || 'Empilhadeira'; }
+        function fmtH(n) { return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 1 }); }
+        function addMesesISO(iso, n) {
+          var d = mkUTC(iso), dia = d.getUTCDate();
+          d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n);
+          var max = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+          d.setUTCDate(Math.min(dia, max)); return isoUTC(d);
+        }
+        function numOuNull(s) { s = String(s == null ? '' : s).trim(); if (!s) return null; var n = parseValor(s); return isNaN(n) ? null : n; }
+
+        // ---------- cadastro único de clientes ----------
+        var sincCli = false;
+        function sincronizarClientes(nomes) {
+          var lista = (appData && appData.clientes) || [];
+          if (sincCli || !lista.length) return Promise.resolve();
+          var tem = {}; lista.forEach(function(c) { tem[norm(c.nome)] = 1; });
+          var novos = [];
+          nomes.forEach(function(n) {
+            n = String(n || '').trim();
+            if (n && !tem[norm(n)]) { tem[norm(n)] = 1; novos.push({ id: 'cli_' + Date.now() + '_' + novos.length, nome: n, canal: 'WhatsApp', status: 'Ativo', obs: null }); }
+          });
+          if (!novos.length) return Promise.resolve();
+          sincCli = true;
+          return chk(sb.from('clientes').insert(novos)).then(function() {
+            novos.forEach(function(n) { appData.clientes.push({ id: n.id, nome: n.nome, canal: n.canal, status: n.status, obs: '', cnpj: '', contato: '', telefone: '', email: '', endereco: '' }); });
+            try { populateSelects(); } catch (e) {}
+            if (setorAtual === 'manutencao') renderMan();
+          }).catch(console.error).then(function() { sincCli = false; });
+        }
+        function todosClientes() {
+          var s = {};
+          ((appData && appData.clientes) || []).forEach(function(c) { if (c.nome) s[c.nome] = 1; });
+          M.equip.forEach(function(e) { if (e.cliente) s[e.cliente] = 1; });
+          L.itens.forEach(function(i) { if (i.cliente) s[i.cliente] = 1; });
+          C.props.forEach(function(p) { if (p.cliente_nome) s[p.cliente_nome] = 1; });
+          return Object.keys(s).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); });
+        }
+        function dlClientes(id) { return '<datalist id="' + id + '">' + todosClientes().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>'; }
+
+        // ---------- vencimentos ----------
+        function ultimasRev() {
+          var ult = {};
+          M.rev.forEach(function(r) {
+            var k = r.equip_id + '|' + norm(r.servico), a = ult[k];
+            if (!a || r.data > a.data || (r.data === a.data && String(r.created_at) > String(a.created_at))) ult[k] = r;
+          });
+          return Object.keys(ult).map(function(k) { return ult[k]; });
+        }
+        function pendencias() {
+          var h = hoje(), out = [];
+          ultimasRev().forEach(function(r) {
+            var e = eqPorId(r.equip_id); if (!e || e.ativo === false) return;
+            if (r.proxima_horas == null && !r.proxima_data) return;
+            var sev = 0, partes = [];
+            if (r.proxima_horas != null && e.horimetro != null) {
+              var rest = Number(r.proxima_horas) - Number(e.horimetro), lim = Math.max(10, Math.round(Number(r.int_horas || 0) * 0.1));
+              if (rest <= 0) { sev = 2; partes.push('passou ' + fmtH(-rest) + ' h do limite'); }
+              else if (rest <= lim) { sev = Math.max(sev, 1); partes.push('faltam ' + fmtH(rest) + ' h'); }
+              else partes.push('faltam ' + fmtH(rest) + ' h');
+            }
+            if (r.proxima_data) {
+              var dd = difDias(h, r.proxima_data);
+              if (dd < 0) { sev = 2; partes.push('vencida há ' + (-dd) + ' dia(s)'); }
+              else if (dd === 0) { sev = 2; partes.push('vence hoje'); }
+              else if (dd <= 15) { sev = Math.max(sev, 1); partes.push('vence em ' + dd + ' dia(s)'); }
+              else partes.push('vence em ' + dd + ' dias');
+            }
+            out.push({ r: r, e: e, sev: sev, txt: partes.join(' · ') });
+          });
+          out.sort(function(a, b) { return b.sev - a.sev || String(a.r.proxima_data || '9').localeCompare(String(b.r.proxima_data || '9')) || a.e.cliente.localeCompare(b.e.cliente); });
+          return out;
+        }
+        function semHistorico() {
+          var tem = {}; M.rev.forEach(function(r) { tem[r.equip_id] = 1; });
+          return M.equip.filter(function(e) { return e.ativo !== false && !tem[e.id]; });
+        }
+        function contarMan() { if (!permitido('manutencao') || !carregado.manutencao) return 0; return pendencias().filter(function(p) { return p.sev === 2; }).length; }
+
+        function avisoManutencao() {
+          if (!permitido('manutencao')) return;
+          var mg = document.getElementById('modal-generico');
+          if (mg && mg.classList.contains('active')) { setTimeout(avisoManutencao, 6000); return; }
+          var pend = pendencias().filter(function(p) { return p.sev > 0; });
+          if (!pend.length) return;
+          var chave = 'pls-aviso-man-' + hoje();
+          try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1'); } catch (e) {}
+          function lista(arr) {
+            return '<ul class="sx-aviso-lista">' + arr.map(function(p) {
+              return '<li><b>' + esc(p.e.cliente) + '</b> — ' + esc(nomeEq(p.e)) + (p.e.serie ? ' (série ' + esc(p.e.serie) + ')' : '') + ': ' + esc(p.r.servico) +
+                ' <span class="sx-muted">· ' + esc(p.txt) + '</span></li>';
+            }).join('') + '</ul>';
+          }
+          var v = pend.filter(function(p) { return p.sev === 2; }), pr = pend.filter(function(p) { return p.sev === 1; }), h = '';
+          if (v.length) h += '<h4 class="sx-aviso-h atraso">⚠ Revisões vencidas — oportunidade de vender o serviço de novo:</h4>' + lista(v);
+          if (pr.length) h += '<h4 class="sx-aviso-h hoje">📣 Perto de vencer:</h4>' + lista(pr);
+          abrirModal('Revisões dos clientes', h, 'Abrir Manutenção', function() { M.sub = 'vencimentos'; setSetor('manutencao'); });
+        }
+
+        // ---------- telas ----------
+        function montarMan() {
+          var el = $('setor-manutencao'); if (!el || el.getAttribute('data-ok')) return;
+          el.setAttribute('data-ok', '1');
+          el.innerHTML =
+            '<div class="sx-subnav no-print" id="mn-subnav">' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="vencimentos">🔔 Vencimentos</button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="equip">🚜 Equipamentos dos clientes</button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção</button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="clientes">👥 Clientes</button>' +
+            '</div>' +
+            '<div id="mn-p-vencimentos" class="sx-pane">' +
+              '<div class="sx-toolbar">' +
+                '<select id="mn-f-sit" class="form-control sx-w"><option value="">Todas as situações</option><option value="2">Vencidas</option><option value="1">Perto de vencer</option><option value="0">Em dia</option></select>' +
+                '<input id="mn-f-busca" class="form-control sx-w2" placeholder="Buscar cliente, equipamento ou serviço…">' +
+              '</div><div id="mn-kpis" class="kpi-grid"></div><div class="table-container" id="mn-venc"></div>' +
+            '</div>' +
+            '<div id="mn-p-equip" class="sx-pane">' +
+              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="eq-novo">➕ Novo equipamento de cliente</button>' +
+              '<input id="mn-e-busca" class="form-control sx-w2" placeholder="Buscar cliente, modelo ou série…"></div>' +
+              '<div class="table-container" id="mn-equip"></div>' +
+            '</div>' +
+            '<div id="mn-p-planos" class="sx-pane">' +
+              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="pl-novo">➕ Novo plano</button>' +
+              '<input id="mn-p-busca" class="form-control sx-w2" placeholder="Buscar plano, marca ou modelo…"></div>' +
+              '<div class="table-container" id="mn-planos"></div>' +
+            '</div>' +
+            '<div id="mn-p-clientes" class="sx-pane">' +
+              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="cli-novo">➕ Novo cliente</button>' +
+              '<input id="mn-c-busca" class="form-control sx-w2" placeholder="Buscar cliente, CNPJ ou contato…"></div>' +
+              '<p class="sx-muted" style="margin:0 0 0.6rem">Cadastro único: os mesmos clientes valem para Demandas, Locações, Comercial e Manutenção.</p>' +
+              '<div class="table-container" id="mn-clientes"></div>' +
+            '</div>';
+        }
+        function entrarMan() {
+          montarMan(); renderMan();
+          Promise.all([carregarMan(), carregarLoc(), carregarCom()]).then(function() { renderMan(); desenharRail(); avisoManutencao(); })
+            .catch(function(e) { console.error(e); showToast('Não foi possível carregar a Manutenção: ' + (e.message || e), 5000); });
+        }
+        function renderMan() {
+          montarMan();
+          ['vencimentos', 'equip', 'planos', 'clientes'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
+          document.querySelectorAll('#setor-manutencao .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === M.sub); });
+          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'planos') renderPlanosMan(); else renderClientesMan();
+        }
+        function pillSev(s) { return s === 2 ? '<span class="sx-pill sx-atraso">VENCIDA</span>' : s === 1 ? '<span class="sx-pill sx-hoje">PERTO DE VENCER</span>' : '<span class="sx-pill sx-st-ok">EM DIA</span>'; }
+        function renderVenc() {
+          var todas = pendencias(), q = norm(M.fBusca);
+          var nv = todas.filter(function(p) { return p.sev === 2; }).length, np = todas.filter(function(p) { return p.sev === 1; }).length, ne = todas.filter(function(p) { return p.sev === 0; }).length;
+          $('mn-kpis').innerHTML = kpi('Vencidas', nv, 'chame o cliente e venda a revisão', 'var(--pls-red)') + kpi('Perto de vencer', np, 'até 15 dias / 10% das horas', 'var(--accent)') +
+            kpi('Em dia', ne, '', '#16a34a') + kpi('Sem revisão registrada', semHistorico().length, 'equipamentos sem histórico', '#64748b');
+          var lista = todas.filter(function(p) {
+            if (M.fSit !== '' && String(p.sev) !== M.fSit) return false;
+            return !q || norm(p.e.cliente + ' ' + nomeEq(p.e) + ' ' + (p.e.serie || '') + ' ' + p.r.servico).indexOf(q) >= 0;
+          });
+          $('mn-venc').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th>Serviço</th><th>Última revisão</th><th>Próxima</th><th>Situação</th><th></th></tr></thead><tbody>' +
+            lista.map(function(p) {
+              var r = p.r, e = p.e, prox = [];
+              if (r.proxima_horas != null) prox.push(fmtH(r.proxima_horas) + ' h <span class="sx-muted">(atual ' + (e.horimetro != null ? fmtH(e.horimetro) : '?') + ' h)</span>');
+              if (r.proxima_data) prox.push(fd(r.proxima_data));
+              return '<tr><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(nomeEq(e)) + (e.serie ? '<br><span class="sx-muted">série ' + esc(e.serie) + '</span>' : '') + '</td><td>' + esc(r.servico) + '</td>' +
+                '<td>' + fd(r.data) + (r.horimetro != null ? '<br><span class="sx-muted">' + fmtH(r.horimetro) + ' h</span>' : '') + '</td><td>' + prox.join('<br>') + '</td>' +
+                '<td>' + pillSev(p.sev) + '<br><span class="sx-muted">' + esc(p.txt) + '</span>' + (r.avisado_em ? '<br><span class="sx-muted">cliente avisado em ' + fd(r.avisado_em).slice(0, 5) + '</span>' : '') + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="msg" data-id="' + r.id + '">📲 Avisar</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="rev-nova" data-eq="' + e.id + '" data-srv="' + esc(r.servico) + '">🔧 Registrar revisão</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="eq-hor" data-id="' + e.id + '">⏱ Horímetro</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma revisão com vencimento cadastrada. Registre a primeira revisão de um equipamento para o sistema passar a avisar.</div>';
+        }
+        function renderEquipMan() {
+          var q = norm(M.eBusca);
+          var lista = M.equip.filter(function(e) { return e.ativo !== false && (!q || norm(e.cliente + ' ' + nomeEq(e) + ' ' + (e.serie || '') + ' ' + (e.tag || '')).indexOf(q) >= 0); });
+          var ult = {}; ultimasRev().forEach(function(r) { if (!ult[r.equip_id] || r.data > ult[r.equip_id].data) ult[r.equip_id] = r; });
+          $('mn-equip').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th>Série</th><th>Horímetro</th><th>Plano</th><th>Última revisão</th><th></th></tr></thead><tbody>' +
+            lista.map(function(e) {
+              var pl = planoPorId(e.plano_id), u = ult[e.id];
+              return '<tr><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(nomeEq(e)) + (e.tag ? '<br><span class="sx-muted">' + esc(e.tag) + '</span>' : '') + '</td><td>' + esc(e.serie || '—') + '</td>' +
+                '<td>' + (e.horimetro != null ? fmtH(e.horimetro) + ' h<br><span class="sx-muted">em ' + fd(e.horimetro_em) + '</span>' : '—') + '</td>' +
+                '<td>' + (pl ? esc(pl.modelos || pl.nome) : '<span class="sx-muted">sem plano</span>') + '</td><td>' + (u ? esc(u.servico) + '<br><span class="sx-muted">' + fd(u.data) + '</span>' : '—') + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="rev-nova" data-eq="' + e.id + '">🔧 Revisão</button> ' +
+                (pl ? '<button type="button" class="btn-pls-secondary" data-man="pl-print" data-id="' + pl.id + '" data-eq="' + e.id + '">🖨 Plano</button> ' : '') +
+                '<button type="button" class="btn-pls-secondary" data-man="eq-hist" data-id="' + e.id + '">📜 Histórico</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="eq-ed" data-id="' + e.id + '">✏</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="eq-del" data-id="' + e.id + '">🗑</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento cadastrado. Cadastre o equipamento do cliente para registrar revisões e receber os avisos.</div>';
+        }
+        function contaPlano(p) {
+          var n = (p.matriz && p.matriz.rows ? p.matriz.rows.length : 0), e = (p.etapas || []).length;
+          return e + ' etapa(s) · ' + n + ' linha(s) na matriz';
+        }
+        function renderPlanosMan() {
+          var q = norm(M.pBusca);
+          var lista = M.planos.filter(function(p) { return p.ativo !== false && (!q || norm(p.nome + ' ' + (p.marca || '') + ' ' + (p.modelos || '')).indexOf(q) >= 0); });
+          $('mn-planos').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Plano</th><th>Marca / modelos</th><th>Conteúdo</th><th>Fonte</th><th></th></tr></thead><tbody>' +
+            lista.map(function(p) {
+              return '<tr><td><b>' + esc(p.nome) + '</b><br><span class="sx-muted">' + esc(p.combustivel || '') + '</span></td><td>' + esc([p.marca, p.modelos].filter(Boolean).join(' — ')) + '</td><td>' + contaPlano(p) + '</td>' +
+                '<td class="sx-muted" style="max-width:260px">' + esc(p.fonte || '—') + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="pl-print" data-id="' + p.id + '">🖨 Imprimir…</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="pl-ed" data-id="' + p.id + '">✏ Editar</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="pl-dup" data-id="' + p.id + '">⧉</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="pl-del" data-id="' + p.id + '">🗑</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum plano cadastrado. Envie a marca, o modelo e o número de série à Claude para ela pesquisar e cadastrar o plano pronto.</div>';
+        }
+        function renderClientesMan() {
+          var q = norm(M.cBusca), cont = {};
+          M.equip.forEach(function(e) { var k = norm(e.cliente); cont[k] = (cont[k] || 0) + 1; });
+          var lista = ((appData && appData.clientes) || []).filter(function(c) { return !q || norm(c.nome + ' ' + (c.cnpj || '') + ' ' + (c.contato || '') + ' ' + (c.telefone || '')).indexOf(q) >= 0; })
+            .sort(function(a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+          $('mn-clientes').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Equip.</th><th></th></tr></thead><tbody>' +
+            lista.map(function(c) {
+              return '<tr><td><b>' + esc(c.nome) + '</b>' + (c.endereco ? '<br><span class="sx-muted">' + esc(c.endereco) + '</span>' : '') + '</td><td>' + esc(c.cnpj || '—') + '</td><td>' + esc(c.contato || '—') + '</td><td>' + esc(c.telefone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
+                '<td>' + (cont[norm(c.nome)] || 0) + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="cli-ed" data-id="' + esc(c.id) + '">✏ Editar</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum cliente encontrado.</div>';
+        }
+
+        // ---------- clientes ----------
+        function abrirCliente(id) {
+          var c = id ? ((appData.clientes || []).filter(function(x) { return x.id === id; })[0]) : { nome: '' };
+          if (!c) return;
+          var f = function(i, l, v, extra) { return '<div class="form-group' + (extra || '') + '"><label class="form-label">' + l + '</label><input id="mn-c-' + i + '" class="form-control" value="' + esc(v || '') + '"' + (i === 'nome' && id ? ' readonly' : '') + '></div>'; };
+          abrirModal(id ? 'Dados do cliente' : 'Novo cliente',
+            '<div class="form-grid">' + f('nome', 'Nome / Razão social', c.nome, ' full-width') + f('cnpj', 'CNPJ', c.cnpj) + f('contato', 'Pessoa de contato', c.contato) + f('telefone', 'Telefone / WhatsApp', c.telefone) + f('email', 'E-mail', c.email) + f('endereco', 'Endereço', c.endereco, ' full-width') + '</div>',
+            'Salvar', function() {
+              var nome = $('mn-c-nome').value.trim(); if (!nome) throw new Error('Informe o nome do cliente.');
+              if (!id && cliPorNome(nome)) throw new Error('Este cliente já está cadastrado.');
+              var d = { cnpj: $('mn-c-cnpj').value.trim() || null, contato: $('mn-c-contato').value.trim() || null, telefone: $('mn-c-telefone').value.trim() || null, email: $('mn-c-email').value.trim() || null, endereco: $('mn-c-endereco').value.trim() || null };
+              var reg = id ? Object.assign({ id: id }, d) : Object.assign({ id: 'cli_' + Date.now(), nome: nome, canal: 'WhatsApp', status: 'Ativo', obs: null }, d);
+              var q = id ? sb.from('clientes').update(d).eq('id', id).select('id') : sb.from('clientes').insert(reg).select('id');
+              return chk(q).then(function(r) {
+                if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
+                if (id) { Object.keys(d).forEach(function(k) { c[k] = d[k] || ''; }); }
+                else { appData.clientes.push({ id: reg.id, nome: nome, canal: 'WhatsApp', status: 'Ativo', obs: '', cnpj: d.cnpj || '', contato: d.contato || '', telefone: d.telefone || '', email: d.email || '', endereco: d.endereco || '' }); try { populateSelects(); } catch (e) {} }
+                renderMan(); showToast('Cliente salvo.');
+              });
+            });
+        }
+
+        // ---------- equipamentos ----------
+        function abrirEquip(id, cliente) {
+          var e = id ? eqPorId(id) : { cliente: cliente || '', ativo: true };
+          if (!e) return;
+          abrirModal(id ? 'Editar equipamento' : 'Novo equipamento de cliente',
+            '<div class="form-grid">' +
+              '<div class="form-group full-width"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="mn-e-cliente" class="form-control" list="mn-dl-cli" value="' + esc(e.cliente) + '" placeholder="Digite para buscar o cliente">' + dlClientes('mn-dl-cli') + '</div>' +
+              '<div class="form-group full-width"><label class="form-label">Plano de manutenção</label><select id="mn-e-plano" class="form-control"><option value="">(sem plano — escolher depois)</option>' +
+                M.planos.map(function(p) { return '<option value="' + p.id + '"' + (p.id === e.plano_id ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
+              '<div class="form-group"><label class="form-label">Marca</label><input id="mn-e-marca" class="form-control" value="' + esc(e.marca || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Modelo</label><input id="mn-e-modelo" class="form-control" value="' + esc(e.modelo || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Nº de série</label><input id="mn-e-serie" class="form-control" value="' + esc(e.serie || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Identificação do cliente (frota/TAG)</label><input id="mn-e-tag" class="form-control" value="' + esc(e.tag || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Horímetro atual (h)</label><input id="mn-e-hor" class="form-control" inputmode="decimal" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div>' +
+              '<div class="form-group full-width"><label class="form-label">Observações</label><input id="mn-e-obs" class="form-control" value="' + esc(e.obs || '') + '"></div>' +
+            '</div>', 'Salvar', function() {
+              var cli = $('mn-e-cliente').value.trim(); if (!cli) throw new Error('Informe o cliente.');
+              var ex = cliPorNome(cli); if (ex) cli = ex.nome;
+              var pid = $('mn-e-plano').value || null, pl = pid ? planoPorId(pid) : null, hor = numOuNull($('mn-e-hor').value);
+              var d = { cliente: cli, plano_id: pid, marca: $('mn-e-marca').value.trim() || (pl && pl.marca) || null, modelo: $('mn-e-modelo').value.trim() || null,
+                serie: $('mn-e-serie').value.trim() || null, tag: $('mn-e-tag').value.trim() || null, obs: $('mn-e-obs').value.trim() || null, updated_at: new Date().toISOString() };
+              if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : hoje(); }
+              var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
+              return chk(q).then(function(r) {
+                if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
+                return Promise.all([sincronizarClientes([cli]), carregarMan()]);
+              }).then(function() { renderMan(); showToast('Equipamento salvo.'); });
+            });
+        }
+        function excluirEquip(id) {
+          var e = eqPorId(id); if (!e) return;
+          if (!confirm('Excluir o equipamento ' + nomeEq(e) + ' de ' + e.cliente + ' e todo o histórico de revisões dele?')) return;
+          chk(sb.from('man_equip').delete().eq('id', id).select('id')).then(function(r) {
+            if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.');
+            return carregarMan();
+          }).then(function() { renderMan(); desenharRail(); showToast('Equipamento excluído.'); }).catch(function(er) { showToast('Erro: ' + (er.message || er), 5000); });
+        }
+        function abrirHorimetro(id) {
+          var e = eqPorId(id); if (!e) return;
+          abrirModal('Horímetro — ' + nomeEq(e), '<p class="sx-muted">' + esc(e.cliente) + '. Atualize quando o cliente informar ou na visita do técnico.</p>' +
+            '<div class="form-group"><label class="form-label">Horímetro atual (h)</label><input id="mn-h-val" class="form-control" inputmode="decimal" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div>' +
+            '<div class="form-group"><label class="form-label">Lido em</label><input id="mn-h-dt" type="date" class="form-control" value="' + hoje() + '"></div>', 'Salvar', function() {
+              var h = numOuNull($('mn-h-val').value); if (h == null) throw new Error('Informe o horímetro.');
+              return chk(sb.from('man_equip').update({ horimetro: h, horimetro_em: $('mn-h-dt').value || hoje(), updated_at: new Date().toISOString() }).eq('id', id).select('id'))
+                .then(carregarMan).then(function() { renderMan(); desenharRail(); showToast('Horímetro atualizado.'); });
+            });
+        }
+
+        // ---------- revisões ----------
+        function abrirRevisao(eqId, srv) {
+          var e = eqPorId(eqId); if (!e) return;
+          var usados = {}; M.rev.filter(function(r) { return r.equip_id === eqId; }).forEach(function(r) { usados[r.servico] = r; });
+          var sug = Object.keys(usados).concat(['Revisão 250 h', 'Revisão 600 h', 'Revisão 1.200 h', 'Revisão 2.000 h', 'Troca de óleo do motor', 'Revisão preventiva geral'])
+            .filter(function(v, i, a) { return a.indexOf(v) === i; });
+          var ant = srv && usados[srv] ? usados[srv] : null;
+          function ih(x) { return x == null ? '' : esc(String(x).replace('.', ',')); }
+          abrirModal('Registrar revisão — ' + nomeEq(e), '<p class="sx-muted">' + esc(e.cliente) + (e.serie ? ' · série ' + esc(e.serie) : '') + '</p>' +
+            '<div class="form-grid">' +
+              '<div class="form-group full-width"><label class="form-label">Serviço realizado <span class="req-star">*</span></label><input id="mn-r-srv" class="form-control" list="mn-dl-srv" value="' + esc(srv || '') + '" placeholder="Ex.: Revisão 250 h / Troca de óleo do motor"><datalist id="mn-dl-srv">' + sug.map(function(s) { return '<option value="' + esc(s) + '">'; }).join('') + '</datalist></div>' +
+              '<div class="form-group"><label class="form-label">Data <span class="req-star">*</span></label><input id="mn-r-data" type="date" class="form-control" value="' + hoje() + '"></div>' +
+              '<div class="form-group"><label class="form-label">Horímetro na revisão (h)</label><input id="mn-r-hor" class="form-control" inputmode="decimal" value="' + (e.horimetro != null ? ih(e.horimetro) : '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Técnico</label><input id="mn-r-tec" class="form-control" list="mn-dl-tec" value="">' + '<datalist id="mn-dl-tec">' + ((appData.tecnicos || []).map(function(t) { return '<option value="' + esc(t) + '">'; }).join('')) + '</datalist></div>' +
+              '<div class="form-group"><label class="form-label">Observações / peças</label><input id="mn-r-obs" class="form-control"></div>' +
+              '<div class="form-group full-width" style="border-top:1px solid #e2e8f0;padding-top:0.6rem"><label class="form-label"><b>Próxima revisão em…</b> <span class="sx-muted">(preencha horas, tempo ou os dois — vale o que vencer primeiro)</span></label></div>' +
+              '<div class="form-group"><label class="form-label">A cada (horas)</label><input id="mn-r-ih" class="form-control" inputmode="decimal" placeholder="250" value="' + (ant ? ih(ant.int_horas) : '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">A cada (meses)</label><input id="mn-r-im" class="form-control" inputmode="numeric" placeholder="3" value="' + (ant ? ih(ant.int_meses) : '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">A cada (dias)</label><input id="mn-r-id" class="form-control" inputmode="numeric" placeholder="" value="' + (ant ? ih(ant.int_dias) : '') + '"></div>' +
+            '</div>', 'Registrar', function() {
+              var srv2 = $('mn-r-srv').value.trim(), data = $('mn-r-data').value, hor = numOuNull($('mn-r-hor').value);
+              if (!srv2) throw new Error('Informe o serviço realizado.'); if (!data) throw new Error('Informe a data.');
+              var ih2 = numOuNull($('mn-r-ih').value), im2 = numOuNull($('mn-r-im').value), id2 = numOuNull($('mn-r-id').value);
+              if (ih2 && hor == null) throw new Error('Para vencer por horas, informe o horímetro da revisão.');
+              var ph = ih2 ? r2(hor + ih2) : null, pd = null;
+              if (im2 || id2) { pd = data; if (im2) pd = addMesesISO(pd, Math.round(im2)); if (id2) pd = addDias(pd, Math.round(id2)); }
+              var reg = { equip_id: eqId, servico: srv2, data: data, horimetro: hor, tecnico: $('mn-r-tec').value.trim() || null, obs: $('mn-r-obs').value.trim() || null,
+                int_horas: ih2 || null, int_meses: im2 || null, int_dias: id2 || null, proxima_horas: ph, proxima_data: pd };
+              return chk(sb.from('man_revisoes').insert(reg).select('id')).then(function() {
+                if (hor != null && (e.horimetro == null || hor > Number(e.horimetro))) return chk(sb.from('man_equip').update({ horimetro: hor, horimetro_em: data }).eq('id', eqId).select('id'));
+              }).then(carregarMan).then(function() { renderMan(); desenharRail(); showToast('Revisão registrada.' + (ph || pd ? ' Próxima: ' + [ph ? fmtH(ph) + ' h' : '', pd ? fd(pd) : ''].filter(Boolean).join(' ou ') : '')); });
+            });
+        }
+        function abrirHistorico(eqId) {
+          var e = eqPorId(eqId); if (!e) return;
+          var rs = M.rev.filter(function(r) { return r.equip_id === eqId; }).sort(function(a, b) { return b.data.localeCompare(a.data); });
+          abrirModal('Histórico — ' + nomeEq(e), '<p class="sx-muted">' + esc(e.cliente) + '</p>' + (rs.length ? '<table class="table-pls"><thead><tr><th>Data</th><th>Serviço</th><th>Horímetro</th><th>Próxima</th><th></th></tr></thead><tbody>' +
+            rs.map(function(r) {
+              return '<tr><td>' + fd(r.data) + '</td><td>' + esc(r.servico) + (r.tecnico ? '<br><span class="sx-muted">' + esc(r.tecnico) + '</span>' : '') + (r.obs ? '<br><span class="sx-muted">' + esc(r.obs) + '</span>' : '') + '</td><td>' + (r.horimetro != null ? fmtH(r.horimetro) + ' h' : '—') + '</td>' +
+                '<td>' + [r.proxima_horas != null ? fmtH(r.proxima_horas) + ' h' : '', r.proxima_data ? fd(r.proxima_data) : ''].filter(Boolean).join(' / ') + '</td>' +
+                '<td><button type="button" class="btn-pls-secondary" data-man="rev-del" data-id="' + r.id + '" data-eq="' + eqId + '">🗑</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Sem revisões registradas.</div>'), 'Fechar', function() {});
+        }
+        function excluirRevisao(id, eqId) {
+          if (!confirm('Excluir este registro de revisão?')) return;
+          chk(sb.from('man_revisoes').delete().eq('id', id).select('id')).then(function(r) {
+            if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.');
+            return carregarMan();
+          }).then(function() { renderMan(); desenharRail(); abrirHistorico(eqId); }).catch(function(er) { showToast('Erro: ' + (er.message || er), 5000); });
+        }
+        function textoAviso(p) {
+          var e = p.e, r = p.r, c = cliPorNome(e.cliente), nome = (c && c.contato) || e.cliente;
+          var qdo = [];
+          if (r.proxima_data) qdo.push(difDias(hoje(), r.proxima_data) < 0 ? 'venceu em ' + fd(r.proxima_data) : 'vence em ' + fd(r.proxima_data));
+          if (r.proxima_horas != null) qdo.push((e.horimetro != null && Number(e.horimetro) >= Number(r.proxima_horas) ? 'já passou do limite de ' : 'está prevista para ') + fmtH(r.proxima_horas) + ' h' + (e.horimetro != null ? ' (horímetro atual: ' + fmtH(e.horimetro) + ' h)' : ''));
+          return 'Olá, ' + nome + '! Aqui é da PLS Empilhadeiras. Identificamos que a revisão "' + r.servico + '" da empilhadeira ' + nomeEq(e) + (e.serie ? ' (série ' + e.serie + ')' : '') + ' ' + qdo.join(' / ') +
+            '. Para manter o equipamento seguro e evitar paradas, podemos agendar a visita do nosso técnico? Ficamos à disposição! ' + EMP.foneLinha;
+        }
+        function abrirAviso(revId) {
+          var p = pendencias().filter(function(x) { return x.r.id === revId; })[0]; if (!p) return;
+          var c = cliPorNome(p.e.cliente), tel = String((c && c.telefone) || '').replace(/\D/g, ''), txt = textoAviso(p);
+          if (tel && tel.length <= 11) tel = '55' + tel;
+          abrirModal('Avisar cliente — ' + p.e.cliente,
+            '<p class="sx-muted">' + esc(p.txt) + (c && c.telefone ? ' · ' + esc(c.telefone) : ' · cliente sem telefone cadastrado (aba Clientes)') + '</p>' +
+            '<textarea id="mn-av-txt" class="form-control" rows="7">' + esc(txt) + '</textarea>' +
+            '<div style="margin-top:0.6rem;display:flex;gap:0.5rem;flex-wrap:wrap"><button type="button" class="btn-pls-secondary" data-man="copiar">📋 Copiar texto</button>' +
+            (tel ? '<a class="btn-pls-secondary" target="_blank" rel="noopener" id="mn-av-wa" href="https://wa.me/' + tel + '?text=' + encodeURIComponent(txt) + '">💬 Abrir no WhatsApp</a>' : '') + '</div>',
+            'Marcar como avisado hoje', function() {
+              return chk(sb.from('man_revisoes').update({ avisado_em: hoje() }).eq('id', revId).select('id')).then(carregarMan).then(function() { renderMan(); });
+            });
+        }
+
+        // ---------- planos: formatos de texto ----------
+        function etapasTxt(a) { return (a || []).map(function(e) { return '## ' + e.t + '\n' + (e.itens || []).join('\n'); }).join('\n\n'); }
+        function txtEtapas(t) {
+          var out = [], cur = null;
+          String(t || '').split(/\r?\n/).forEach(function(l) {
+            l = l.trim(); if (!l) return;
+            if (/^##/.test(l)) { cur = { t: l.replace(/^#+\s*/, ''), itens: [] }; out.push(cur); }
+            else { if (!cur) { cur = { t: 'ITENS', itens: [] }; out.push(cur); } cur.itens.push(l); }
+          });
+          return out;
+        }
+        function matrizTxt(m) {
+          if (!m || !m.rows || !m.rows.length) return '';
+          return 'COLUNAS: ' + m.cols.join(', ') + '\n' + m.rows.map(function(r) { return r.s + ' | ' + r.t + ' | ' + m.cols.map(function(c) { return (r.m && r.m[c]) || '-'; }).join(' '); }).join('\n');
+        }
+        function txtMatriz(t) {
+          var cols = [], rows = [], ult = '';
+          String(t || '').split(/\r?\n/).forEach(function(l) {
+            l = l.trim(); if (!l) return;
+            if (/^COLUNAS\s*:/i.test(l)) { cols = l.replace(/^COLUNAS\s*:/i, '').split(',').map(function(x) { return x.trim(); }).filter(Boolean); return; }
+            var pt = l.split('|'); if (pt.length < 2) return;
+            var s = pt[0].trim() || ult; ult = s;
+            var marks = (pt[2] || '').trim().split(/\s+/), m = {};
+            cols.forEach(function(c, i) { var x = (marks[i] || '').toUpperCase(); if (x === 'I' || x === 'T') m[c] = x; });
+            rows.push({ s: s, t: pt[1].trim(), m: m });
+          });
+          return rows.length && cols.length ? { cols: cols, rows: rows } : { cols: [], rows: [] };
+        }
+        function fluidosTxt(a) { return (a || []).map(function(f) { return f.i + ' | ' + f.e + ' | ' + (f.a || ''); }).join('\n'); }
+        function txtFluidos(t) {
+          return String(t || '').split(/\r?\n/).map(function(l) { return l.trim(); }).filter(Boolean).map(function(l) { var p = l.split('|'); return { i: (p[0] || '').trim(), e: (p[1] || '').trim(), a: (p[2] || '').trim() }; });
+        }
+        function colCurta(t) { var m = /(\d[\d.]*)\s*h/i.exec(t); return m ? m[1] + 'h' : String(t).slice(0, 8); }
+        function etapasDe(p) {
+          if (p.etapas && p.etapas.length) return p.etapas;
+          var m = p.matriz; if (!m || !m.rows || !m.rows.length) return [];
+          return m.cols.map(function(c) {
+            var it = m.rows.filter(function(r) { return r.m && r.m[c]; }).map(function(r) { return (r.m[c] === 'T' ? 'TROCAR/SUBSTITUIR: ' : '') + r.t; });
+            return { t: 'A CADA ' + c.toUpperCase().replace('H', ' HORAS'), itens: it };
+          });
+        }
+        function matrizDe(p) {
+          if (p.matriz && p.matriz.rows && p.matriz.rows.length) return p.matriz;
+          var et = p.etapas || [], cols = et.map(function(e) { return colCurta(e.t); }), rows = [], idx = {};
+          et.forEach(function(e, i) {
+            (e.itens || []).forEach(function(t) {
+              if (idx[t] == null) { idx[t] = rows.length; rows.push({ s: '', t: t, m: {} }); }
+              rows[idx[t]].m[cols[i]] = /^(trocar|substituir)/i.test(t) ? 'T' : 'I';
+            });
+          });
+          return { cols: cols, rows: rows };
+        }
+
+        // ---------- planos: edição ----------
+        function lerFoto(file) {
+          return new Promise(function(res, rej) {
+            var fr = new FileReader();
+            fr.onload = function() {
+              var im = new Image();
+              im.onload = function() {
+                var k = Math.min(1, 520 / im.width), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+                c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.78));
+              };
+              im.onerror = rej; im.src = fr.result;
+            };
+            fr.onerror = rej; fr.readAsDataURL(file);
+          });
+        }
+        function abrirPlano(id) {
+          var p = id ? planoPorId(id) : { nome: '', etapas: [], matriz: { cols: [], rows: [] }, fluidos: [], pontos: [] };
+          if (!p) return;
+          var ta = function(i, l, v, dica, rows) { return '<div class="form-group full-width"><label class="form-label">' + l + '</label>' + (dica ? '<div class="sx-muted" style="font-size:0.72rem;margin-bottom:0.2rem">' + dica + '</div>' : '') +
+            '<textarea id="mn-p-' + i + '" class="form-control" rows="' + (rows || 6) + '" style="font-family:monospace;font-size:0.78rem">' + esc(v) + '</textarea></div>'; };
+          abrirModal(id ? 'Editar plano' : 'Novo plano',
+            '<div class="form-grid">' +
+              '<div class="form-group full-width"><label class="form-label">Nome do plano <span class="req-star">*</span></label><input id="mn-p-nome" class="form-control" value="' + esc(p.nome) + '"></div>' +
+              '<div class="form-group"><label class="form-label">Marca</label><input id="mn-p-marca" class="form-control" value="' + esc(p.marca || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Modelos (aparece no cabeçalho)</label><input id="mn-p-modelos" class="form-control" value="' + esc(p.modelos || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Combustível</label><input id="mn-p-comb" class="form-control" list="mn-dl-comb" value="' + esc(p.combustivel || '') + '"><datalist id="mn-dl-comb"><option value="Diesel"><option value="GLP"><option value="Elétrica"></datalist></div>' +
+              '<div class="form-group"><label class="form-label">Foto do equipamento</label><input id="mn-p-foto" type="file" accept="image/*" class="form-control">' + (p.foto ? '<label class="sx-chkl"><input type="checkbox" id="mn-p-fotodel"> remover a foto atual</label>' : '') + '</div>' +
+              '<div class="form-group full-width"><label class="form-label">Fonte das informações</label><input id="mn-p-fonte" class="form-control" value="' + esc(p.fonte || '') + '" placeholder="Manual do fabricante, site, data da consulta…"></div>' +
+              ta('etapas', 'Modelo A — etapas e itens (checklist OK / N/A)', etapasTxt(p.etapas), 'Uma linha "## Título da etapa" e, embaixo, um item por linha. Se deixar vazio, o modelo A é montado a partir da matriz.', 10) +
+              ta('matriz', 'Modelo B — matriz Inspecionar (I) / Trocar (T)', matrizTxt(p.matriz), 'Primeira linha "COLUNAS: 8h, 50h, 250h". Depois: SISTEMA | item | marcas na ordem das colunas (I, T ou -). Se deixar vazio, o modelo B é montado a partir das etapas.', 10) +
+              ta('fluidos', 'Fluidos e lubrificantes', fluidosTxt(p.fluidos), 'Item | Especificação | Aplicação/capacidade (uma linha cada)', 5) +
+              ta('pontos', 'Pontos importantes para o técnico (modelo A)', (p.pontos || []).join('\n'), 'Um por linha.', 4) +
+              '<div class="form-group full-width"><label class="form-label">Observação</label><input id="mn-p-obs" class="form-control" value="' + esc(p.obs || '') + '"></div>' +
+            '</div>', 'Salvar', function() {
+              var nome = $('mn-p-nome').value.trim(); if (!nome) throw new Error('Informe o nome do plano.');
+              var d = { nome: nome, marca: $('mn-p-marca').value.trim() || null, modelos: $('mn-p-modelos').value.trim() || null, combustivel: $('mn-p-comb').value.trim() || null,
+                fonte: $('mn-p-fonte').value.trim() || null, obs: $('mn-p-obs').value.trim() || null, etapas: txtEtapas($('mn-p-etapas').value), matriz: txtMatriz($('mn-p-matriz').value),
+                fluidos: txtFluidos($('mn-p-fluidos').value), pontos: $('mn-p-pontos').value.split(/\r?\n/).map(function(x) { return x.trim(); }).filter(Boolean), updated_at: new Date().toISOString() };
+              var arq = $('mn-p-foto').files[0], tirar = $('mn-p-fotodel') && $('mn-p-fotodel').checked;
+              return (arq ? lerFoto(arq) : Promise.resolve(null)).then(function(foto) {
+                if (foto) d.foto = foto; else if (tirar) d.foto = null;
+                return chk(id ? sb.from('man_planos').update(d).eq('id', id).select('id') : sb.from('man_planos').insert(d).select('id'));
+              }).then(function(r) {
+                if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
+                return carregarMan();
+              }).then(function() { renderMan(); showToast('Plano salvo.'); });
+            });
+        }
+        function duplicarPlano(id) {
+          var p = planoPorId(id); if (!p) return;
+          var d = JSON.parse(JSON.stringify(p)); delete d.id; delete d.created_at; delete d.updated_at; d.nome = p.nome + ' (cópia)';
+          chk(sb.from('man_planos').insert(d).select('id')).then(carregarMan).then(function() { renderMan(); showToast('Plano duplicado.'); }).catch(function(er) { showToast('Erro: ' + (er.message || er), 5000); });
+        }
+        function excluirPlano(id) {
+          var p = planoPorId(id); if (!p) return;
+          if (!confirm('Excluir o plano "' + p.nome + '"? Os equipamentos que usam esse plano ficam sem plano.')) return;
+          chk(sb.from('man_planos').delete().eq('id', id).select('id')).then(function(r) {
+            if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.');
+            return carregarMan();
+          }).then(function() { renderMan(); showToast('Plano excluído.'); }).catch(function(er) { showToast('Erro: ' + (er.message || er), 5000); });
+        }
+
+        // ---------- planos: impressão (modelo A = checklist por etapas | modelo B = infográfico I/T) ----------
+        function abrirImpressao(planoId, eqId) {
+          var p = planoPorId(planoId); if (!p) return;
+          var e0 = eqId ? eqPorId(eqId) : null;
+          var eqs = M.equip.filter(function(e) { return e.ativo !== false; }).sort(function(a, b) { return a.cliente.localeCompare(b.cliente, 'pt-BR'); });
+          abrirModal('Imprimir plano — ' + p.nome,
+            '<div class="form-grid">' +
+              '<div class="form-group full-width"><label class="form-label">Equipamento do cliente (opcional)</label><select id="mn-i-eq" class="form-control"><option value="">— em branco: preencher à mão na visita —</option>' +
+                eqs.map(function(e) { return '<option value="' + e.id + '"' + (e0 && e0.id === e.id ? ' selected' : '') + '>' + esc(e.cliente + ' — ' + nomeEq(e) + (e.serie ? ' (série ' + e.serie + ')' : '')) + '</option>'; }).join('') + '</select></div>' +
+              '<div class="form-group full-width"><label class="form-label">Modelo do documento</label>' +
+                '<label class="sx-chkl"><input type="radio" name="mn-i-mod" value="A" checked> <b>Modelo A</b> — checklist por etapa (OK / N/A), várias páginas</label>' +
+                '<label class="sx-chkl"><input type="radio" name="mn-i-mod" value="B"> <b>Modelo B</b> — infográfico de uma página (matriz Inspecionar / Trocar)</label></div>' +
+            '</div>', 'Imprimir', function() {
+              var mod = (document.querySelector('input[name="mn-i-mod"]:checked') || {}).value || 'A', eid = $('mn-i-eq').value, e = eid ? eqPorId(eid) : null;
+              imprimirPlano(p, mod, e);
+            });
+        }
+        function fotoOuNada(p) { return p.foto ? '<img class="mpb-foto" src="' + p.foto + '" alt="">' : ''; }
+        function linhaContato() { return EMP.foneLinha; }
+        function ctxEq(e) {
+          return { cliente: e ? e.cliente : '', eq: e ? nomeEq(e) : '', serie: e && e.serie || '', hor: e && e.horimetro != null ? fmtH(e.horimetro) + ' h' : '', tag: e && e.tag || '' };
+        }
+        function htmlPlanoA(p, e) {
+          var c = ctxEq(e), et = etapasDe(p), blank = '<span class="mpa-fill"></span>';
+          var box = '<span class="mpa-box"></span>';
+          var h = '<div class="mpa">' +
+            '<div class="mpa-head"><img src="' + COM_IMG.logo + '" alt="PLS"><div><b>PLANO DE MANUTENÇÃO PREVENTIVA</b><span>' + esc(p.nome) + '</span></div></div>' +
+            '<table class="mpa-info"><tr><th>Cliente</th><td>' + (esc(c.cliente) || blank) + '</td><th>Data da visita</th><td>' + blank + '</td></tr>' +
+            '<tr><th>Equipamento</th><td>' + (esc(c.eq + (c.tag ? ' · ' + c.tag : '')) || blank) + '</td><th>Nº de série</th><td>' + (esc(c.serie) || blank) + '</td></tr>' +
+            '<tr><th>Horímetro atual</th><td>' + (esc(c.hor) || blank) + '</td><th>Técnico</th><td>' + blank + '</td></tr></table>' +
+            '<div class="mpa-regra"><b>Regra de uso:</b> em cada revisão, executar também as verificações dos intervalos anteriores. Em ambiente severo, empoeirado ou de alta intensidade de operação, reduzir os intervalos de limpeza, inspeção e filtros.</div>';
+          et.forEach(function(s) {
+            h += '<div class="mpa-etapa"><div class="mpa-eh">' + esc(s.t) + '</div><table class="mpa-tb"><thead><tr><th class="c">OK</th><th class="c">N/A</th><th>ITEM A CONFERIR / EXECUTAR</th></tr></thead><tbody>' +
+              (s.itens || []).map(function(t) { return '<tr><td class="c">' + box + '</td><td class="c">' + box + '</td><td>' + esc(t) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+          });
+          if ((p.fluidos || []).length) {
+            h += '<div class="mpa-etapa"><div class="mpa-eh dk">FLUIDOS, CAPACIDADES E REFERÊNCIAS</div><table class="mpa-tb mpa-fl"><thead><tr><th>Item</th><th>Especificação</th><th>Capacidade / aplicação</th></tr></thead><tbody>' +
+              p.fluidos.map(function(f) { return '<tr><td><b>' + esc(f.i) + '</b></td><td>' + esc(f.e) + '</td><td>' + esc(f.a) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+          }
+          if ((p.pontos || []).length) h += '<div class="mpa-etapa"><div class="mpa-eh dk">PONTOS IMPORTANTES PARA O TÉCNICO</div><ul class="mpa-pts">' + p.pontos.map(function(t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+          h += '<div class="mpa-etapa"><div class="mpa-eh dk">REGISTRO DA MANUTENÇÃO</div><table class="mpa-tb mpa-reg"><thead><tr><th>Data</th><th>Horímetro</th><th>Revisão</th><th>Técnico</th><th>Peças / fluidos / observações</th><th>Ass.</th></tr></thead><tbody>' +
+            '<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(5) + '</tbody></table></div>' +
+            (p.obs ? '<p class="mpa-obs">' + esc(p.obs) + '</p>' : '') +
+            '<p class="mpa-obs">Documento interno ' + esc(EMP.nome) + (p.fonte ? '. Fonte: ' + esc(p.fonte) : '') + '</p>' +
+            '<div class="mpa-contato">' + esc(EMP.nome) + ' · ' + esc(EMP.foneLinha) + ' · ' + esc(EMP.email) + ' · ' + esc(EMP.site) + '</div></div>';
+          return h;
+        }
+        function htmlPlanoB(p, e) {
+          var c = ctxEq(e), m = matrizDe(p), cols = m.cols, rows = m.rows, n = rows.length || 1;
+          var rh = Math.max(3.1, Math.min(4.7, 118 / n)), fs = Math.max(5.5, Math.min(7.2, rh * 1.55));
+          var grupos = [], num = 0;
+          rows.forEach(function(r, i) { var g = grupos[grupos.length - 1]; if (g && g.s === (r.s || '')) g.n++; else grupos.push({ s: r.s || '', n: 1, ini: i }); });
+          var gi = {}; grupos.forEach(function(g) { gi[g.ini] = g; });
+          var corpo = rows.map(function(r, i) {
+            var g = gi[i], tds = cols.map(function(cc) { var v = r.m && r.m[cc]; return '<td class="c' + (v === 'T' ? ' t' : '') + '">' + (v || '') + '</td>'; }).join('');
+            num++;
+            return '<tr' + (g ? ' class="g0"' : '') + '>' + (g ? '<td class="mpb-sis" rowspan="' + g.n + '">' + esc(g.s) + '</td>' : '') + '<td class="mpb-it">' + num + '. ' + esc(r.t) + '</td>' + tds + '<td class="obs"></td></tr>';
+          }).join('');
+          var blank = '<span class="mpb-fill"></span>';
+          return '<div class="mpb" style="--rh:' + rh + 'mm;--fs:' + fs + 'pt">' +
+            '<div class="mpb-top"><img class="mpb-logo" src="' + COM_IMG.logo + '" alt="PLS"><div class="mpb-tt"><b>PLANO DE MANUTENÇÃO</b><em>EMPILHADEIRA ' + esc(String(p.combustivel || '').toUpperCase()) + '</em><span>' + esc(p.modelos || p.nome) + '</span></div></div>' +
+            '<div class="mpb-mid"><div class="mpb-blocos">' +
+              '<div class="mpb-bl"><i>📋</i><div><b>EQUIPAMENTO</b>' + (c.cliente ? '<p>Cliente: <strong>' + esc(c.cliente) + '</strong></p>' : '<p>Cliente: ' + blank + '</p>') +
+                '<p>' + esc(c.eq || [p.marca, p.modelos].filter(Boolean).join(' ') || p.nome) + '</p><p>Série: ' + (esc(c.serie) || blank) + ' &nbsp; Horímetro: ' + (esc(c.hor) || blank) + '</p></div></div>' +
+              '<div class="mpb-bl"><i>⏱</i><div><b>INTERVALOS DE MANUTENÇÃO</b><p>Segundo o manual do fabricante</p><p>' + cols.map(esc).join(' | ') + '</p></div></div>' +
+              '<div class="mpb-bl"><i>🛡</i><div><b>OBJETIVO</b><p>Garantir a máxima segurança, confiabilidade e vida útil do equipamento, prevenindo falhas e reduzindo custos com manutenção corretiva.</p></div></div>' +
+            '</div><div class="mpb-fotobox">' + fotoOuNada(p) + '</div></div>' +
+            '<div class="mpb-sec">1. CHECKLIST DE MANUTENÇÃO PREVENTIVA</div>' +
+            '<table class="mpb-tb"><thead><tr><th>SISTEMA</th><th>ITEM A VERIFICAR</th>' + cols.map(function(cc) { return '<th class="c">' + esc(cc) + '</th>'; }).join('') + '<th class="obsh">OBSERVAÇÕES</th></tr></thead><tbody>' + corpo + '</tbody></table>' +
+            '<div class="mpb-leg">I = Inspecionar / Verificar &nbsp;&nbsp; T = Trocar / Substituir</div>' +
+            '<div class="mpb-low"><div class="mpb-fl"><div class="mpb-sec">2. ESPECIFICAÇÕES DE FLUIDOS E LUBRIFICANTES</div><table class="mpb-tb2"><thead><tr><th>ITEM</th><th>ESPECIFICAÇÃO / TIPO</th><th>APLICAÇÃO</th></tr></thead><tbody>' +
+              (p.fluidos || []).map(function(f) { return '<tr><td>' + esc(f.i) + '</td><td>' + esc(f.e) + '</td><td>' + esc(f.a) + '</td></tr>'; }).join('') + '</tbody></table><div class="mpb-nt">Utilizar somente fluidos recomendados pelo fabricante.</div></div>' +
+              '<div class="mpb-rg"><div class="mpb-sec">3. REGISTRO DE MANUTENÇÃO</div><div class="mpb-rgb"><p>DATA: ______/______/________ &nbsp;&nbsp; HORÍMETRO: ____________</p><p>TÉCNICO RESPONSÁVEL: ' + blank + '</p><p>SERVIÇO REALIZADO: ' + blank + '</p><p>' + blank + '</p><p>PEÇAS / FLUIDOS SUBSTITUÍDOS: ' + blank + '</p><p>' + blank + '</p><p><b>PRÓXIMA MANUTENÇÃO PREVISTA (HORÍMETRO):</b> ' + blank + '</p></div></div></div>' +
+            '<div class="mpb-foot"><div><b>' + esc(EMP.nome) + '</b><br>' + esc(EMP.cidade) + ' - RJ<br><span>' + esc(EMP.end) + '</span></div><div>' + EMP.fones.map(esc).join('<br>') + '</div><div>' + esc(EMP.email) + '<br>' + esc(EMP.site) + '<br>' + esc(EMP.insta) + '</div></div></div>';
+        }
+        function imprimirPlano(p, modelo, e) {
+          var area = $('sx-print-area');
+          area.innerHTML = modelo === 'B' ? htmlPlanoB(p, e) : htmlPlanoA(p, e);
+          var st = $('sx-print-page');
+          setTimeout(function() {
+            document.body.classList.add('print-sx');
+            if (st) st.textContent = modelo === 'B' ? '@page { size: A4 portrait; margin: 0; }' :
+              '@page { size: A4 portrait; margin: 8mm 9mm 12mm 9mm; @bottom-center { content: "PLS Empilhadeiras - Plano de Manutenção Preventiva · Página " counter(page) " de " counter(pages); font: 7pt Arial, sans-serif; color: #5b6270; } }';
+            var antes = document.title; document.title = 'Plano de manutenção - ' + (e ? e.cliente + ' - ' + nomeEq(e) : p.nome);
+            var limpar = function() { document.body.classList.remove('print-sx'); if (st) st.textContent = ''; document.title = antes; window.removeEventListener('afterprint', limpar); };
+            window.addEventListener('afterprint', limpar);
+            setTimeout(function() { window.print(); }, 120);
+          }, 60);
+        }
+
+        // ---------- eventos da Manutenção ----------
+        document.addEventListener('click', function(evt) {
+          var a = evt.target.closest ? evt.target.closest('[data-man]') : null; if (!a) return;
+          var k = a.getAttribute('data-man'), id = a.getAttribute('data-id');
+          switch (k) {
+            case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
+            case 'eq-novo': abrirEquip(null); break;
+            case 'eq-ed': abrirEquip(id); break;
+            case 'eq-del': excluirEquip(id); break;
+            case 'eq-hor': abrirHorimetro(id); break;
+            case 'eq-hist': abrirHistorico(id); break;
+            case 'rev-nova': abrirRevisao(a.getAttribute('data-eq'), a.getAttribute('data-srv') || ''); break;
+            case 'rev-del': excluirRevisao(id, a.getAttribute('data-eq')); break;
+            case 'msg': abrirAviso(id); break;
+            case 'copiar': { var t = $('mn-av-txt'); if (t) { t.select(); try { document.execCommand('copy'); showToast('Texto copiado.'); } catch (e) {} } break; }
+            case 'pl-novo': abrirPlano(null); break;
+            case 'pl-ed': abrirPlano(id); break;
+            case 'pl-dup': duplicarPlano(id); break;
+            case 'pl-del': excluirPlano(id); break;
+            case 'pl-print': abrirImpressao(id, a.getAttribute('data-eq')); break;
+            case 'cli-novo': abrirCliente(null); break;
+            case 'cli-ed': abrirCliente(id); break;
+          }
+        });
+        document.addEventListener('input', function(evt) {
+          var t = evt.target; if (!t || !t.id) return;
+          if (t.id === 'mn-f-busca') { M.fBusca = t.value; renderVenc(); }
+          else if (t.id === 'mn-e-busca') { M.eBusca = t.value; renderEquipMan(); }
+          else if (t.id === 'mn-p-busca') { M.pBusca = t.value; renderPlanosMan(); }
+          else if (t.id === 'mn-c-busca') { M.cBusca = t.value; renderClientesMan(); }
+        });
+        document.addEventListener('change', function(evt) {
+          var t = evt.target; if (!t || !t.id) return;
+          if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
+          // Comercial: preenche o CNPJ a partir do cadastro único de clientes
+          else if (t.id === 'cm-cliente') {
+            var c = cliPorNome(t.value), campo = $('cm-cnpj');
+            if (c && c.cnpj && campo && !campo.value.trim()) campo.value = c.cnpj;
+          }
+        });
+
         // =================================================================
         // EVENTOS
         // =================================================================
@@ -9905,6 +10615,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         { k: 'setor_locacoes', g: 'setores', t: 'Locações' },
         { k: 'setor_rh', g: 'setores', t: 'RH' },
         { k: 'setor_comercial', g: 'setores', t: 'Comercial' },
+        { k: 'setor_manutencao', g: 'setores', t: 'Manutenção' },
         { k: 'ver_painel', g: 'abas', t: 'Painel e Modo TV' },
         { k: 'ver_clientes', g: 'abas', t: 'Cadastro de Cliente' },
         { k: 'ver_calendario', g: 'abas', t: 'Calendário' },
