@@ -2552,7 +2552,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v41 — 07/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v42 — 07/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10177,14 +10177,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             lista.map(function(c) {
               return '<tr><td><b>' + esc(c.nome) + '</b>' + (c.endereco ? '<br><span class="sx-muted">' + esc(c.endereco) + '</span>' : '') + (c.obs ? '<br><span class="sx-muted">' + esc(c.obs) + '</span>' : '') + '</td><td>' + esc(c.cnpj || '—') + '</td><td>' + esc(c.contato || '—') + '</td><td>' + esc(c.telefone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
                 '<td>' + esc(c.canal || '—') + '<br><span class="sx-muted">' + esc(c.status || '') + '</span></td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="cli-ed" data-id="' + esc(c.id) + '">✏ Editar</button> ' +
-                '<button type="button" class="btn-pls-secondary" data-man="cli-del" data-id="' + esc(c.id) + '">🗑</button></td></tr>';
+                '<button type="button" class="btn-pls-secondary" data-man="cli-jun" data-id="' + esc(c.id) + '" title="Unir com outro cadastro (duplicado)">🔗 Juntar</button> <button type="button" class="btn-pls-secondary" data-man="cli-del" data-id="' + esc(c.id) + '">🗑</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum cliente encontrado.</div>';
         }
         function abrirCliente(id) {
           var c = id ? ((appData.clientes || []).filter(function(x) { return x.id === id; })[0]) : { nome: '', canal: '', status: 'Ativo' };
           if (!c) return;
           var cfg = (appData && appData.config) || {}, canais = cfg.canais || ['WhatsApp'], sts = cfg.statusCadastral || ['Ativo', 'Inativo'];
-          var f = function(i, l, v, extra) { return '<div class="form-group' + (extra || '') + '"><label class="form-label">' + l + '</label><input id="mn-c-' + i + '" class="form-control" value="' + esc(v || '') + '"' + (i === 'nome' && id ? ' readonly title="O nome não pode ser alterado depois de cadastrado"' : '') + '></div>'; };
+          var f = function(i, l, v, extra) { return '<div class="form-group' + (extra || '') + '"><label class="form-label">' + l + '</label><input id="mn-c-' + i + '" class="form-control" value="' + esc(v || '') + '"' + '' + '></div>'; };
           abrirModal(id ? 'Dados do cliente' : 'Novo cliente',
             '<div class="form-grid">' + f('nome', 'Nome / Razão social <span class="req-star">*</span>', c.nome, ' full-width') + f('cnpj', 'CNPJ', c.cnpj) + f('contato', 'Pessoa de contato', c.contato) + f('telefone', 'Telefone / WhatsApp', c.telefone) + f('email', 'E-mail', c.email) + f('endereco', 'Endereço', c.endereco, ' full-width') +
             '<div class="form-group"><label class="form-label">Canal principal</label><select id="mn-c-canal" class="form-control">' + opts(canais, c.canal || canais[0]) + '</select></div>' +
@@ -10192,14 +10192,47 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             f('obs', 'Observações', c.obs, ' full-width') + '</div>',
             'Salvar', function() {
               var nome = $('mn-c-nome').value.trim(); if (!nome) throw new Error('Informe o nome do cliente.');
-              if (!id && cliPorNome(nome)) throw new Error('Este cliente já está cadastrado.');
+              var outro = cliPorNome(nome); if (outro && outro !== c) throw new Error('Já existe um cliente com esse nome. Para unir os dois, use o botão Juntar no cadastro duplicado.');
+              var nomeAntigo = id ? c.nome : null, renomear = id && nomeAntigo !== nome;
               var d = { cnpj: $('mn-c-cnpj').value.trim(), contato: $('mn-c-contato').value.trim(), telefone: $('mn-c-telefone').value.trim(), email: $('mn-c-email').value.trim(), endereco: $('mn-c-endereco').value.trim(),
                 canal: $('mn-c-canal').value, status: $('mn-c-status').value, obs: $('mn-c-obs').value.trim() };
-              if (id) Object.keys(d).forEach(function(k) { c[k] = d[k]; });
+              if (id) { Object.keys(d).forEach(function(k) { c[k] = d[k]; }); if (renomear) c.nome = nome; }
               else appData.clientes.push(Object.assign({ id: 'cli_' + Date.now(), nome: nome }, d));
               saveData(); try { populateSelects(); } catch (e) {}
-              renderClientesMan(); showToast('Cliente salvo.');
+              renderClientesMan();
+              if (renomear) return trocarNomeCliente(nomeAntigo, nome, true).then(function() { showToast('Cliente renomeado em todo o sistema.'); return true; }).catch(function(e) { showToast('Erro ao atualizar os lançamentos: ' + (e.message || e), 6000); return true; });
+              showToast('Cliente salvo.');
             });
+        }
+        // troca o nome do cliente nas tabelas que guardam o nome (demandas acompanham sozinhas pelo banco)
+        function trocarNomeCliente(de, para, soRename) {
+          var tabs = [['loc_itens', 'cliente'], ['man_equip', 'cliente'], ['man_checklists', 'cliente'], ['com_propostas', 'cliente_nome']];
+          var pre = soRename ? Promise.resolve() : chk(sb.from('demandas').update({ cliente: para }).eq('cliente', de).select('id'));
+          return pre.then(function() {
+            return Promise.all(tabs.map(function(t) { var o = {}; o[t[1]] = para; return chk(sb.from(t[0]).update(o).eq(t[1], de).select('id')); }));
+          }).then(function() { return Promise.all([carregarMan(), carregarLoc(), carregarCom()]); }).then(function() { renderClientesMan(); });
+        }
+        function abrirJuntar(id) {
+          var c = (appData.clientes || []).filter(function(x) { return x.id === id; })[0]; if (!c) return;
+          var outros = appData.clientes.filter(function(x) { return x.id !== id; }).sort(function(a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
+          abrirModal('Juntar cliente duplicado',
+            '<p style="margin:0 0 .6rem">O cadastro <b>' + esc(c.nome) + '</b> será unido a outro. Todas as demandas, locações, equipamentos, propostas e checklists dele passam para o cliente escolhido, e este cadastro some.</p>' +
+            '<div class="form-group full-width"><label class="form-label">Juntar com (este cadastro continua)</label><select id="mn-j-alvo" class="form-control">' + opts(outros.map(function(x) { return { v: x.id, t: x.nome }; }), '', '— escolher —') + '</select></div>' +
+            '<div class="form-group full-width"><label class="form-label">Nome final do cliente</label><input id="mn-j-nome" class="form-control"></div>',
+            'Juntar', function() {
+              var alvo = outros.filter(function(x) { return x.id === $('mn-j-alvo').value; })[0]; if (!alvo) throw new Error('Escolha com qual cliente juntar.');
+              var final = $('mn-j-nome').value.trim() || alvo.nome;
+              var outroNome = cliPorNome(final); if (outroNome && outroNome !== alvo) throw new Error('Esse nome final já pertence a outro cliente.');
+              ['cnpj', 'contato', 'telefone', 'email', 'endereco'].forEach(function(k) { if (!alvo[k] && c[k]) alvo[k] = c[k]; });
+              var deNome = c.nome, alvoNome = alvo.nome;
+              return trocarNomeCliente(deNome, alvoNome, false).then(function() {
+                appData.clientes = appData.clientes.filter(function(x) { return x.id !== c.id; });
+                if (final !== alvo.nome) alvo.nome = final;
+                saveData(); try { populateSelects(); } catch (e) {}
+                if (final !== alvoNome) return trocarNomeCliente(alvoNome, final, true);
+              }).then(function() { renderClientesMan(); showToast('Clientes unidos.'); return true; });
+            });
+          var sel = $('mn-j-alvo'); sel.addEventListener('change', function() { var x = outros.filter(function(o) { return o.id === sel.value; })[0]; $('mn-j-nome').value = x ? x.nome : ''; });
         }
         function excluirCliente(id) {
           var c = (appData.clientes || []).filter(function(x) { return x.id === id; })[0]; if (!c) return;
@@ -11000,6 +11033,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'cli-novo': abrirCliente(null); break;
             case 'cli-ed': abrirCliente(id); break;
             case 'cli-del': excluirCliente(id); break;
+            case 'cli-jun': abrirJuntar(id); break;
           }
         });
         document.addEventListener('input', function(evt) {
