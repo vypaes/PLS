@@ -145,6 +145,7 @@ input.q{margin-bottom:8px}
     <button data-t="demandas"><span class="i">🗂</span>Demandas</button>
     <button data-t="lancar" class="add"><span class="i">+</span>Lançar</button>
     <button data-t="calendario"><span class="i">📅</span>Calendário</button>
+    <button data-t="checklist" id="nav-ck"><span class="i">✅</span>Checklist</button>
     <button data-t="rh" id="nav-rh" style="display:none"><span class="i">👥</span>RH</button>
   </nav>
 </div>
@@ -153,6 +154,366 @@ input.q{margin-bottom:8px}
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ===== PLS Checklist de entrada / saída (módulo compartilhado: app.html e index.html) ===== */
+var PLSCK = (function() {
+  var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, nome: function() { return ''; }, clientes: function() { return []; }, logo: '', toast: function(m) { alert(m); }, onSaved: null, empresa: 'PLS EMPILHADEIRAS' };
+  var SECOES = [
+    { t: 'OBRIGATÓRIO', its: [{ t: 'O operador é qualificado', sim: 1 }] },
+    { t: '1 - SISTEMA ELÉTRICO', its: ['Farol dianteiro', 'Farol traseiro', 'Luz de freio', 'Alarme de ré', 'Luz de lanterna'] },
+    { t: '2 - PAINEL', its: ['Marcador de temperatura', 'Buzina', 'Horímetro', 'Luz da bateria', 'Luz de pressão do óleo', 'Retrovisor'] },
+    { t: '3 - SISTEMA HIDRÁULICO', its: ['Mangueiras', 'Vazamento hidráulico', 'Sistema de elevação', 'Sistema de inclinação', 'Sistema de direção', 'Nível de óleo hidráulico', 'Cilindro de deslocamento lateral'] },
+    { t: '4 - GERAL', its: ['Trava do garfo', 'Extintor de incêndio', 'Pedais (freio e acelerador)', 'Assento do operador', 'Escapamento', 'Alavancas', 'Identificação da capacidade do equipamento', 'Giroflex', 'Funcionamento do freio estacionário', 'Funcionamento do freio', 'Funcionamento do motor', 'Nível do óleo do motor', 'Nível de óleo do freio', 'Nível do líquido de arrefecimento', 'Teste de carga'] },
+    { t: '5 - PNEUS', its: ['Dianteiros', 'Traseiros'] },
+    { t: '6 - OUTROS', its: [{ t: '', livre: 1 }, { t: '', livre: 1 }, { t: '', livre: 1 }, { t: '', livre: 1 }] }
+  ];
+  var S = null, V = 'info', IDX = 0, ROOT = null, PDFB = null, PDFN = '', REG = null, PODE_EXC = false;
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function hojeISO() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function agora() { var d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function br(iso) { if (!iso) return ''; var p = String(iso).slice(0, 10).split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function novoEstado() {
+    var itens = [];
+    SECOES.forEach(function(sec) { sec.its.forEach(function(it, i) { var o = typeof it === 'string' ? { t: it } : it; itens.push({ sec: sec.t, t: o.t, sim: o.sim ? 1 : 0, livre: o.livre ? 1 : 0, s: '', obs: '', foto: '' }); }); });
+    return { tipo: 'entrada', cliente: '', equipamento: '', modelo: '', inspec: C.nome() || '', hor: '', data: hojeISO(), hora: agora(), itens: itens, comentarios: '', condicao: '', local: '', resp: '', assin: '' };
+  }
+  function salvarRascunho() { try { localStorage.setItem('pls-ck-rascunho', JSON.stringify({ S: S, V: V, IDX: IDX })); } catch (e) {} }
+  function limparRascunho() { try { localStorage.removeItem('pls-ck-rascunho'); } catch (e) {} }
+  function lerRascunho() { try { return JSON.parse(localStorage.getItem('pls-ck-rascunho') || 'null'); } catch (e) { return null; } }
+
+  // ---------- estilos / overlay ----------
+  function css() {
+    if (document.getElementById('pck-css')) return;
+    var st = document.createElement('style'); st.id = 'pck-css';
+    st.textContent = '#pck{position:fixed;inset:0;z-index:9000;background:#f1f5f9;display:flex;flex-direction:column;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#0f172a;font-size:15px}' +
+      '#pck *{box-sizing:border-box}#pck .pk-top{background:#1a1b1f;color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:10px}' +
+      '#pck .pk-top b{flex:1;font-size:15px}#pck .pk-top button{background:#2a2c33;border:0;color:#fff;border-radius:8px;padding:8px 12px;font-size:14px}' +
+      '#pck .pk-bar{height:5px;background:#334155}#pck .pk-bar i{display:block;height:100%;background:#ea580c;transition:width .2s}' +
+      '#pck .pk-main{flex:1;overflow-y:auto;padding:14px 12px 20px;width:100%;max-width:680px;margin:0 auto}' +
+      '#pck .pk-foot{background:#fff;border-top:1px solid #e2e8f0;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;max-width:680px;width:100%;margin:0 auto}' +
+      '#pck .pk-btn{flex:1;padding:14px;border:0;border-radius:12px;background:#ea580c;color:#fff;font-weight:700;font-size:16px;cursor:pointer}' +
+      '#pck .pk-btn.g{background:#e2e8f0;color:#0f172a}#pck .pk-btn.v{background:#16a34a}#pck .pk-btn.w{background:#25d366}#pck .pk-btn.r{background:#dc2626}#pck .pk-btn:disabled{opacity:.5}' +
+      '#pck .fld{margin-bottom:12px}#pck .fld label{display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:4px}' +
+      '#pck input[type=text],#pck input[type=date],#pck input[type=time],#pck textarea,#pck select{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:16px;font-family:inherit}' +
+      '#pck .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}' +
+      '#pck .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#e2e8f0;border-radius:12px;padding:4px;margin-bottom:14px}#pck .seg button{border:0;background:transparent;border-radius:9px;padding:12px 4px;font-size:15px;font-weight:700;color:#64748b}#pck .seg button.on{background:#fff;color:#0f172a;box-shadow:0 1px 3px rgba(0,0,0,.15)}' +
+      '#pck .sec{font-size:12px;font-weight:800;letter-spacing:.05em;color:#ea580c;margin-bottom:4px}#pck .tit{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:14px}' +
+      '#pck .st{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}#pck .st button{padding:20px 4px;border-radius:14px;border:2px solid #cbd5e1;background:#fff;font-size:17px;font-weight:800;color:#334155}' +
+      '#pck .st button.bom.on{background:#16a34a;border-color:#16a34a;color:#fff}#pck .st button.ruim.on{background:#dc2626;border-color:#dc2626;color:#fff}#pck .st button.na.on{background:#64748b;border-color:#64748b;color:#fff}' +
+      '#pck .box{background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:12px;margin-bottom:12px}' +
+      '#pck .ph{max-width:100%;max-height:220px;border-radius:10px;display:block;margin:8px 0}' +
+      '#pck .li{display:flex;align-items:center;gap:8px;padding:10px 4px;border-bottom:1px solid #e2e8f0;font-size:14px;cursor:pointer}#pck .li .d{width:12px;height:12px;border-radius:50%;background:#cbd5e1;flex:0 0 auto}#pck .li .d.bom{background:#16a34a}#pck .li .d.ruim{background:#dc2626}#pck .li .d.na{background:#64748b}' +
+      '#pck .li small{color:#64748b;display:block}#pck .gh{font-size:11px;font-weight:800;color:#64748b;margin:12px 0 2px;letter-spacing:.05em}' +
+      '#pck canvas.sig{width:100%;height:150px;border:1px dashed #94a3b8;border-radius:10px;background:#fff;touch-action:none;display:block}' +
+      '#pck .ok{background:#dcfce7;border:1px solid #86efac;border-radius:12px;padding:14px;margin-bottom:12px;font-weight:700;color:#166534}' +
+      '#pck .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #e2e8f0;font-size:14px}#pck .kv span:first-child{color:#64748b}#pck .kv span:last-child{text-align:right;font-weight:600}' +
+      '#pck .pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px}#pck .pill.v{background:#dcfce7;color:#166534}#pck .pill.r{background:#fee2e2;color:#991b1b}' +
+      '#pck .chk{display:flex;gap:8px;align-items:center;font-weight:700;padding:12px;border:2px solid #cbd5e1;border-radius:12px;margin-bottom:8px;background:#fff}#pck .chk input{width:22px;height:22px}#pck .chk.on{border-color:#16a34a;background:#f0fdf4}#pck .chk.on.bad{border-color:#dc2626;background:#fef2f2}';
+    document.head.appendChild(st);
+  }
+  function abrirRoot() {
+    css();
+    if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pck'; document.body.appendChild(ROOT); }
+    ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden';
+  }
+  function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; PDFB = null; REG = null; if (C.onClose) C.onClose(); }
+  function shell(titulo, prog, corpo, rodape) {
+    ROOT.innerHTML = '<div class="pk-top"><b>' + esc(titulo) + '</b><button type="button" id="pk-x">✕ Fechar</button></div>' +
+      (prog != null ? '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' : '') + '<div class="pk-main" id="pk-main">' + corpo + '</div>' + (rodape ? '<div class="pk-foot">' + rodape + '</div>' : '');
+    document.getElementById('pk-x').onclick = function() {
+      if (V === 'pronto' || V === 'ver') { fechar(); return; }
+      if (confirm('Sair do checklist? O que você já marcou fica guardado neste aparelho para continuar depois.')) fechar();
+    };
+  }
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- etapas ----------
+  function telaInfo() {
+    V = 'info';
+    var dl = '<datalist id="pk-dl">' + C.clientes().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
+    shell('Checklist de empilhadeira', 0,
+      '<div class="seg"><button type="button" data-t="entrada" class="' + (S.tipo === 'entrada' ? 'on' : '') + '">⬇ Entrada</button><button type="button" data-t="saida" class="' + (S.tipo === 'saida' ? 'on' : '') + '">⬆ Saída</button></div>' +
+      '<div class="fld"><label>Empresa (cliente) *</label><input type="text" id="pk-cli" list="pk-dl" value="' + esc(S.cliente) + '" placeholder="Nome do cliente" autocomplete="off">' + dl + '</div>' +
+      '<div class="fld"><label>Equipamento</label><input type="text" id="pk-eq" value="' + esc(S.equipamento) + '" placeholder="Ex.: Empilhadeira 2,5 t, frota 12"></div>' +
+      '<div class="fld"><label>Fabricante / modelo</label><input type="text" id="pk-mod" value="' + esc(S.modelo) + '" placeholder="Ex.: Hyster H50FT"></div>' +
+      '<div class="fld"><label>Horímetro</label><input type="text" id="pk-hor" inputmode="decimal" value="' + esc(S.hor) + '"></div>' +
+      '<div class="fld"><label>Inspecionado por *</label><input type="text" id="pk-ins" value="' + esc(S.inspec) + '"></div>' +
+      '<div class="row2"><div class="fld"><label>Data</label><input type="date" id="pk-data" value="' + esc(S.data) + '"></div><div class="fld"><label>Hora</label><input type="time" id="pk-hora" value="' + esc(S.hora) + '"></div></div>',
+      '<button type="button" class="pk-btn" id="pk-ini">Começar a vistoria →</button>');
+    ROOT.querySelectorAll('.seg button').forEach(function(b) { b.onclick = function() { S.tipo = b.getAttribute('data-t'); ROOT.querySelectorAll('.seg button').forEach(function(x) { x.classList.toggle('on', x === b); }); }; });
+    $('pk-ini').onclick = function() {
+      S.cliente = $('pk-cli').value.trim(); S.equipamento = $('pk-eq').value.trim(); S.modelo = $('pk-mod').value.trim(); S.hor = $('pk-hor').value.trim(); S.inspec = $('pk-ins').value.trim(); S.data = $('pk-data').value || hojeISO(); S.hora = $('pk-hora').value || agora();
+      if (!S.cliente) { C.toast('Informe a empresa (cliente).'); return; }
+      if (!S.inspec) { C.toast('Informe quem está inspecionando.'); return; }
+      var p = S.itens.findIndex(function(i) { return !i.s; }); IDX = p < 0 ? 0 : p; salvarRascunho(); telaItem();
+    };
+  }
+  function ruimCount() { return S.itens.filter(function(i) { return i.s === 'ruim'; }).length; }
+  function telaItem() {
+    V = 'item'; var it = S.itens[IDX], n = S.itens.length, lb = it.sim ? ['Sim', 'Não', 'N.A.'] : ['Bom', 'Ruim', 'N.A.'];
+    var corpo = '<div class="sec">' + esc(it.sec) + ' · item ' + (IDX + 1) + ' de ' + n + '</div>' +
+      (it.livre ? '<div class="fld"><label>Descreva o item (deixe em branco se não houver)</label><input type="text" id="pk-livre" value="' + esc(it.t) + '"></div>' : '<div class="tit">' + esc(it.t) + '</div>') +
+      '<div class="st"><button type="button" class="bom ' + (it.s === 'bom' ? 'on' : '') + '" data-s="bom">' + lb[0] + '</button><button type="button" class="ruim ' + (it.s === 'ruim' ? 'on' : '') + '" data-s="ruim">' + lb[1] + '</button><button type="button" class="na ' + (it.s === 'na' ? 'on' : '') + '" data-s="na">' + lb[2] + '</button></div>';
+    if (it.s === 'ruim') {
+      corpo += '<div class="box"><div class="fld"><label>O que está errado? *</label><textarea id="pk-obs" rows="3" placeholder="Descreva o problema">' + esc(it.obs) + '</textarea></div>' +
+        '<button type="button" class="pk-btn g" id="pk-foto">📷 ' + (it.foto ? 'Trocar foto' : 'Tirar / anexar foto (opcional)') + '</button>' +
+        '<input type="file" id="pk-file" accept="image/*" capture="environment" style="display:none">' +
+        (it.foto ? '<img class="ph" src="' + it.foto + '" alt=""><button type="button" class="pk-btn g" id="pk-fotox" style="margin-top:4px">Remover foto</button>' : '') + '</div>';
+    }
+    shell((S.tipo === 'entrada' ? 'Entrada' : 'Saída') + ' · ' + S.cliente, Math.round(IDX / n * 100), corpo,
+      '<button type="button" class="pk-btn g" id="pk-ant"' + (IDX === 0 ? ' disabled' : '') + '>← Anterior</button><button type="button" class="pk-btn g" id="pk-lst" style="flex:.6">☰</button><button type="button" class="pk-btn" id="pk-prox">' + (IDX === n - 1 ? 'Concluir →' : 'Próximo →') + '</button>');
+    function guardar() {
+      var lv = $('pk-livre'); if (lv) it.t = lv.value.trim();
+      var ob = $('pk-obs'); if (ob) it.obs = ob.value.trim();
+      salvarRascunho();
+    }
+    function avancar() {
+      guardar();
+      if (it.livre && !it.t) { it.s = 'na'; it.obs = ''; it.foto = ''; }
+      if (!it.s) { C.toast('Marque ' + lb[0] + ', ' + lb[1] + ' ou N.A.'); return; }
+      if (it.s === 'ruim' && !it.obs) { C.toast('Descreva o problema deste item.'); var o = $('pk-obs'); if (o) o.focus(); return; }
+      if (IDX < n - 1) { IDX++; salvarRascunho(); telaItem(); } else { telaFim(); }
+    }
+    ROOT.querySelectorAll('.st button').forEach(function(b) {
+      b.onclick = function() {
+        guardar(); it.s = b.getAttribute('data-s'); if (it.s !== 'ruim') { it.obs = ''; it.foto = ''; } salvarRascunho();
+        if (it.s === 'ruim') telaItem(); else setTimeout(avancar, 180);
+      };
+    });
+    $('pk-ant').onclick = function() { guardar(); if (IDX > 0) { IDX--; telaItem(); } };
+    $('pk-prox').onclick = avancar;
+    $('pk-lst').onclick = function() { guardar(); telaLista(); };
+    var fb = $('pk-foto');
+    if (fb) {
+      fb.onclick = function() { $('pk-file').click(); };
+      $('pk-file').onchange = function() {
+        var f = this.files[0]; if (!f) return; guardar();
+        comprimir(f, 800, 0.62).then(function(d) { it.foto = d; salvarRascunho(); telaItem(); }).catch(function() { C.toast('Não foi possível ler a foto.'); });
+      };
+    }
+    var fx = $('pk-fotox'); if (fx) fx.onclick = function() { guardar(); it.foto = ''; telaItem(); };
+  }
+  function telaLista() {
+    V = 'lista'; var h = '', ult = '';
+    S.itens.forEach(function(it, i) {
+      if (it.sec !== ult) { h += '<div class="gh">' + esc(it.sec) + '</div>'; ult = it.sec; }
+      h += '<div class="li" data-i="' + i + '"><span class="d ' + (it.s || '') + '"></span><div style="flex:1">' + esc(it.t || '(outro item)') + (it.obs ? '<small>' + esc(it.obs) + '</small>' : '') + '</div><span>' + (it.s === 'bom' ? (it.sim ? 'Sim' : 'Bom') : it.s === 'ruim' ? (it.sim ? 'Não' : 'Ruim') : it.s === 'na' ? 'N.A.' : '—') + '</span></div>';
+    });
+    shell('Todos os itens', null, h, '<button type="button" class="pk-btn g" id="pk-vlt">← Voltar</button><button type="button" class="pk-btn" id="pk-fimb">Ir para o final →</button>');
+    ROOT.querySelectorAll('.li').forEach(function(l) { l.onclick = function() { IDX = +l.getAttribute('data-i'); telaItem(); }; });
+    $('pk-vlt').onclick = telaItem;
+    $('pk-fimb').onclick = telaFim;
+  }
+  function telaFim() {
+    var falta = S.itens.findIndex(function(i) { return !i.s && !(i.livre && !i.t); });
+    if (falta >= 0) { IDX = falta; C.toast('Ainda falta marcar este item.'); telaItem(); return; }
+    V = 'fim'; var nr = ruimCount();
+    if (!S.condicao) S.condicao = nr ? 'inapto' : 'apto';
+    shell('Concluir checklist', 100,
+      '<div class="' + (nr ? 'box' : 'ok') + '">' + (nr ? '⚠ ' + nr + ' item(ns) com problema' : '✔ Nenhum problema encontrado') + '</div>' +
+      '<div class="fld"><label>Comentários</label><textarea id="pk-com" rows="3">' + esc(S.comentarios) + '</textarea></div>' +
+      '<label class="chk ' + (S.condicao === 'apto' ? 'on' : '') + '" id="pk-c1"><input type="radio" name="pk-cond" value="apto"' + (S.condicao === 'apto' ? ' checked' : '') + '> Em condições de operar sem risco</label>' +
+      '<label class="chk bad ' + (S.condicao === 'inapto' ? 'on' : '') + '" id="pk-c2"><input type="radio" name="pk-cond" value="inapto"' + (S.condicao === 'inapto' ? ' checked' : '') + '> Não tem condições de operar</label>' +
+      '<div class="row2" style="margin-top:10px"><div class="fld"><label>Local</label><input type="text" id="pk-loc" value="' + esc(S.local) + '"></div><div class="fld"><label>Responsável (cliente)</label><input type="text" id="pk-resp" value="' + esc(S.resp) + '"></div></div>' +
+      '<div class="fld"><label>Assinatura do responsável (opcional)</label><canvas class="sig" id="pk-sig"></canvas><button type="button" class="pk-btn g" id="pk-sigx" style="margin-top:6px;padding:8px">Limpar assinatura</button></div>',
+      '<button type="button" class="pk-btn g" id="pk-vlt2" style="flex:.6">← Itens</button><button type="button" class="pk-btn v" id="pk-fim">✔ Concluir e salvar</button>');
+    ROOT.querySelectorAll('input[name=pk-cond]').forEach(function(r) { r.onchange = function() { S.condicao = r.value; $('pk-c1').classList.toggle('on', r.value === 'apto'); $('pk-c2').classList.toggle('on', r.value === 'inapto'); }; });
+    var cv = $('pk-sig'), ctx; var r0 = cv.getBoundingClientRect(); cv.width = Math.round(r0.width * 2); cv.height = 300; ctx = cv.getContext('2d'); ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.strokeStyle = '#111';
+    var tem = false, des = false;
+    if (S.assin) { var im = new Image(); im.onload = function() { ctx.drawImage(im, 0, 0, cv.width, cv.height); tem = true; }; im.src = S.assin; }
+    function pt(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+    cv.addEventListener('pointerdown', function(e) { des = true; var p = pt(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); cv.setPointerCapture(e.pointerId); e.preventDefault(); });
+    cv.addEventListener('pointermove', function(e) { if (!des) return; var p = pt(e); ctx.lineTo(p[0], p[1]); ctx.stroke(); tem = true; e.preventDefault(); });
+    ['pointerup', 'pointercancel'].forEach(function(ev) { cv.addEventListener(ev, function() { des = false; }); });
+    $('pk-sigx').onclick = function() { ctx.clearRect(0, 0, cv.width, cv.height); tem = false; S.assin = ''; };
+    function colher() { S.comentarios = $('pk-com').value.trim(); S.local = $('pk-loc').value.trim(); S.resp = $('pk-resp').value.trim(); S.assin = tem ? cv.toDataURL('image/png') : ''; salvarRascunho(); }
+    $('pk-vlt2').onclick = function() { colher(); IDX = S.itens.length - 1; telaItem(); };
+    $('pk-fim').onclick = function() {
+      colher(); var b = this; b.disabled = true; b.textContent = 'Salvando…';
+      salvar().then(function(reg) { limparRascunho(); REG = reg; try { if (C.onSaved) C.onSaved(reg); } catch (e0) { console.error(e0); } telaPronto(reg, true); })
+        .catch(function(e) { b.disabled = false; b.textContent = '✔ Concluir e salvar'; C.toast('Não foi possível salvar: ' + ((e && e.message) || e) + '. Seus dados continuam neste aparelho — tente de novo.'); });
+    };
+  }
+  function linha() {
+    var itens = S.itens.filter(function(i) { return !(i.livre && !i.t); }).map(function(i) { return { sec: i.sec, t: i.t, sim: i.sim, s: i.s, obs: i.obs, foto: i.foto }; });
+    return { tipo: S.tipo, cliente: S.cliente, equipamento: S.equipamento || null, fabricante_modelo: S.modelo || null, data: S.data, hora: S.hora, inspecionado_por: S.inspec, horimetro: S.hor || null, itens: itens,
+      comentarios: S.comentarios || null, condicao: S.condicao || null, local: S.local || null, responsavel: S.resp || null, assinatura: S.assin || null, n_ruim: itens.filter(function(i) { return i.s === 'ruim'; }).length };
+  }
+  function salvar() { return C.chk(C.sb.from('man_checklists').insert(linha()).select('*')).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }
+
+  // ---------- final / visualização ----------
+  function resumoTxt(r) {
+    var ruins = (r.itens || []).filter(function(i) { return i.s === 'ruim'; });
+    return '*CHECK LIST DE ' + (r.tipo === 'saida' ? 'SAÍDA' : 'ENTRADA') + ' - ' + C.empresa + '*\n' +
+      'Cliente: ' + r.cliente + '\n' + (r.equipamento ? 'Equipamento: ' + r.equipamento + '\n' : '') + (r.fabricante_modelo ? 'Modelo: ' + r.fabricante_modelo + '\n' : '') +
+      (r.horimetro ? 'Horímetro: ' + r.horimetro + '\n' : '') + 'Data: ' + br(r.data) + (r.hora ? ' ' + r.hora : '') + '\nInspecionado por: ' + (r.inspecionado_por || '') + '\n' +
+      (r.condicao === 'apto' ? '✅ Em condições de operar sem risco' : r.condicao === 'inapto' ? '⛔ NÃO tem condições de operar' : '') + '\n' +
+      (ruins.length ? '\nItens com problema:\n' + ruins.map(function(i) { return '• ' + i.t + (i.obs ? ': ' + i.obs : ''); }).join('\n') + '\n' : '\nNenhum problema encontrado.\n') +
+      (r.comentarios ? '\nComentários: ' + r.comentarios : '');
+  }
+  function nomeArq(r) { return ('Checklist ' + (r.tipo === 'saida' ? 'saida' : 'entrada') + ' - ' + r.cliente + ' - ' + String(r.data).slice(0, 10)).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() + '.pdf'; }
+  function telaPronto(r, novo) {
+    V = novo ? 'pronto' : 'ver'; PDFB = null;
+    var ruins = (r.itens || []).filter(function(i) { return i.s === 'ruim'; });
+    var acoes = '<div style="margin:0 0 14px;display:grid;gap:8px"><button type="button" class="pk-btn w" id="pk-wpdf" disabled>Gerando PDF…</button><button type="button" class="pk-btn g" id="pk-ver" disabled>📄 Abrir / imprimir PDF</button><button type="button" class="pk-btn g" id="pk-dl" disabled>⬇ Baixar PDF</button><button type="button" class="pk-btn g" id="pk-wtxt">💬 Enviar resumo em texto no WhatsApp</button>' + (PODE_EXC && !novo ? '<button type="button" class="pk-btn r" id="pk-del">🗑 Excluir este checklist</button>' : '') + '</div>';
+    var corpo = (novo ? '<div class="ok">✔ Checklist salvo no sistema, em nome de ' + esc(r.cliente) + '.</div>' : '') + acoes +
+      '<div class="kv"><span>Tipo</span><span>' + (r.tipo === 'saida' ? 'Saída' : 'Entrada') + '</span></div><div class="kv"><span>Cliente</span><span>' + esc(r.cliente) + '</span></div>' +
+      (r.equipamento ? '<div class="kv"><span>Equipamento</span><span>' + esc(r.equipamento) + '</span></div>' : '') + (r.fabricante_modelo ? '<div class="kv"><span>Modelo</span><span>' + esc(r.fabricante_modelo) + '</span></div>' : '') +
+      (r.horimetro ? '<div class="kv"><span>Horímetro</span><span>' + esc(r.horimetro) + '</span></div>' : '') +
+      '<div class="kv"><span>Data / hora</span><span>' + br(r.data) + ' ' + esc(r.hora || '') + '</span></div><div class="kv"><span>Inspecionado por</span><span>' + esc(r.inspecionado_por || '') + '</span></div>' +
+      '<div class="kv"><span>Resultado</span><span>' + (r.condicao === 'apto' ? '<span class="pill v">Em condições de operar</span>' : r.condicao === 'inapto' ? '<span class="pill r">Não tem condições de operar</span>' : '—') + '</span></div>' +
+      '<div class="kv"><span>Itens com problema</span><span>' + ruins.length + '</span></div>' +
+      (ruins.length ? '<div class="box" style="margin-top:10px">' + ruins.map(function(i) { return '<div style="margin-bottom:6px"><b>' + esc(i.t) + '</b><br>' + esc(i.obs || '') + (i.foto ? '<img class="ph" src="' + i.foto + '" alt="">' : '') + '</div>'; }).join('') + '</div>' : '') +
+      (r.comentarios ? '<div class="kv"><span>Comentários</span><span>' + esc(r.comentarios) + '</span></div>' : '') +
+      '';
+    shell((r.tipo === 'saida' ? 'Saída' : 'Entrada') + ' · ' + r.cliente, null, corpo, '<button type="button" class="pk-btn" id="pk-ok2">' + (novo ? 'Concluído' : 'Fechar') + '</button>');
+    $('pk-ok2').onclick = fechar;
+    $('pk-wtxt').onclick = function() { window.open('https://wa.me/?text=' + encodeURIComponent(resumoTxt(r)), '_blank'); };
+    var del = $('pk-del'); if (del) del.onclick = function() { if (!confirm('Excluir este checklist de ' + r.cliente + '?')) return; C.chk(C.sb.from('man_checklists').delete().eq('id', r.id).select('id')).then(function() { if (C.onSaved) C.onSaved(null); fechar(); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); };
+    gerarPdf(r).then(function(blob) {
+      PDFB = blob; PDFN = nomeArq(r);
+      var w = $('pk-wpdf'); if (!w) return; w.disabled = false; w.textContent = '📲 Enviar PDF no WhatsApp'; $('pk-ver').disabled = false; $('pk-dl').disabled = false;
+      var url = URL.createObjectURL(blob);
+      w.onclick = function() {
+        var f = new File([blob], PDFN, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [f] })) {
+          navigator.share({ files: [f], title: PDFN, text: resumoTxt(r) }).catch(function() {});
+        } else { baixar(url, PDFN); window.open('https://wa.me/?text=' + encodeURIComponent(resumoTxt(r) + '\n\n(PDF baixado no aparelho: anexe aqui)'), '_blank'); }
+      };
+      $('pk-ver').onclick = function() { window.open(url, '_blank'); };
+      $('pk-dl').onclick = function() { baixar(url, PDFN); };
+    }).catch(function(e) { var w = $('pk-wpdf'); if (w) w.textContent = 'Erro ao gerar PDF'; console.error(e); });
+  }
+  function baixar(url, nome) { var a = document.createElement('a'); a.href = url; a.download = nome; document.body.appendChild(a); a.click(); setTimeout(function() { a.remove(); }, 500); }
+
+  // ---------- imagem / PDF ----------
+  function comprimir(file, maxw, q) {
+    return new Promise(function(res, rej) {
+      var fr = new FileReader();
+      fr.onload = function() {
+        var im = new Image();
+        im.onload = function() { var k = Math.min(1, maxw / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', q)); };
+        im.onerror = rej; im.src = fr.result;
+      };
+      fr.onerror = rej; fr.readAsDataURL(file);
+    });
+  }
+  function carregarImg(src) { return new Promise(function(res) { if (!src) { res(null); return; } var im = new Image(); im.onload = function() { res(im); }; im.onerror = function() { res(null); }; im.src = src; }); }
+  function gerarPdf(r) {
+    var itens = r.itens || [];
+    return Promise.all([carregarImg(C.logo), carregarImg(r.assinatura)].concat(itens.map(function(i) { return carregarImg(i.foto); }))).then(function(imgs) {
+      var logo = imgs[0], assin = imgs[1], fotos = imgs.slice(2);
+      var W = 1240, H = 1754, M = 60, pages = [], cv, g, y;
+      var F = 'Arial, Helvetica, sans-serif';
+      function nova(cont) {
+        cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); pages.push(cv);
+        g.textBaseline = 'alphabetic'; y = M;
+        if (logo) { var hh = cont ? 60 : 90, ww = logo.width * hh / logo.height; g.drawImage(logo, M, y, ww, hh); }
+        g.fillStyle = '#111'; g.font = 'bold ' + (cont ? 30 : 38) + 'px ' + F; g.textAlign = 'right'; g.fillText('CHECK LIST DE EMPILHADEIRA' + (cont ? ' (cont.)' : ''), W - M, y + (cont ? 28 : 40));
+        g.fillStyle = '#ea580c'; g.font = 'bold 26px ' + F; g.fillText((r.tipo === 'saida' ? 'SAÍDA' : 'ENTRADA') + ' · ' + C.empresa, W - M, y + (cont ? 58 : 80)); g.textAlign = 'left';
+        y += cont ? 76 : 106; g.fillStyle = '#ea580c'; g.fillRect(M, y, W - 2 * M, 4); y += 18;
+      }
+      function wrap(txt, maxw, font) { g.font = font; var out = [], lin = ''; String(txt || '').split('\n').forEach(function(par) { lin = ''; par.split(' ').forEach(function(w) { var t = lin ? lin + ' ' + w : w; if (g.measureText(t).width > maxw && lin) { out.push(lin); lin = w; } else lin = t; }); out.push(lin); }); return out; }
+      function campo(x, w, rot, val) { g.strokeStyle = '#94a3b8'; g.lineWidth = 1.5; g.strokeRect(x, y, w, 56); g.fillStyle = '#64748b'; g.font = 'bold 15px ' + F; g.fillText(rot, x + 8, y + 19); g.fillStyle = '#111'; g.font = '22px ' + F; var t = String(val || ''); while (g.measureText(t).width > w - 16 && t.length > 3) t = t.slice(0, -2); g.fillText(t, x + 8, y + 46); }
+      nova(false);
+      var half = (W - 2 * M) / 2;
+      campo(M, half, 'EMPRESA', r.cliente); campo(M + half, half, 'EQUIPAMENTO', r.equipamento); y += 56;
+      campo(M, half, 'FABRICANTE / MODELO', r.fabricante_modelo); campo(M + half, half / 2, 'DATA', br(r.data)); campo(M + half * 1.5, half / 2, 'HORA', r.hora); y += 56;
+      campo(M, half, 'INSPECIONADO POR', r.inspecionado_por); campo(M + half, half, 'HORÍMETRO', r.horimetro); y += 56 + 22;
+      var XI = M, XB = 640, XR = 730, XN = 820, XO = 910, XE = W - M;
+      function cab() {
+        g.fillStyle = '#ea580c'; g.fillRect(M, y, XE - M, 40); g.fillStyle = '#fff'; g.font = 'bold 18px ' + F; g.textAlign = 'center';
+        g.fillText('ITENS VISTORIADOS', (XI + XB) / 2, y + 27); g.fillText('BOM', (XB + XR) / 2, y + 27); g.fillText('RUIM', (XR + XN) / 2, y + 27); g.fillText('N.A', (XN + XO) / 2, y + 27); g.fillText('OBSERVAÇÕES', (XO + XE) / 2, y + 27); g.textAlign = 'left'; y += 40;
+      }
+      cab(); var ult = '';
+      itens.forEach(function(it) {
+        if (it.sec !== ult) {
+          if (y > H - 200) { nova(true); cab(); }
+          g.fillStyle = '#e2e8f0'; g.fillRect(M, y, XE - M, 34); g.fillStyle = '#111'; g.font = 'bold 18px ' + F; g.fillText(it.sec, XI + 10, y + 24); y += 34; ult = it.sec;
+        }
+        var ol = wrap(it.obs, XE - XO - 14, '17px ' + F), il = wrap(it.t, XB - XI - 20, '19px ' + F), h = Math.max(36, ol.length * 22 + 12, il.length * 24 + 10);
+        if (y + h > H - 120) { nova(true); cab(); g.fillStyle = '#e2e8f0'; g.fillRect(M, y, XE - M, 34); g.fillStyle = '#111'; g.font = 'bold 18px ' + F; g.fillText(it.sec + ' (cont.)', XI + 10, y + 24); y += 34; }
+        g.strokeStyle = '#cbd5e1'; g.lineWidth = 1; g.strokeRect(M, y, XE - M, h); [XB, XR, XN, XO].forEach(function(x) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + h); g.stroke(); });
+        g.fillStyle = '#111'; g.font = '19px ' + F; il.forEach(function(l, k) { g.fillText(l, XI + 10, y + 25 + k * 24); });
+        g.font = '17px ' + F; g.fillStyle = '#7f1d1d'; ol.forEach(function(l, k) { g.fillText(l, XO + 8, y + 24 + k * 22); });
+        var cx = it.s === 'bom' ? (XB + XR) / 2 : it.s === 'ruim' ? (XR + XN) / 2 : it.s === 'na' ? (XN + XO) / 2 : 0;
+        if (cx) { g.textAlign = 'center'; g.font = 'bold 26px ' + F; g.fillStyle = it.s === 'ruim' ? '#dc2626' : it.s === 'bom' ? '#16a34a' : '#475569'; g.fillText('X', cx, y + h / 2 + 9); g.textAlign = 'left'; }
+        y += h;
+      });
+      y += 24;
+      if (y > H - 520) nova(true);
+      g.fillStyle = '#111'; g.font = 'bold 20px ' + F; g.fillText('COMENTÁRIOS', M, y + 20); y += 30;
+      var cl = wrap(r.comentarios || '', W - 2 * M - 20, '19px ' + F); var ch = Math.max(70, cl.length * 24 + 16);
+      g.strokeStyle = '#94a3b8'; g.strokeRect(M, y, W - 2 * M, ch); g.fillStyle = '#111'; g.font = '19px ' + F; cl.forEach(function(l, k) { g.fillText(l, M + 10, y + 26 + k * 24); }); y += ch + 24;
+      g.font = 'bold 20px ' + F; g.fillStyle = '#111'; g.fillText('Declaramos que o equipamento por nós vistoriado nos itens acima encontra-se em:', M, y + 18); y += 38;
+      function caixa(x, rot, on, cor) { g.strokeStyle = '#111'; g.lineWidth = 2; g.strokeRect(x, y, 30, 30); if (on) { g.fillStyle = cor; g.font = 'bold 28px ' + F; g.fillText('X', x + 5, y + 25); } g.fillStyle = '#111'; g.font = '20px ' + F; g.fillText(rot, x + 42, y + 24); }
+      caixa(M, 'Em condições de operar sem risco', r.condicao === 'apto', '#16a34a'); caixa(M + 560, 'Não tem condições de operar', r.condicao === 'inapto', '#dc2626'); y += 60;
+      var sh = 150;
+      g.strokeStyle = '#94a3b8'; g.lineWidth = 1.5; g.strokeRect(M, y, 560, sh); g.strokeRect(M + 580, y, W - 2 * M - 580, sh);
+      g.fillStyle = '#64748b'; g.font = 'bold 15px ' + F; g.fillText('PLS EMPILHADEIRAS (inspecionado por)', M + 8, y + 20); g.fillText('CLIENTE (assinatura do responsável)', M + 588, y + 20);
+      g.fillStyle = '#111'; g.font = '22px ' + F; g.fillText(r.inspecionado_por || '', M + 8, y + sh - 14); g.fillText(r.responsavel || '', M + 588, y + sh - 14);
+      if (assin) { var aw = Math.min(W - 2 * M - 600, 420), ah = assin.height * aw / assin.width; if (ah > 90) { ah = 90; aw = assin.width * ah / assin.height; } g.drawImage(assin, M + 590, y + 28, aw, ah); }
+      y += sh + 16; g.fillStyle = '#111'; g.font = '20px ' + F; g.fillText('Data: ' + br(r.data) + (r.hora ? ' ' + r.hora : '') + '     Local: ' + (r.local || ''), M, y + 20);
+      // fotos
+      var com = []; itens.forEach(function(it, i) { if (it.foto && fotos[i]) com.push({ it: it, im: fotos[i] }); });
+      if (com.length) {
+        nova(true); g.fillStyle = '#111'; g.font = 'bold 24px ' + F; g.fillText('FOTOS DAS NÃO CONFORMIDADES', M, y + 20); y += 44;
+        var cw = (W - 2 * M - 30) / 2, chh = 480;
+        com.forEach(function(c, k) {
+          var col = k % 2; if (col === 0 && k > 0) y += chh + 90; if (col === 0 && y + chh + 70 > H - 60) { nova(true); }
+          var x = M + col * (cw + 30);
+          g.fillStyle = '#111'; g.font = 'bold 19px ' + F; var tl = wrap(c.it.t + (c.it.obs ? ' - ' + c.it.obs : ''), cw, 'bold 19px ' + F); g.font = 'bold 19px ' + F; tl.slice(0, 2).forEach(function(l, q) { g.fillText(l, x, y + 18 + q * 22); });
+          var k2 = Math.min(cw / c.im.width, chh / c.im.height), dw = c.im.width * k2, dh = c.im.height * k2; g.drawImage(c.im, x, y + 52, dw, dh);
+        });
+      }
+      // rodapé com paginação
+      pages.forEach(function(p, i) { var q = p.getContext('2d'); q.fillStyle = '#64748b'; q.font = '16px ' + F; q.textAlign = 'center'; q.fillText(C.empresa + ' · Check list · página ' + (i + 1) + ' de ' + pages.length, W / 2, H - 30); });
+      return montarPdf(pages);
+    });
+  }
+  function montarPdf(pages) {
+    var parts = [], pos = 0, offs = [];
+    function enc(s) { var u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; }
+    function add(u) { parts.push(u); pos += u.length; }
+    function obj(n, head, stream) { offs[n] = pos; add(enc(n + ' 0 obj\n' + head + (stream ? '\nstream\n' : '\n'))); if (stream) { add(stream); add(enc('\nendstream')); } add(enc('\nendobj\n')); }
+    add(enc('%PDF-1.4\n'));
+    var n = pages.length, kids = [];
+    for (var i = 0; i < n; i++) kids.push((3 + i * 3 + 2) + ' 0 R');
+    obj(1, '<< /Type /Catalog /Pages 2 0 R >>'); obj(2, '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>');
+    pages.forEach(function(cv, i) {
+      var b = 3 + i * 3, d = atob(cv.toDataURL('image/jpeg', 0.82).split(',')[1]), u = new Uint8Array(d.length); for (var k = 0; k < d.length; k++) u[k] = d.charCodeAt(k);
+      obj(b, '<< /Type /XObject /Subtype /Image /Width ' + cv.width + ' /Height ' + cv.height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + u.length + ' >>', u);
+      var c = 'q 595.28 0 0 841.89 0 0 cm /Im0 Do Q'; obj(b + 1, '<< /Length ' + c.length + ' >>', enc(c));
+      obj(b + 2, '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im0 ' + b + ' 0 R >> >> /Contents ' + (b + 1) + ' 0 R >>');
+    });
+    var total = 3 + n * 3, xr = pos; var x = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+    for (var j = 1; j < total; j++) x += ('0000000000' + offs[j]).slice(-10) + ' 00000 n \n';
+    add(enc(x + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF'));
+    return new Blob(parts, { type: 'application/pdf' });
+  }
+
+  // ---------- API pública ----------
+  return {
+    init: function(o) { for (var k in o) C[k] = o[k]; },
+    novo: function(pre) {
+      abrirRoot(); var rs = lerRascunho();
+      if (rs && rs.S && confirm('Existe um checklist começado neste aparelho (' + (rs.S.cliente || 'sem cliente') + '). Continuar de onde parou?\n\nOK = continuar · Cancelar = começar um novo')) { S = rs.S; IDX = rs.IDX || 0; (rs.V === 'item' || rs.V === 'lista') ? telaItem() : telaInfo(); return; }
+      limparRascunho(); S = novoEstado(); if (pre) for (var k in pre) S[k] = pre[k]; telaInfo();
+    },
+    abrir: function(id, podeExcluir) {
+      PODE_EXC = !!podeExcluir; abrirRoot(); shell('Checklist', null, '<div class="ok" style="background:#fff;border-color:#e2e8f0;color:#64748b">Carregando…</div>');
+      C.chk(C.sb.from('man_checklists').select('*').eq('id', id).maybeSingle()).then(function(r) { if (!r.data) throw new Error('Checklist não encontrado.'); REG = r.data; telaPronto(r.data, false); })
+        .catch(function(e) { C.toast('Erro: ' + (e.message || e)); fechar(); });
+    },
+    setPodeExcluir: function(v) { PODE_EXC = !!v; },
+    listar: function() { return C.chk(C.sb.from('man_checklists').select('id,tipo,cliente,equipamento,fabricante_modelo,data,hora,inspecionado_por,condicao,n_ruim,created_at').order('created_at', { ascending: false }).limit(300)).then(function(r) { return r.data || []; }); },
+    temRascunho: function() { return !!lerRascunho(); }
+  };
+})();
+
+</script>
 <script>
 (function(){
 'use strict';
@@ -356,6 +717,24 @@ function telaLancar(){
    +'<label class="chk"><input type="checkbox" id="l-unico"> <span>⚡ Serviço de um dia só — concluir a demanda sozinha quando terminar</span></label></div>'
    +'<button class="btn" id="l-btn" type="submit">Lançar demanda</button></form>';
 }
+var CKL=null;
+function ckItem(c){
+  var ok=c.condicao==='apto',bad=c.condicao==='inapto';
+  return '<div class="card'+(bad?' late':ok?' done':'')+'" data-ckabrir="'+c.id+'"><div class="t1"><div class="cli">'+esc(c.cliente)+'</div><span class="badge '+(c.tipo==='saida'?'blu':'org')+'">'+(c.tipo==='saida'?'Saída':'Entrada')+'</span></div>'
+   +'<div class="sub">'+esc([c.equipamento,c.fabricante_modelo].filter(Boolean).join(' · ')||'—')+'</div>'
+   +'<div class="sub">'+br(c.data)+' '+esc(c.hora||'')+' · '+esc(c.inspecionado_por||'')+'</div>'
+   +'<div class="task">'+(c.n_ruim?'<span class="badge red">'+c.n_ruim+' item(ns) com problema</span> ':'<span class="badge grn">sem problemas</span> ')+(bad?'<span class="badge red">não pode operar</span>':'')+'</div></div>';
+}
+function ckPintar(){var el=$('ck-lista');if(!el)return;el.innerHTML=CKL===null?'<div class="empty">Carregando…</div>':CKL.length?CKL.map(ckItem).join(''):'<div class="empty">Nenhum checklist ainda.</div>';}
+function ckCarregar(){PLSCK.listar().then(function(l){CKL=l;ckPintar();}).catch(function(e){CKL=[];ckPintar();toast('⚠ '+erro(e),4000);});}
+function telaChecklist(){
+  setTimeout(function(){ckPintar();ckCarregar();},0);
+  return '<button type="button" class="btn" data-ck="novo">＋ Novo checklist (entrada / saída)</button><div class="hint" style="margin-top:8px">Marque item por item, anexe foto do que estiver ruim e, no fim, envie o PDF no WhatsApp. Fica salvo em nome do cliente.</div><div class="sec">Últimos checklists</div><div id="ck-lista"></div>';
+}
+document.addEventListener('click',function(e){
+  var n=e.target.closest('[data-ck]');if(n){PLSCK.novo();return;}
+  var a=e.target.closest('[data-ckabrir]');if(a){PLSCK.abrir(a.getAttribute('data-ckabrir'),ehAdmin());}
+});
 function telaCal(){
   if(!calMes){var n=new Date();calMes={a:n.getFullYear(),m:n.getMonth()};}
   if(!calSel)calSel=hoje();
@@ -375,12 +754,12 @@ function telaCal(){
   return h;
 }
 
-var TITULOS={painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH'};
+var TITULOS={painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH',checklist:'Checklist'};
 function render(){
   var m=$('main'),sc=m.scrollTop,foco=document.activeElement&&document.activeElement.id;
   $('h-title').childNodes[0].nodeValue=TITULOS[tab];
   $('h-sub').textContent=perfil?perfil.nome:'';
-  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh}[tab];
+  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh,checklist:telaChecklist}[tab];
   if(tab==='lancar'&&document.getElementById('f-lanc'))return; /* não apaga o formulário em edição */
   m.innerHTML=fn();m.scrollTop=sc;
   if(foco==='busca'){var b=$('busca');if(b){b.focus();var v=b.value;b.value='';b.value=v;}}
@@ -598,7 +977,7 @@ function temRh(){return ehAdmin()||!!(perfil&&perfil.permissoes&&perfil.permisso
 function temDem(){return ehAdmin()||!(perfil&&perfil.permissoes&&perfil.permissoes.setor_demandas===false);}
 function aplicarSetores(){
   [].forEach.call(document.querySelectorAll('#nav button'),function(b){
-    var t=b.getAttribute('data-t');b.style.display=(t==='rh'?temRh():temDem())?'':'none';
+    var t=b.getAttribute('data-t');b.style.display=(t==='rh'?temRh():t==='checklist'?(temDem()||pode('setor_manutencao')):temDem())?'':'none';
   });
   if(!temDem()&&temRh())tab='rh';
 }
@@ -776,6 +1155,7 @@ sb.auth.getSession().then(function(r){
   if(r.data&&r.data.session)entrar(r.data.session).catch(function(e){mostrarLogin(erro(e));});else mostrarLogin('');
 });
 $('h-logo').src=$('lg-logo').src;
+PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:$('lg-logo').src,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')ckCarregar();},onClose:function(){if(tab==='checklist')ckCarregar();}});
 /* vira o dia com o app aberto */
 var diaAtual=hoje();setInterval(function(){if(hoje()!==diaAtual){diaAtual=hoje();render();}},60000);
 window.__M={RH:RH,D:D,render:render,ir:ir,set perfil(v){perfil=v;},get tab(){return tab;}};
