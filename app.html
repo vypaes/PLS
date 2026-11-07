@@ -179,7 +179,7 @@ var PLSCK = (function() {
     SECOES.forEach(function(sec) { sec.its.forEach(function(it, i) { var o = typeof it === 'string' ? { t: it } : it; itens.push({ sec: sec.t, t: o.t, sim: o.sim ? 1 : 0, livre: o.livre ? 1 : 0, s: '', obs: '', foto: '' }); }); });
     return { tipo: 'entrada', cliente: '', equipamento: '', modelo: '', inspec: C.nome() || '', hor: '', data: hojeISO(), hora: agora(), itens: itens, comentarios: '', condicao: '', local: '', resp: '', assin: '' };
   }
-  function salvarRascunho() { if (S && S.id) return; try { localStorage.setItem('pls-ck-rascunho', JSON.stringify({ S: S, V: V, IDX: IDX })); } catch (e) {} }
+  function salvarRascunho() { return; try { localStorage.setItem('pls-ck-rascunho', JSON.stringify({ S: S, V: V, IDX: IDX })); } catch (e) {} }
   function limparRascunho() { try { localStorage.removeItem('pls-ck-rascunho'); } catch (e) {} }
   function lerRascunho() { try { return JSON.parse(localStorage.getItem('pls-ck-rascunho') || 'null'); } catch (e) { return null; } }
 
@@ -190,7 +190,7 @@ var PLSCK = (function() {
     st.textContent = '#pck{position:fixed;inset:0;z-index:9000;background:#f1f5f9;display:flex;flex-direction:column;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#0f172a;font-size:15px}' +
       '#pck *{box-sizing:border-box}#pck .pk-top{background:#1a1b1f;color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;display:flex;align-items:center;gap:10px}' +
       '#pck .pk-top b{flex:1;font-size:15px}#pck .pk-top button{background:#2a2c33;border:0;color:#fff;border-radius:8px;padding:8px 12px;font-size:14px}' +
-      '#pck .pk-main.ctr{display:flex;flex-direction:column}#pck .pk-main.ctr>.pk-c{margin:auto 0;padding:10px 0}#pck .pk-bar{height:5px;background:#334155}#pck .pk-bar i{display:block;height:100%;background:#ea580c;transition:width .2s}' +
+      '#pck .pk-main.ctr{display:flex;flex-direction:column}#pck .pk-main.ctr>.pk-c{margin:auto 0;padding:10px 0}#pck #pk-cli.sel{border-color:#16a34a;background:#f0fdf4;font-weight:700}#pck #pk-clilist .opt{padding:13px 12px;border:1px solid #e2e8f0;border-top:0;background:#fff;font-size:15px}#pck #pk-clilist .opt.vazio{color:#991b1b;font-size:13px}#pck #pk-clilist{border-top:1px solid #e2e8f0;margin-top:2px}#pck .pk-bar{height:5px;background:#334155}#pck .pk-bar i{display:block;height:100%;background:#ea580c;transition:width .2s}' +
       '#pck .pk-main{flex:1;overflow-y:auto;padding:14px 12px 20px;width:100%;max-width:680px;margin:0 auto}' +
       '#pck .pk-foot{background:#fff;border-top:1px solid #e2e8f0;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;max-width:680px;width:100%;margin:0 auto}' +
       '#pck .pk-btn{flex:1;padding:14px;border:0;border-radius:12px;background:#ea580c;color:#fff;font-weight:700;font-size:16px;cursor:pointer}' +
@@ -220,11 +220,11 @@ var PLSCK = (function() {
   }
   function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; PDFB = null; REG = null; if (C.onClose) C.onClose(); }
   function shell(titulo, prog, corpo, rodape, centro) {
-    ROOT.innerHTML = '<div class="pk-top"><b>' + esc(titulo) + '</b><button type="button" id="pk-x">✕ Fechar</button></div>' +
+    ROOT.innerHTML = '<div class="pk-top"><b>' + esc(titulo) + '</b><button type="button" id="pk-x">' + ((V === 'pronto' || V === 'ver') ? 'Fechar' : '✕ Cancelar') + '</button></div>' +
       (prog != null ? '<div class="pk-bar"><i style="width:' + prog + '%"></i></div>' : '') + '<div class="pk-main' + (centro ? ' ctr' : '') + '" id="pk-main"><div class="pk-c">' + corpo + '</div></div>' + (rodape ? '<div class="pk-foot">' + rodape + '</div>' : '');
     document.getElementById('pk-x').onclick = function() {
       if (V === 'pronto' || V === 'ver') { fechar(); return; }
-      if (confirm('Sair do checklist? O que você já marcou fica guardado neste aparelho para continuar depois.')) fechar();
+      if (confirm(S && S.id ? 'Cancelar a edição? As alterações não salvas serão perdidas.' : 'Cancelar este checklist? Tudo o que foi marcado será perdido.')) fechar();
     };
   }
   function $(id) { return document.getElementById(id); }
@@ -232,10 +232,9 @@ var PLSCK = (function() {
   // ---------- etapas ----------
   function telaInfo() {
     V = 'info';
-    var dl = '<datalist id="pk-dl">' + C.clientes().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist>';
-    shell('Checklist de equipamentos', 0,
+        shell('Checklist de equipamentos', 0,
       '<div class="seg"><button type="button" data-t="entrada" class="' + (S.tipo === 'entrada' ? 'on' : '') + '">⬇ Entrada</button><button type="button" data-t="saida" class="' + (S.tipo === 'saida' ? 'on' : '') + '">⬆ Saída</button></div>' +
-      '<div class="fld"><label>Empresa (cliente cadastrado) *</label><input type="text" id="pk-cli" list="pk-dl" value="' + esc(S.cliente) + '" placeholder="Digite para buscar o cliente cadastrado" autocomplete="off">' + dl + '</div>' +
+            '<div class="fld"><label>Empresa (cliente cadastrado) *</label><input type="text" id="pk-cli" value="' + esc(S.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="pk-clilist"></div></div>' +
       '<div class="fld"><label>Equipamento</label><input type="text" id="pk-eq" value="' + esc(S.equipamento) + '" placeholder="Ex.: Empilhadeira 2,5 t, frota 12"></div>' +
       '<div class="fld"><label>Fabricante / modelo</label><input type="text" id="pk-mod" value="' + esc(S.modelo) + '" placeholder="Ex.: Hyster H50FT"></div>' +
       '<div class="fld"><label>Horímetro</label><input type="text" id="pk-hor" inputmode="decimal" value="' + esc(S.hor) + '"></div>' +
@@ -243,9 +242,20 @@ var PLSCK = (function() {
       '<div class="row2"><div class="fld"><label>Data</label><input type="date" id="pk-data" value="' + esc(S.data) + '"></div><div class="fld"><label>Hora</label><input type="time" id="pk-hora" value="' + esc(S.hora) + '"></div></div>',
       '<button type="button" class="pk-btn" id="pk-ini">Começar a vistoria →</button>');
     ROOT.querySelectorAll('.seg button').forEach(function(b) { b.onclick = function() { S.tipo = b.getAttribute('data-t'); ROOT.querySelectorAll('.seg button').forEach(function(x) { x.classList.toggle('on', x === b); }); }; });
+    var ci = $('pk-cli'), cl = $('pk-clilist');
+    function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    function mostrar() {
+      var q = norm(ci.value), ls = C.clientes().filter(function(n) { return !q || norm(n).indexOf(q) >= 0; }).slice(0, 8);
+      cl.innerHTML = ls.length ? ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no setor Clientes do sistema.</div>';
+      cl.querySelectorAll('.opt[data-n]').forEach(function(o) { o.onmousedown = o.ontouchstart = function(ev) { ev.preventDefault(); S.cliente = o.getAttribute('data-n'); ci.value = S.cliente; cl.innerHTML = ''; ci.classList.add('sel'); }; });
+    }
+    if (S.cliente) ci.classList.add('sel');
+    ci.oninput = function() { S.cliente = ''; ci.classList.remove('sel'); mostrar(); };
+    ci.onfocus = function() { if (!S.cliente) mostrar(); };
+    ci.onblur = function() { setTimeout(function() { cl.innerHTML = ''; }, 200); };
     $('pk-ini').onclick = function() {
-      S.cliente = $('pk-cli').value.trim(); S.equipamento = $('pk-eq').value.trim(); S.modelo = $('pk-mod').value.trim(); S.hor = $('pk-hor').value.trim(); S.inspec = $('pk-ins').value.trim(); S.data = $('pk-data').value || hojeISO(); S.hora = $('pk-hora').value || agora();
-      if (!S.cliente) { C.toast('Escolha a empresa (cliente).'); return; }
+      S.equipamento = $('pk-eq').value.trim(); S.modelo = $('pk-mod').value.trim(); S.hor = $('pk-hor').value.trim(); S.inspec = $('pk-ins').value.trim(); S.data = $('pk-data').value || hojeISO(); S.hora = $('pk-hora').value || agora();
+      if (!S.cliente) { C.toast('Escolha o cliente na lista (busque e toque no nome). Se não existir, cadastre antes.'); return; }
       if (!S.id && C.clientes().indexOf(S.cliente) < 0) { C.toast('Escolha um cliente da lista cadastrada. Se ele não existir, cadastre antes.'); return; }
       if (!S.inspec) { C.toast('Informe quem está inspecionando.'); return; }
       if (S.id) { telaLista(); return; } var p = S.itens.findIndex(function(i) { return !i.s; }); IDX = p < 0 ? 0 : p; salvarRascunho(); telaItem();
@@ -511,9 +521,7 @@ var PLSCK = (function() {
   return {
     init: function(o) { for (var k in o) C[k] = o[k]; },
     novo: function(pre) {
-      abrirRoot(); var rs = lerRascunho();
-      if (rs && rs.S && confirm('Existe um checklist começado neste aparelho (' + (rs.S.cliente || 'sem cliente') + '). Continuar de onde parou?\n\nOK = continuar · Cancelar = começar um novo')) { S = rs.S; IDX = rs.IDX || 0; (rs.V === 'item' || rs.V === 'lista') ? telaItem() : telaInfo(); return; }
-      limparRascunho(); S = novoEstado(); if (pre) for (var k in pre) S[k] = pre[k]; telaInfo();
+      abrirRoot(); limparRascunho(); S = novoEstado(); if (pre) for (var k in pre) S[k] = pre[k]; telaInfo();
     },
     abrir: function(id, podeExcluir) {
       PODE_EXC = !!podeExcluir; abrirRoot(); shell('Checklist', null, '<div class="ok" style="background:#fff;border-color:#e2e8f0;color:#64748b">Carregando…</div>');
@@ -738,10 +746,11 @@ function ckItem(c){
    +'<div class="sub">'+br(c.data)+' '+esc(c.hora||'')+' · '+esc(c.inspecionado_por||'')+'</div>'
    +'<div class="task">'+(c.n_ruim?'<span class="badge red">'+c.n_ruim+' item(ns) com problema</span> ':'<span class="badge grn">sem problemas</span> ')+(bad?'<span class="badge red">não pode operar</span>':'')+'</div></div>';
 }
-var ckF={q:'',tipo:'',prob:false,de:'',ate:''};
+var ckF={q:'',cli:'',tipo:'',prob:false,de:'',ate:''};
 function ckFiltrada(){
   var q=ckF.q.trim().toLowerCase();
   return (CKL||[]).filter(function(c){
+    if(ckF.cli&&c.cliente!==ckF.cli)return false;
     if(ckF.tipo&&c.tipo!==ckF.tipo)return false;
     if(ckF.prob&&!c.n_ruim)return false;
     if(ckF.de&&String(c.data).slice(0,10)<ckF.de)return false;
@@ -754,11 +763,12 @@ function ckCarregar(){PLSCK.listar().then(function(l){CKL=l;ckPintar();}).catch(
 function telaChecklist(){
   setTimeout(function(){ckPintar();ckCarregar();},0);
   return '<button type="button" class="btn" data-ck="novo">＋ Novo checklist (entrada / saída)</button><div class="hint" style="margin-top:8px">Marque item por item, anexe foto do que estiver ruim e, no fim, envie o PDF no WhatsApp. Fica salvo em nome do cliente.</div><div class="sec">Checklists feitos</div>'
+   +'<div class="fld"><label>Cliente</label><select id="ck-cli"><option value="">Todos os clientes</option>'+D.clientes.map(function(n){return '<option'+(n===ckF.cli?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select></div>'
    +'<input class="q" id="ck-q" placeholder="Buscar cliente, equipamento ou inspetor" value="'+esc(ckF.q)+'">'
    +'<div class="chips"><button type="button" class="chip'+(!ckF.tipo?' on':'')+'" data-ckf="tipo:">Todos</button><button type="button" class="chip'+(ckF.tipo==='entrada'?' on':'')+'" data-ckf="tipo:entrada">Entrada</button><button type="button" class="chip'+(ckF.tipo==='saida'?' on':'')+'" data-ckf="tipo:saida">Saída</button><button type="button" class="chip'+(ckF.prob?' on':'')+'" data-ckf="prob">Com problema</button></div>'
    +'<div class="row2"><div class="fld"><label>De</label><input type="date" id="ck-de" value="'+esc(ckF.de)+'"></div><div class="fld"><label>Até</label><input type="date" id="ck-ate" value="'+esc(ckF.ate)+'"></div></div><div id="ck-lista"></div>';
 }
-document.addEventListener('input',function(e){if(e.target.id==='ck-q'){ckF.q=e.target.value;ckPintar();}else if(e.target.id==='ck-de'){ckF.de=e.target.value;ckPintar();}else if(e.target.id==='ck-ate'){ckF.ate=e.target.value;ckPintar();}});
+document.addEventListener('input',function(e){if(e.target.id==='ck-q'){ckF.q=e.target.value;ckPintar();}else if(e.target.id==='ck-cli'){ckF.cli=e.target.value;ckPintar();}else if(e.target.id==='ck-de'){ckF.de=e.target.value;ckPintar();}else if(e.target.id==='ck-ate'){ckF.ate=e.target.value;ckPintar();}});
 document.addEventListener('click',function(e){
   var f=e.target.closest('[data-ckf]');if(f){var v=f.getAttribute('data-ckf');if(v==='prob')ckF.prob=!ckF.prob;else ckF.tipo=v.split(':')[1];render();return;}
   var n=e.target.closest('[data-ck]');if(n){PLSCK.novo();return;}
