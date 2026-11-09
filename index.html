@@ -2438,7 +2438,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .mpb-nt { font-size: 6.6pt; margin-top: 0.8mm; }
     .mpb-rgb { border: 1px solid #111827; padding: 1.5mm 2.5mm; }
     .mpb-rgb p { margin: 1.2mm 0; font-size: 6.6pt; }
+    .pls-tip { position: fixed; z-index: 2147483000; background: #111827; color: #fff; font: 600 14px/1.25 Arial, sans-serif; padding: 7px 12px; border-radius: 8px; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.35); max-width: 280px; display: none; }
+    .mn-pc-row { display: grid; grid-template-columns: 2fr 1.5fr 0.8fr 1fr auto; gap: 4px; margin-bottom: 4px; }
+    .mn-pc-row input { min-width: 0; }
+    @media print { .pls-tip { display: none !important; } }
+    .mpb-pecas th { font-size: 8pt !important; padding: 1.5mm !important; } .mpb-pecas td { font-size: 8.5pt !important; padding: 1.6mm !important; }
     .mpb-fill { display: inline-block; border-bottom: 1px solid #333; min-width: 38mm; height: 2.6mm; vertical-align: bottom; }
+    .mpb-rgb p { display: flex; align-items: flex-end; gap: 1.2mm; }
+    .mpb-rgb p .mpb-fill { flex: 1; min-width: 12mm; }
+    .mpb-rgb p.sol { white-space: nowrap; }
     .mpb-foot { position: absolute; left: 0; right: 0; bottom: 0; height: 15mm; background: #111827; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 9mm; font-size: 7.6pt; line-height: 1.35; }
     .mpb-foot span { opacity: 0.85; font-size: 6.8pt; }
 
@@ -2552,7 +2560,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v43 — 09/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v44 — 09/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10260,6 +10268,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
 
         // ---------- equipamentos ----------
+        function colsPlano(pid) {
+          var pl = pid ? planoPorId(pid) : null; if (!pl) return [];
+          var c = (pl.matriz && pl.matriz.cols) || [];
+          return c.length ? c.slice() : etapasDe(pl).map(function(x) { return x.t; });
+        }
+        function linhaPeca(x) {
+          x = x || {};
+          return '<div class="mn-pc-row"><input class="form-control mn-pc-i" placeholder="Item (ex.: Óleo do motor)" value="' + esc(x.i || '') + '">' +
+            '<input class="form-control mn-pc-c" placeholder="Código / modelo" value="' + esc(x.c || '') + '">' +
+            '<input class="form-control mn-pc-q" placeholder="Qtd (8 L)" value="' + esc(x.q || '') + '">' +
+            '<input class="form-control mn-pc-t" list="mn-dl-int" placeholder="Revisão" value="' + esc(x.t || '') + '">' +
+            '<button type="button" class="btn-pls-secondary" data-man="peca-del" title="Remover esta peça">✕</button></div>';
+        }
+        function lerPecas() {
+          return [].map.call(document.querySelectorAll('#mn-e-pecas .mn-pc-row'), function(r) {
+            var g = function(c) { return r.querySelector(c).value.trim(); };
+            return { i: g('.mn-pc-i'), c: g('.mn-pc-c'), q: g('.mn-pc-q'), t: g('.mn-pc-t') };
+          }).filter(function(x) { return x.i; });
+        }
         function abrirEquip(id, cliente) {
           var e = id ? eqPorId(id) : { cliente: cliente || '', ativo: true };
           if (!e) return;
@@ -10276,6 +10303,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="form-group full-width"><label class="form-label">Foto do equipamento do cliente</label><input id="mn-e-foto" type="file" accept="image/*" class="form-control">' +
                 '<div class="sx-muted" style="font-size:0.72rem;margin-top:2px">Sai no plano impresso deste equipamento. Sem foto aqui, vale a foto do plano de manutenção.</div>' +
                 (e.foto ? '<div style="margin-top:4px"><img src="' + e.foto + '" alt="" style="max-height:90px;border-radius:6px;border:1px solid #cbd5e1"> <label class="sx-chkl"><input type="checkbox" id="mn-e-fotodel"> remover a foto atual</label></div>' : '') + '</div>' +
+              '<div class="form-group full-width"><label class="form-label">Peças e consumíveis deste equipamento</label>' +
+                '<div class="sx-muted" style="font-size:0.72rem;margin-bottom:4px">Item · código/modelo · quantidade · revisão do plano em que é usada (ex.: 250 h). Sai impresso junto com o plano.</div>' +
+                '<datalist id="mn-dl-int">' + colsPlano(e.plano_id).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
+                '<div id="mn-e-pecas">' + (e.pecas || []).map(linhaPeca).join('') + '</div>' +
+                '<button type="button" class="btn-pls-secondary" data-man="peca-add" style="margin-top:2px">➕ Adicionar peça</button></div>' +
               '<div class="form-group full-width"><label class="form-label">Observações</label><input id="mn-e-obs" class="form-control" value="' + esc(e.obs || '') + '"></div>' +
             '</div>', 'Salvar', function() {
               var cli = $('mn-e-cliente').value.trim(); if (!cli) throw new Error('Informe o cliente.');
@@ -10287,6 +10319,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var arqE = $('mn-e-foto').files[0], tirarE = $('mn-e-fotodel') && $('mn-e-fotodel').checked;
               return (arqE ? lerFoto(arqE) : Promise.resolve(null)).then(function(fotoE) {
                 if (fotoE) d.foto = fotoE; else if (tirarE) d.foto = null;
+                d.pecas = lerPecas();
                 var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
                 return chk(q);
               }).then(function(r) {
@@ -10532,6 +10565,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function ctxEq(e) {
           return { cliente: e ? e.cliente : '', eq: e ? nomeEq(e) : '', serie: e && e.serie || '', hor: e && e.horimetro != null ? fmtH(e.horimetro) + ' h' : '', tag: e && e.tag || '' };
         }
+        function tabPecas(e, cls) {
+          var l = (e && e.pecas || []).slice(); if (!l.length) return '';
+          var ordem = colsPlano(e.plano_id);
+          var pos = function(x) { var k = ordem.indexOf(x.t); return x.t ? (k < 0 ? 998 : k) : 999; };
+          l.sort(function(a, b) { return pos(a) - pos(b); });
+          return '<table class="' + cls + '"><thead><tr><th>ITEM / PEÇA</th><th>CÓDIGO / MODELO</th><th>QTD</th><th>REVISÃO</th></tr></thead><tbody>' +
+            l.map(function(x) { return '<tr><td><b>' + esc(x.i) + '</b></td><td>' + esc(x.c) + '</td><td>' + esc(x.q) + '</td><td>' + esc(x.t) + '</td></tr>'; }).join('') + '</tbody></table>';
+        }
         function htmlPlanoA(p, e) {
           var c = ctxEq(e), et = etapasDe(p), blank = '<span class="mpa-fill"></span>';
           var rg = (p.pontos || []).filter(function(t) { return /^REGRA:/.test(t); })[0], pts = (p.pontos || []).filter(function(t) { return !/^REGRA:/.test(t); });
@@ -10550,6 +10591,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             h += '<div class="mpa-etapa"><div class="mpa-eh dk">FLUIDOS, CAPACIDADES E REFERÊNCIAS</div><table class="mpa-tb mpa-fl"><thead><tr><th>Item</th><th>Especificação</th><th>Capacidade / aplicação</th></tr></thead><tbody>' +
               p.fluidos.map(function(f) { return '<tr><td><b>' + esc(f.i) + '</b></td><td>' + esc(f.e) + '</td><td>' + esc(f.a) + '</td></tr>'; }).join('') + '</tbody></table></div>';
           }
+          if (e && (e.pecas || []).length) h += '<div class="mpa-etapa"><div class="mpa-eh dk">PEÇAS E CONSUMÍVEIS DESTE EQUIPAMENTO</div>' + tabPecas(e, 'mpa-tb mpa-fl') + '</div>';
           if (pts.length) h += '<div class="mpa-etapa"><div class="mpa-eh dk">PONTOS IMPORTANTES PARA O TÉCNICO</div><ul class="mpa-pts">' + pts.map(function(t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
           h += '<div class="mpa-etapa"><div class="mpa-eh dk">REGISTRO DA MANUTENÇÃO</div><table class="mpa-tb mpa-reg"><thead><tr><th>Data</th><th>Horímetro</th><th>Revisão</th><th>Técnico</th><th>Peças / fluidos / observações</th><th>Ass.</th></tr></thead><tbody>' +
             '<tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(5) + '</tbody></table></div>' +
@@ -10590,7 +10632,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="mpb-fl"><div class="mpb-sec">2. ESPECIFICAÇÕES DE FLUIDOS E LUBRIFICANTES</div><table class="mpb-tb2"><thead><tr><th>ITEM</th><th>ESPECIFICAÇÃO / TIPO</th><th>APLICAÇÃO</th></tr></thead><tbody>' +
               p.fluidos.map(function(f) { return '<tr><td>' + esc(f.i) + '</td><td>' + esc(f.e) + '</td><td>' + esc(f.a) + '</td></tr>'; }).join('') + '</tbody></table><div class="mpb-nt">Utilizar somente fluidos recomendados pelo fabricante.</div></div>' :
             '<div class="mpb-fl"><div class="mpb-sec">2. OBSERVAÇÕES IMPORTANTES</div><ul class="mpb-ob">' + pts.map(function(t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>') +
-            '<div class="mpb-rg"><div class="mpb-sec">3. REGISTRO DE MANUTENÇÃO</div><div class="mpb-rgb"><p>DATA: ______/______/________ &nbsp;&nbsp; HORÍMETRO: ____________</p><p>TÉCNICO RESPONSÁVEL: ' + blank + '</p><p>SERVIÇO REALIZADO: ' + blank + '</p><p>' + blank + '</p><p>PEÇAS / FLUIDOS SUBSTITUÍDOS: ' + blank + '</p><p>' + blank + '</p><p><b>PRÓXIMA MANUTENÇÃO PREVISTA (HORÍMETRO):</b> ' + blank + '</p></div></div></div>';
+            '<div class="mpb-rg"><div class="mpb-sec">3. REGISTRO DE MANUTENÇÃO</div><div class="mpb-rgb"><p>DATA: ______/______/________ &nbsp;&nbsp; HORÍMETRO: ' + blank + '</p><p>TÉCNICO RESPONSÁVEL: ' + blank + '</p><p>SERVIÇO REALIZADO: ' + blank + '</p><p>' + blank + '</p><p>PEÇAS / FLUIDOS SUBSTITUÍDOS: ' + blank + '</p><p>' + blank + '</p><p><b>PRÓXIMA MANUTENÇÃO PREVISTA (HORÍMETRO):</b> ' + blank + '</p></div></div></div>';
           var foot = '<div class="mpb-foot"><div><b>' + esc(EMP.nome) + '</b><br>' + esc(EMP.cidade) + ' - RJ<br><span>' + esc(EMP.end) + '</span></div><div>' + EMP.fones.map(esc).join('<br>') + '</div><div>' + esc(EMP.email) + '<br>' + esc(EMP.site) + '<br>' + esc(EMP.insta) + '</div></div>';
           var out = '';
           pages.forEach(function(rs, pi) {
@@ -10611,6 +10653,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="mpb-sec">1. CHECKLIST DE MANUTENÇÃO PREVENTIVA' + (pi ? ' (continuação)' : '') + (pages.length > 1 ? ' - página ' + (pi + 1) + ' de ' + pages.length : '') + '</div>' +
               tabela(rs) + (ultima ? leg + baixo : leg + '<div class="mpb-leg" style="text-align:right"><b>continua no verso &rarr;</b></div>') + foot + '</div>';
           });
+          if (e && (e.pecas || []).length) {
+            out += '<div class="mpb mpb-p2" style="--rh:4mm;--fs:7pt"><div class="mpb-top cont"><img class="mpb-logo" src="' + COM_IMG.logo + '" alt="PLS"><div class="mpb-tt"><b>PEÇAS E CONSUMÍVEIS</b><span>' + esc(c.eq || p.modelos || p.nome) + '</span></div></div>' +
+              '<div class="mpb-cl">Cliente: ' + (esc(c.cliente) || blank) + ' &nbsp; Equipamento: ' + (esc(c.eq) || blank) + ' &nbsp; Série: ' + (esc(c.serie) || blank) + '</div>' +
+              '<div class="mpb-sec">PEÇAS E CONSUMÍVEIS DESTE EQUIPAMENTO</div>' + tabPecas(e, 'mpb-tb2 mpb-pecas') + foot + '</div>';
+          }
           return out;
         }
         function imprimirPlano(p, modelo, e) {
@@ -11039,6 +11086,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
             case 'eq-novo': abrirEquip(null); break;
             case 'eq-ed': abrirEquip(id); break;
+            case 'peca-add': var bx = $('mn-e-pecas'); if (bx) { bx.insertAdjacentHTML('beforeend', linhaPeca()); var ult = bx.lastChild.querySelector('input'); if (ult) ult.focus(); } break;
+            case 'peca-del': var rw = a.closest('.mn-pc-row'); if (rw) rw.remove(); break;
             case 'eq-del': excluirEquip(id); break;
             case 'eq-hor': abrirHorimetro(id); break;
             case 'eq-hist': abrirHistorico(id); break;
@@ -11071,7 +11120,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         });
         document.addEventListener('change', function(evt) {
           var t = evt.target; if (!t || !t.id) return;
-          if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
+          if (t.id === 'mn-e-plano') { var dl = $('mn-dl-int'); if (dl) dl.innerHTML = colsPlano(t.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); }
+          else if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
           else if (t.id === 'mn-k-tipo') { M.kTipo = t.value; renderCk(); }
           else if (t.id === 'mn-k-cli') { M.kCli = t.value; renderCk(); }
           else if (t.id === 'mn-k-prob') { M.kProb = t.value; renderCk(); }
@@ -11765,6 +11815,37 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
   window.skipChart = { bar: bar, line: line, donut: donut };
 })();
 
+</script>
+<script>
+(function() {
+  var tip = document.createElement('div'); tip.className = 'pls-tip'; document.body.appendChild(tip);
+  var EMO = [[/🗑/, 'Excluir'], [/✏|✎/, 'Editar'], [/🖨/, 'Imprimir'], [/⧉/, 'Duplicar'], [/✕|✖|×/, 'Remover / fechar'], [/^\s*\+\s*$|➕/, 'Adicionar'], [/📷/, 'Foto'], [/📜/, 'Histórico'], [/👁/, 'Ver'], [/🔗/, 'Juntar'], [/↻|🔄/, 'Atualizar'], [/⬇|📥/, 'Baixar'], [/📄/, 'Abrir PDF'], [/💬|📲/, 'Enviar no WhatsApp']];
+  function texto(el) {
+    var t = el.getAttribute('data-tip'); if (t) return t;
+    t = el.getAttribute('title'); if (t) { el.setAttribute('data-tip', t); el.removeAttribute('title'); return t; }
+    if (el.tagName !== 'BUTTON' && !el.classList.contains('btn-row')) return '';
+    var x = (el.textContent || '').trim();
+    if (x.length > 3) return '';
+    var d = el.getAttribute('data-d'); if (d === '-1') return 'Anterior'; if (d === '1') return 'Próximo';
+    for (var i = 0; i < EMO.length; i++) if (EMO[i][0].test(x)) return EMO[i][1];
+    var m = (el.getAttribute('data-man') || el.getAttribute('data-sx') || el.getAttribute('data-action') || '');
+    if (/(^|-)del|excl|remov/.test(m)) return 'Excluir';
+    if (/(^|-)ed(it)?($|-)/.test(m)) return 'Editar';
+    return '';
+  }
+  document.addEventListener('mouseover', function(ev) {
+    var el = ev.target.closest && ev.target.closest('[title],[data-tip],button'); if (!el) { tip.style.display = 'none'; return; }
+    var t = texto(el); if (!t) { tip.style.display = 'none'; return; }
+    tip.textContent = t; tip.style.display = 'block';
+    var r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
+    var y = r.top - h - 8; if (y < 6) y = r.bottom + 8;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  });
+  document.addEventListener('mouseout', function(ev) { var el = ev.target.closest && ev.target.closest('[title],[data-tip],button'); if (el && !(ev.relatedTarget && el.contains(ev.relatedTarget))) tip.style.display = 'none'; });
+  document.addEventListener('click', function() { tip.style.display = 'none'; }, true);
+  window.addEventListener('scroll', function() { tip.style.display = 'none'; }, true);
+})();
 </script>
 </body>
 </html>
