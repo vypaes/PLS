@@ -2439,7 +2439,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .mpb-rgb { border: 1px solid #111827; padding: 1.5mm 2.5mm; }
     .mpb-rgb p { margin: 1.2mm 0; font-size: 6.6pt; }
     .pls-tip { position: fixed; z-index: 2147483000; background: #111827; color: #fff; font: 600 14px/1.25 Arial, sans-serif; padding: 7px 12px; border-radius: 8px; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.35); max-width: 280px; display: none; }
-    .mn-pc-row { display: grid; grid-template-columns: 2fr 1.5fr 0.8fr 1fr auto; gap: 4px; margin-bottom: 4px; }
+    .mn-pc-row { display: grid; grid-template-columns: 1.7fr 1fr 1.2fr 0.6fr 1.3fr auto; gap: 4px; margin-bottom: 4px; }
     .mn-pc-row input { min-width: 0; }
     @media print { .pls-tip { display: none !important; } }
     .mpb-pecas th { font-size: 8pt !important; padding: 1.5mm !important; } .mpb-pecas td { font-size: 8.5pt !important; padding: 1.6mm !important; }
@@ -2560,7 +2560,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v44 — 09/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v46 — 09/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10155,6 +10155,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="rev-nova" data-eq="' + e.id + '">🔧 Revisão</button> ' +
                 (pl ? '<button type="button" class="btn-pls-secondary" data-man="pl-print" data-id="' + pl.id + '" data-eq="' + e.id + '">🖨 Plano</button> ' : '') +
                 '<button type="button" class="btn-pls-secondary" data-man="eq-hist" data-id="' + e.id + '">📜 Histórico</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-man="eq-clone" data-id="' + e.id + '" title="Clonar este equipamento para outro cliente">⧉</button> ' +
                 '<button type="button" class="btn-pls-secondary" data-man="eq-ed" data-id="' + e.id + '">✏</button> ' +
                 '<button type="button" class="btn-pls-secondary" data-man="eq-del" data-id="' + e.id + '">🗑</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento cadastrado. Cadastre o equipamento do cliente para registrar revisões e receber os avisos.</div>';
@@ -10276,7 +10277,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function linhaPeca(x) {
           x = x || {};
           return '<div class="mn-pc-row"><input class="form-control mn-pc-i" placeholder="Item (ex.: Óleo do motor)" value="' + esc(x.i || '') + '">' +
-            '<input class="form-control mn-pc-c" placeholder="Código / modelo" value="' + esc(x.c || '') + '">' +
+            '<input class="form-control mn-pc-p" placeholder="Código PLS" value="' + esc(x.p || '') + '">' +
+            '<input class="form-control mn-pc-m" placeholder="Modelo" value="' + esc(x.m != null ? x.m : (x.c || '')) + '">' +
             '<input class="form-control mn-pc-q" placeholder="Qtd (8 L)" value="' + esc(x.q || '') + '">' +
             '<input class="form-control mn-pc-t" list="mn-dl-int" placeholder="Revisão" value="' + esc(x.t || '') + '">' +
             '<button type="button" class="btn-pls-secondary" data-man="peca-del" title="Remover esta peça">✕</button></div>';
@@ -10284,19 +10286,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function lerPecas() {
           return [].map.call(document.querySelectorAll('#mn-e-pecas .mn-pc-row'), function(r) {
             var g = function(c) { return r.querySelector(c).value.trim(); };
-            return { i: g('.mn-pc-i'), c: g('.mn-pc-c'), q: g('.mn-pc-q'), t: g('.mn-pc-t') };
+            return { i: g('.mn-pc-i'), p: g('.mn-pc-p'), m: g('.mn-pc-m'), q: g('.mn-pc-q'), t: g('.mn-pc-t') };
           }).filter(function(x) { return x.i; });
         }
-        function abrirEquip(id, cliente) {
+        function abrirEquip(id, cliente, cloneDe) {
           var e = id ? eqPorId(id) : { cliente: cliente || '', ativo: true };
+          if (cloneDe) {
+            var o = eqPorId(cloneDe); if (!o) return;
+            e = { cliente: '', ativo: true, plano_id: o.plano_id, marca: o.marca, modelo: o.modelo, motor: o.motor, transmissao: o.transmissao, foto: o.foto, pecas: JSON.parse(JSON.stringify(o.pecas || [])), obs: o.obs };
+          }
           if (!e) return;
-          abrirModal(id ? 'Editar equipamento' : 'Novo equipamento de cliente',
+          abrirModal(id ? 'Editar equipamento' : (cloneDe ? 'Clonar equipamento — escolha o novo cliente e o nº de série' : 'Novo equipamento de cliente'),
             '<div class="form-grid">' +
               '<div class="form-group full-width"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="mn-e-cliente" class="form-control" list="mn-dl-cli" value="' + esc(e.cliente) + '" placeholder="Digite para buscar o cliente">' + dlClientes('mn-dl-cli') + '</div>' +
               '<div class="form-group full-width"><label class="form-label">Plano de manutenção</label><select id="mn-e-plano" class="form-control"><option value="">(sem plano — escolher depois)</option>' +
                 M.planos.map(function(p) { return '<option value="' + p.id + '"' + (p.id === e.plano_id ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
               '<div class="form-group"><label class="form-label">Marca</label><input id="mn-e-marca" class="form-control" value="' + esc(e.marca || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Modelo</label><input id="mn-e-modelo" class="form-control" value="' + esc(e.modelo || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Motor</label><input id="mn-e-motor" class="form-control" value="' + esc(e.motor || '') + '" placeholder="Ex.: Mazda WL 2.5 diesel"></div>' +
+              '<div class="form-group"><label class="form-label">Transmissão</label><input id="mn-e-trans" class="form-control" value="' + esc(e.transmissao || '') + '" placeholder="Ex.: Powershift, hidrostática, manual"></div>' +
               '<div class="form-group"><label class="form-label">Nº de série</label><input id="mn-e-serie" class="form-control" value="' + esc(e.serie || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Identificação do cliente (frota/TAG)</label><input id="mn-e-tag" class="form-control" value="' + esc(e.tag || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Horímetro atual (h)</label><input id="mn-e-hor" class="form-control" inputmode="decimal" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div>' +
@@ -10304,7 +10312,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 '<div class="sx-muted" style="font-size:0.72rem;margin-top:2px">Sai no plano impresso deste equipamento. Sem foto aqui, vale a foto do plano de manutenção.</div>' +
                 (e.foto ? '<div style="margin-top:4px"><img src="' + e.foto + '" alt="" style="max-height:90px;border-radius:6px;border:1px solid #cbd5e1"> <label class="sx-chkl"><input type="checkbox" id="mn-e-fotodel"> remover a foto atual</label></div>' : '') + '</div>' +
               '<div class="form-group full-width"><label class="form-label">Peças e consumíveis deste equipamento</label>' +
-                '<div class="sx-muted" style="font-size:0.72rem;margin-bottom:4px">Item · código/modelo · quantidade · revisão do plano em que é usada (ex.: 250 h). Sai impresso junto com o plano.</div>' +
+                '<div class="sx-muted" style="font-size:0.72rem;margin-bottom:4px">Item · código PLS · modelo · quantidade · revisão do plano em que é usada (ex.: 250 h). Sai impresso junto com o plano.</div>' +
                 '<datalist id="mn-dl-int">' + colsPlano(e.plano_id).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
                 '<div id="mn-e-pecas">' + (e.pecas || []).map(linhaPeca).join('') + '</div>' +
                 '<button type="button" class="btn-pls-secondary" data-man="peca-add" style="margin-top:2px">➕ Adicionar peça</button></div>' +
@@ -10314,11 +10322,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var ex = cliPorNome(cli); if (ex) cli = ex.nome;
               var pid = $('mn-e-plano').value || null, pl = pid ? planoPorId(pid) : null, hor = numOuNull($('mn-e-hor').value);
               var d = { cliente: cli, plano_id: pid, marca: $('mn-e-marca').value.trim() || (pl && pl.marca) || null, modelo: $('mn-e-modelo').value.trim() || null,
-                serie: $('mn-e-serie').value.trim() || null, tag: $('mn-e-tag').value.trim() || null, obs: $('mn-e-obs').value.trim() || null, updated_at: new Date().toISOString() };
+                motor: $('mn-e-motor').value.trim() || null, transmissao: $('mn-e-trans').value.trim() || null, serie: $('mn-e-serie').value.trim() || null, tag: $('mn-e-tag').value.trim() || null, obs: $('mn-e-obs').value.trim() || null, updated_at: new Date().toISOString() };
               if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : hoje(); }
               var arqE = $('mn-e-foto').files[0], tirarE = $('mn-e-fotodel') && $('mn-e-fotodel').checked;
               return (arqE ? lerFoto(arqE) : Promise.resolve(null)).then(function(fotoE) {
-                if (fotoE) d.foto = fotoE; else if (tirarE) d.foto = null;
+                if (fotoE) d.foto = fotoE; else if (tirarE) d.foto = null; else if (cloneDe && e.foto) d.foto = e.foto;
                 d.pecas = lerPecas();
                 var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
                 return chk(q);
@@ -10563,15 +10571,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function fotoOuNada(p, e) { var f = (e && e.foto) || p.foto; return f ? '<img class="mpb-foto" src="' + f + '" alt="">' : ''; }
         function linhaContato() { return EMP.foneLinha; }
         function ctxEq(e) {
-          return { cliente: e ? e.cliente : '', eq: e ? nomeEq(e) : '', serie: e && e.serie || '', hor: e && e.horimetro != null ? fmtH(e.horimetro) + ' h' : '', tag: e && e.tag || '' };
+          return { cliente: e ? e.cliente : '', eq: e ? nomeEq(e) : '', serie: e && e.serie || '', motor: e && e.motor || '', trans: e && e.transmissao || '', hor: e && e.horimetro != null ? fmtH(e.horimetro) + ' h' : '', tag: e && e.tag || '' };
         }
         function tabPecas(e, cls) {
           var l = (e && e.pecas || []).slice(); if (!l.length) return '';
           var ordem = colsPlano(e.plano_id);
           var pos = function(x) { var k = ordem.indexOf(x.t); return x.t ? (k < 0 ? 998 : k) : 999; };
           l.sort(function(a, b) { return pos(a) - pos(b); });
-          return '<table class="' + cls + '"><thead><tr><th>ITEM / PEÇA</th><th>CÓDIGO / MODELO</th><th>QTD</th><th>REVISÃO</th></tr></thead><tbody>' +
-            l.map(function(x) { return '<tr><td><b>' + esc(x.i) + '</b></td><td>' + esc(x.c) + '</td><td>' + esc(x.q) + '</td><td>' + esc(x.t) + '</td></tr>'; }).join('') + '</tbody></table>';
+          return '<table class="' + cls + '"><thead><tr><th>ITEM / PEÇA</th><th>CÓD. PLS</th><th>MODELO</th><th>QTD</th><th>REVISÃO</th></tr></thead><tbody>' +
+            l.map(function(x) { return '<tr><td><b>' + esc(x.i) + '</b></td><td>' + esc(x.p) + '</td><td>' + esc(x.m != null ? x.m : x.c) + '</td><td>' + esc(x.q) + '</td><td>' + esc(x.t) + '</td></tr>'; }).join('') + '</tbody></table>';
         }
         function htmlPlanoA(p, e) {
           var c = ctxEq(e), et = etapasDe(p), blank = '<span class="mpa-fill"></span>';
@@ -10581,7 +10589,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="mpa-head"><img src="' + COM_IMG.logo + '" alt="PLS"><div><b>PLANO DE MANUTENÇÃO PREVENTIVA</b><span>' + esc(p.nome) + '</span></div></div>' +
             '<table class="mpa-info"><tr><th>Cliente</th><td>' + (esc(c.cliente) || blank) + '</td><th>Data da visita</th><td>' + blank + '</td></tr>' +
             '<tr><th>Equipamento</th><td>' + (esc(c.eq + (c.tag ? ' · ' + c.tag : '')) || blank) + '</td><th>Nº de série</th><td>' + (esc(c.serie) || blank) + '</td></tr>' +
-            '<tr><th>Horímetro atual</th><td>' + (esc(c.hor) || blank) + '</td><th>Técnico</th><td>' + blank + '</td></tr></table>' +
+            '<tr><th>Horímetro atual</th><td>' + (esc(c.hor) || blank) + '</td><th>Técnico</th><td>' + blank + '</td></tr>' + ((c.motor || c.trans) ? '<tr><th>Motor</th><td>' + (esc(c.motor) || '—') + '</td><th>Transmissão</th><td>' + (esc(c.trans) || '—') + '</td></tr>' : '') + '</table>' +
             (/^PLANO BASE/.test(p.obs || '') ? '<div class="mpa-regra" style="background:#fef2f2;border-color:#dc2626"><b>PLANO PROVISÓRIO:</b> conferir intervalos e capacidades com o manual do fabricante antes de executar.</div>' : '') + '<div class="mpa-regra">' + (rg ? '<b>Regra de uso:</b> ' + esc(rg.replace(/^REGRA:\s*/, '')) : '<b>Regra de uso:</b> em cada revisão, executar também as verificações dos intervalos anteriores. Em ambiente severo, empoeirado ou de alta intensidade de operação, reduzir os intervalos de limpeza, inspeção e filtros.') + '</div>';
           et.forEach(function(s) {
             h += '<div class="mpa-etapa"><div class="mpa-eh">' + esc(s.t) + '</div><table class="mpa-tb"><thead><tr><th class="c">OK</th><th class="c">N/A</th><th>ITEM A CONFERIR / EXECUTAR</th></tr></thead><tbody>' +
@@ -10641,7 +10649,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               topo = '<div class="mpb-top"><img class="mpb-logo" src="' + COM_IMG.logo + '" alt="PLS"><div class="mpb-tt"><b>PLANO DE MANUTENÇÃO</b><em>EMPILHADEIRA ' + esc(String(p.combustivel || '').toUpperCase()) + '</em><span>' + esc(p.modelos || p.nome) + '</span></div></div>' +
               '<div class="mpb-mid"><div class="mpb-blocos">' +
                 '<div class="mpb-bl"><i>📋</i><div><b>EQUIPAMENTO</b>' + (c.cliente ? '<p>Cliente: <strong>' + esc(c.cliente) + '</strong></p>' : '<p>Cliente: ' + blank + '</p>') +
-                  '<p>' + esc(c.eq || [/^(PLS|Tria)$/.test(p.marca || '') ? '' : p.marca, p.modelos].filter(Boolean).join(' ') || p.nome) + '</p><p>Série: ' + (esc(c.serie) || blank) + ' &nbsp; Horímetro: ' + (esc(c.hor) || blank) + '</p></div></div>' +
+                  '<p>' + esc(c.eq || [/^(PLS|Tria)$/.test(p.marca || '') ? '' : p.marca, p.modelos].filter(Boolean).join(' ') || p.nome) + '</p><p>Série: ' + (esc(c.serie) || blank) + ' &nbsp; Horímetro: ' + (esc(c.hor) || blank) + '</p>' + ((c.motor || c.trans) ? '<p>Motor: ' + (esc(c.motor) || '—') + ' &nbsp; Transmissão: ' + (esc(c.trans) || '—') + '</p>' : '') + '</div></div>' +
                 '<div class="mpb-bl"><i>⏱</i><div><b>INTERVALOS DE MANUTENÇÃO</b><p>' + fonteTxt + '</p><p>' + cols.map(function(x) { return esc(x).replace(' / ', ' · '); }).join(' | ') + '</p></div></div>' +
                 '<div class="mpb-bl"><i>🛡</i><div><b>OBJETIVO</b><p>Garantir a máxima segurança, confiabilidade e vida útil do equipamento, prevenindo falhas e reduzindo custos com manutenção corretiva.</p></div></div>' +
               '</div><div class="mpb-fotobox">' + fotoOuNada(p, e) + '</div></div>';
@@ -11086,6 +11094,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
             case 'eq-novo': abrirEquip(null); break;
             case 'eq-ed': abrirEquip(id); break;
+            case 'eq-clone': abrirEquip(null, '', id); break;
             case 'peca-add': var bx = $('mn-e-pecas'); if (bx) { bx.insertAdjacentHTML('beforeend', linhaPeca()); var ult = bx.lastChild.querySelector('input'); if (ult) ult.focus(); } break;
             case 'peca-del': var rw = a.closest('.mn-pc-row'); if (rw) rw.remove(); break;
             case 'eq-del': excluirEquip(id); break;
