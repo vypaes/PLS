@@ -2552,7 +2552,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v42 — 07/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v43 — 09/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -3803,6 +3803,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         return pagina(0);
       }
 
+      var ausenciasTec = [];
+      var AUS_TIPOS = ['Falta', 'Atestado', 'Folga', 'Férias', 'Outro'];
+      function ausHoje(t) { var h = getTodayISO(); return ausenciasTec.filter(function(a) { return a.tec === t && a.ini <= h && a.fim >= h; })[0] || null; }
+      function splitTec(x) { return String(x || '').split(/\s*,\s*|\s+e\s+/).map(function(n) { return n.trim(); }).filter(Boolean); }
+      function recente(iso) { var df = getDiffDays(iso); return df <= 0 && df >= -7; }
       function loadData() {
         var nomes = function(t) {
           return chk(sb.from(t).select('nome').order(t === 'tecnicos' ? 'created_at' : 'ordem').order('nome'))
@@ -3817,8 +3822,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             .catch(function(e) { console.error('Não foi possível ler os serviços diários:', e); return []; }),
           chk(sb.from('configuracoes').select('chave,valor').eq('chave', 'painel'))
             .then(function(r) { return r.data || []; })
-            .catch(function(e) { console.error('Não foi possível ler a configuração do painel:', e); return []; })
+            .catch(function(e) { console.error('Não foi possível ler a configuração do painel:', e); return []; }),
+          buscarTudo('tec_ausencias', function(q) { return q.order('data_ini'); })
+            .catch(function(e) { console.error('Não foi possível ler as ausências:', e); return []; })
         ]).then(function(res) {
+          ausenciasTec = (res[9] || []).map(function(a) { return { id: a.id, tec: a.tecnico, ini: a.data_ini, fim: a.data_fim, tipo: a.tipo, obs: a.obs || '' }; });
           if (res[8] && res[8][0]) painelCfg = normalizarCfgPainel(res[8][0].valor);
           appData = {
             clientes: res[5].map(cliFromDb),
@@ -5342,9 +5350,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var d = porId[sv.demandaId];
           if (!d || !sv.data || d.status === 'Cancelado') return;
           var emAnd = sv.status === 'Em andamento';
-          if (!emAnd && !(sv.status === 'Concluída' && sv.data === h)) return;
+          if (!emAnd && !(sv.status === 'Concluída' && recente(sv.data))) return;
           if (emAnd && d.status === 'Concluída') return;
-          its.push({ dem: d, tec: sv.tecnico || 'Sem técnico', data: sv.data, cliente: d.cliente, equip: d.equipamento || '', tarefa: sv.descricao, entrega: d.dataPrev, done: !emAnd, srv: true });
+          var tsv = splitTec(sv.tecnico); if (!tsv.length) tsv = ['Sem técnico'];
+          tsv.forEach(function(tn) { its.push({ dem: d, tec: tn, data: sv.data, cliente: d.cliente, equip: d.equipamento || '', tarefa: sv.descricao, entrega: d.dataPrev, done: !emAnd, srv: true }); });
         });
         appData.demandas.forEach(function(d) {
           if (!d.dataPrev || d.status === 'Cancelado') return;
@@ -5354,9 +5363,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (ss.some(function(x) { return x.status === 'Em andamento'; })) return;
           }
           var done = d.status === 'Concluída';
-          if (done && d.dataPrev !== h) return;
-          its.push({ dem: d, tec: tecDem(d) || 'Sem técnico', data: d.dataPrev, cliente: d.cliente, equip: d.equipamento || '', tarefa: d.obsTecnicas || d.obs || d.tipo || '',
-                     entrega: d.dataPrev, done: done, entregaItem: true, resp: !!d.usaServicos });
+          if (done && !recente(d.dataPrev)) return;
+          var tdm = splitTec(tecDem(d)); if (!tdm.length) tdm = ['Sem técnico'];
+          tdm.forEach(function(tn) { its.push({ dem: d, tec: tn, data: d.dataPrev, cliente: d.cliente, equip: d.equipamento || '', tarefa: d.obsTecnicas || d.obs || d.tipo || '',
+                     entrega: d.dataPrev, done: done, entregaItem: true, resp: !!d.usaServicos }); });
         });
         return its;
       }
@@ -5368,10 +5378,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var meus = its.filter(function(i) { return i.tec === t; });
           var hojePend = meus.filter(function(i) { return !i.done && getDiffDays(i.data) === 0; }).length;
           var atras = meus.filter(function(i) { return !i.done && getDiffDays(i.data) < 0; }).length;
-          var feitas = meus.filter(function(i) { return i.done; }).length;
+          var feitas = meus.filter(function(i) { return i.done && getDiffDays(i.data) === 0; }).length;
           var fut = meus.filter(function(i) { return !i.done && getDiffDays(i.data) > 0; }).sort(function(a, b) { return a.data.localeCompare(b.data); });
-          var estado = hojePend > 0 ? 'ocupado' : (atras > 0 ? 'atrasada' : (feitas > 0 ? 'terminou' : (fut.length ? 'livre' : 'sem')));
-          return { tec: t, hoje: hojePend, atrasadas: atras, feitas: feitas, proximo: fut.length ? fut[0].data : '', estado: estado };
+          var aus = ausHoje(t);
+          var estado = (aus && hojePend === 0) ? 'ausente' : hojePend > 0 ? 'ocupado' : (atras > 0 ? 'atrasada' : (feitas > 0 ? 'terminou' : (fut.length ? 'livre' : 'sem')));
+          return { aus: aus, tec: t, hoje: hojePend, atrasadas: atras, feitas: feitas, proximo: fut.length ? fut[0].data : '', estado: estado };
         });
       }
 
@@ -5381,10 +5392,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if (!el) return;
         document.body.classList.toggle('painel-vis-eq', painelVisao === 'eq');
         var eq = resumoEquipe().filter(function(e) { return !/externo/i.test(e.tec); });
-        var ociosos = eq.filter(function(e) { return e.estado === 'sem' || e.estado === 'livre' || e.estado === 'atrasada'; });
-        var cor = { ocupado: '#fff7ed;border-color:#fdba74', terminou: '#f0fdf4;border-color:#86efac', livre: '#fef2f2;border-color:#fca5a5', atrasada: '#fef2f2;border-color:#f87171', sem: '#fef2f2;border-color:#ef4444' };
+        var ausentes = eq.filter(function(e) { return e.aus; });
+        var ociosos = eq.filter(function(e) { return e.estado !== 'ausente' && e.estado === 'sem' || e.estado === 'livre' || e.estado === 'atrasada'; });
+        var cor = { ocupado: '#fff7ed;border-color:#fdba74', terminou: '#f0fdf4;border-color:#86efac', livre: '#fef2f2;border-color:#fca5a5', atrasada: '#fef2f2;border-color:#f87171', sem: '#fef2f2;border-color:#ef4444', ausente: '#eef2ff;border-color:#a5b4fc' };
         var txt = function(e) {
-          if (e.estado === 'ocupado') return '🔧 ' + e.hoje + ' hoje' + (e.atrasadas ? ' • ⚠ ' + e.atrasadas + ' atrasada(s)' : '') + (e.feitas ? ' • ✔ ' + e.feitas + ' feita(s)' : '');
+          if (e.estado === 'ausente') return '🏖 ' + escapeHtml(e.aus.tipo) + ' hoje' + (e.aus.obs ? ' — ' + escapeHtml(e.aus.obs) : '') + (e.aus.fim !== e.aus.ini ? ' (até ' + formatDateBR(e.aus.fim) + ')' : '');
+          if (e.estado === 'ocupado') return '🔧 ' + (e.hoje + e.feitas) + ' hoje' + (e.feitas ? ' • ✔ ' + e.feitas + ' concluída(s)' : '') + ' • ⏳ ' + e.hoje + ' em andamento' + (e.atrasadas ? ' • ⚠ ' + e.atrasadas + ' atrasada(s)' : '');
           if (e.estado === 'terminou') return '✔ Fez ' + e.feitas + ' hoje — sem mais pendências';
           if (e.estado === 'atrasada') return '⚠ Nada para hoje • só ' + e.atrasadas + ' atrasada(s)' + (e.feitas ? ' • ✔ ' + e.feitas + ' feita(s)' : '');
           if (e.estado === 'livre') return '⚠ Livre hoje • próxima demanda ' + formatDateBR(e.proximo);
@@ -5407,13 +5420,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var totFe = eq.reduce(function(a, e) { return a + e.feitas; }, 0);
         el.innerHTML = '<div class="eq-bar no-print">' + seg + '<div class="eq-title">👥 Equipe hoje' +
           (painelVisao === 'eq' ? ' <span class="eq-tot">✔ ' + totFe + ' feita(s) hoje no total</span>' : '') +
+          (ausentes.length ? ' <span class="eq-alerta" style="background:#eef2ff;color:#3730a3">🏖 Ausentes hoje: ' + ausentes.map(function(e) { return escapeHtml(e.tec) + ' (' + escapeHtml(e.aus.tipo) + ')'; }).join(', ') + '</span>' : '') +
           (ociosos.length ? ' <span class="eq-alerta">⚠ Sem demanda para hoje: ' + ociosos.map(function(e) { return escapeHtml(e.tec) + (e.estado === 'atrasada' ? ' (só atrasadas)' : ''); }).join(', ') + '</span>' : '') + '</div>' +
           '<div class="eq-grid' + (painelVisao === 'eq' ? ' eq-grande' : '') + '">' + eq.slice().sort(function(a, b) {
             if (painelVisao !== 'eq') return 0;
-            var o = { sem: 0, livre: 1, atrasada: 1, ocupado: 2, terminou: 3 };
+            var o = { sem: 0, livre: 1, atrasada: 1, ocupado: 2, terminou: 3, ausente: 4 };
             return o[a.estado] - o[b.estado] || a.tec.localeCompare(b.tec, 'pt-BR');
           }).map(function(e) {
-            return '<div class="eq-card" style="background:' + cor[e.estado] + ';"><b>' + escapeHtml(e.tec) + '</b><span>' + txt(e) + '</span>' + detalhe(e) + '</div>';
+            return '<div class="eq-card" style="background:' + cor[e.estado] + ';"><b>' + escapeHtml(e.tec) + '</b><span>' + txt(e) + '</span>' + detalhe(e) + '<button type="button" class="no-print" style="margin-top:3px;border:0;background:none;color:#4f46e5;cursor:pointer;font-size:0.72rem;text-align:left;padding:0" data-action="aus-abrir" data-t="' + escapeHtml(e.tec) + '">🏖 ausência/folga/atestado</button></div>';
           }).join('') + '</div></div>';
       }
 
@@ -6448,6 +6462,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if (action === 'dup-cancel') { fecharModalDup(); pendenteDup = null; return; }
         if (action === 'dup-criar') { var pd = pendenteDup; fecharModalDup(); pendenteDup = null; if (pd) pd.criar(); return; }
         if (action === 'dup-add') { var pd2 = pendenteDup, idD = target.getAttribute('data-id'); fecharModalDup(); pendenteDup = null; if (pd2) pd2.adicionar(idD); return; }
+        if (action === 'aus-abrir') { abrirAusencia(target.getAttribute('data-t')); return; }
+        if (action === 'aus-del') { delAusencia(target.getAttribute('data-id'), target.getAttribute('data-t')); return; }
         if (action === 'painel-visao') { painelVisao = target.getAttribute('data-v'); renderPainelTab(); return; }
         if (action === 'rk-periodo') {
           var de = document.getElementById('rk-de'), ate = document.getElementById('rk-ate'), hj = getTodayISO(), pp = target.getAttribute('data-p');
@@ -10257,6 +10273,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="form-group"><label class="form-label">Nº de série</label><input id="mn-e-serie" class="form-control" value="' + esc(e.serie || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Identificação do cliente (frota/TAG)</label><input id="mn-e-tag" class="form-control" value="' + esc(e.tag || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Horímetro atual (h)</label><input id="mn-e-hor" class="form-control" inputmode="decimal" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div>' +
+              '<div class="form-group full-width"><label class="form-label">Foto do equipamento do cliente</label><input id="mn-e-foto" type="file" accept="image/*" class="form-control">' +
+                '<div class="sx-muted" style="font-size:0.72rem;margin-top:2px">Sai no plano impresso deste equipamento. Sem foto aqui, vale a foto do plano de manutenção.</div>' +
+                (e.foto ? '<div style="margin-top:4px"><img src="' + e.foto + '" alt="" style="max-height:90px;border-radius:6px;border:1px solid #cbd5e1"> <label class="sx-chkl"><input type="checkbox" id="mn-e-fotodel"> remover a foto atual</label></div>' : '') + '</div>' +
               '<div class="form-group full-width"><label class="form-label">Observações</label><input id="mn-e-obs" class="form-control" value="' + esc(e.obs || '') + '"></div>' +
             '</div>', 'Salvar', function() {
               var cli = $('mn-e-cliente').value.trim(); if (!cli) throw new Error('Informe o cliente.');
@@ -10265,8 +10284,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var d = { cliente: cli, plano_id: pid, marca: $('mn-e-marca').value.trim() || (pl && pl.marca) || null, modelo: $('mn-e-modelo').value.trim() || null,
                 serie: $('mn-e-serie').value.trim() || null, tag: $('mn-e-tag').value.trim() || null, obs: $('mn-e-obs').value.trim() || null, updated_at: new Date().toISOString() };
               if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : hoje(); }
-              var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
-              return chk(q).then(function(r) {
+              var arqE = $('mn-e-foto').files[0], tirarE = $('mn-e-fotodel') && $('mn-e-fotodel').checked;
+              return (arqE ? lerFoto(arqE) : Promise.resolve(null)).then(function(fotoE) {
+                if (fotoE) d.foto = fotoE; else if (tirarE) d.foto = null;
+                var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
+                return chk(q);
+              }).then(function(r) {
                 if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
                 return Promise.all([sincronizarClientes([cli]), carregarMan()]);
               }).then(function() { renderMan(); showToast('Equipamento salvo.'); });
@@ -10504,7 +10527,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               imprimirPlano(p, mod, e);
             });
         }
-        function fotoOuNada(p) { return p.foto ? '<img class="mpb-foto" src="' + p.foto + '" alt="">' : ''; }
+        function fotoOuNada(p, e) { var f = (e && e.foto) || p.foto; return f ? '<img class="mpb-foto" src="' + f + '" alt="">' : ''; }
         function linhaContato() { return EMP.foneLinha; }
         function ctxEq(e) {
           return { cliente: e ? e.cliente : '', eq: e ? nomeEq(e) : '', serie: e && e.serie || '', hor: e && e.horimetro != null ? fmtH(e.horimetro) + ' h' : '', tag: e && e.tag || '' };
@@ -10579,7 +10602,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   '<p>' + esc(c.eq || [/^(PLS|Tria)$/.test(p.marca || '') ? '' : p.marca, p.modelos].filter(Boolean).join(' ') || p.nome) + '</p><p>Série: ' + (esc(c.serie) || blank) + ' &nbsp; Horímetro: ' + (esc(c.hor) || blank) + '</p></div></div>' +
                 '<div class="mpb-bl"><i>⏱</i><div><b>INTERVALOS DE MANUTENÇÃO</b><p>' + fonteTxt + '</p><p>' + cols.map(function(x) { return esc(x).replace(' / ', ' · '); }).join(' | ') + '</p></div></div>' +
                 '<div class="mpb-bl"><i>🛡</i><div><b>OBJETIVO</b><p>Garantir a máxima segurança, confiabilidade e vida útil do equipamento, prevenindo falhas e reduzindo custos com manutenção corretiva.</p></div></div>' +
-              '</div><div class="mpb-fotobox">' + fotoOuNada(p) + '</div></div>';
+              '</div><div class="mpb-fotobox">' + fotoOuNada(p, e) + '</div></div>';
             } else {
               topo = '<div class="mpb-top cont"><img class="mpb-logo" src="' + COM_IMG.logo + '" alt="PLS"><div class="mpb-tt"><b>PLANO DE MANUTENÇÃO - continuação</b><span>' + esc(p.modelos || p.nome) + '</span></div></div>' +
                 '<div class="mpb-cl">Cliente: ' + (esc(c.cliente) || blank) + ' &nbsp; Equipamento: ' + (esc(c.eq) || blank) + ' &nbsp; Série: ' + (esc(c.serie) || blank) + ' &nbsp; Data: ______/______/________</div>';
@@ -11315,6 +11338,40 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if (primeiro) setTimeout(function() { primeiro.focus(); }, 50);
       }
 
+      function abrirAusencia(tec) {
+        var h = getTodayISO();
+        var lst = ausenciasTec.filter(function(a) { return a.tec === tec && a.fim >= h; }).sort(function(a, b) { return a.ini.localeCompare(b.ini); });
+        abrirModal('Ausência — ' + tec,
+          '<div class="form-grid">' +
+            '<div class="form-group"><label class="form-label">Motivo</label><select id="au-tipo" class="form-control">' + AUS_TIPOS.map(function(t) { return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">De</label><input type="date" id="au-ini" class="form-control" value="' + h + '"></div>' +
+            '<div class="form-group"><label class="form-label">Até</label><input type="date" id="au-fim" class="form-control" value="' + h + '"></div>' +
+            '<div class="form-group"><label class="form-label">Observação</label><input type="text" id="au-obs" class="form-control" placeholder="Opcional"></div>' +
+          '</div>' +
+          (lst.length ? '<div style="margin-top:10px;font-weight:700">Lançadas</div>' + lst.map(function(a) {
+            return '<div style="display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid #e2e8f0"><span>' + escapeHtml(a.tipo) + ' · ' + formatDateBR(a.ini) + (a.fim !== a.ini ? ' a ' + formatDateBR(a.fim) : '') + (a.obs ? ' · ' + escapeHtml(a.obs) : '') + '</span><button type="button" data-action="aus-del" data-id="' + escapeHtml(a.id) + '" data-t="' + escapeHtml(tec) + '">Excluir</button></div>';
+          }).join('') : ''),
+          'Salvar ausência',
+          function() {
+            var ini = document.getElementById('au-ini').value, fim = document.getElementById('au-fim').value || ini;
+            if (!ini) throw new Error('Informe a data.');
+            if (fim < ini) throw new Error('A data final é antes da inicial.');
+            var row = { id: crypto.randomUUID(), tecnico: tec, data_ini: ini, data_fim: fim, tipo: document.getElementById('au-tipo').value, obs: document.getElementById('au-obs').value.trim() || null };
+            return chk(sb.from('tec_ausencias').insert(row).select('id')).then(function(r) {
+              if (!r.data.length) throw new Error('Você não tem permissão para isso.');
+              ausenciasTec.push({ id: row.id, tec: tec, ini: ini, fim: fim, tipo: row.tipo, obs: row.obs || '' });
+              renderEquipePainel(); showToast('Ausência registrada.');
+            });
+          });
+      }
+      function delAusencia(id, tec) {
+        if (!confirm('Excluir esta ausência?')) return;
+        chk(sb.from('tec_ausencias').delete().eq('id', id).select('id')).then(function(r) {
+          if (!r.data.length) throw new Error('Você não tem permissão para isso.');
+          ausenciasTec = ausenciasTec.filter(function(a) { return a.id !== id; });
+          renderEquipePainel(); abrirAusencia(tec);
+        }).catch(function(e) { alert(e.message || e); });
+      }
       function fecharModal() {
         var m = document.getElementById('modal-generico');
         if (m) m.classList.remove('active');
