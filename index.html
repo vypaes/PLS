@@ -2220,7 +2220,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     }
 
     .setor-sec { display: none; }
-    body.setor-locacoes #setor-locacoes, body.setor-rh #setor-rh { display: block; }
+    body.setor-locacoes #setor-locacoes, body.setor-rh #setor-rh, body.setor-frota #setor-frota { display: block; }
     body.setor-fora .pls-tabs { display: none; }
     body.setor-fora .tab-content { display: none !important; }
     body.setor-gerencial #tab-config { display: block !important; }
@@ -2564,7 +2564,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v49 — 09/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v50 — 10/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -3468,6 +3468,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
     <!-- SETORES: LOCAÇÕES E RH -->
     <section id="setor-locacoes" class="setor-sec"></section>
+    <section id="setor-frota" class="setor-sec"></section>
     <section id="setor-rh" class="setor-sec"></section>
     <section id="setor-comercial" class="setor-sec"></section>
     <section id="setor-manutencao" class="setor-sec"></section>
@@ -3817,6 +3818,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
       var ausenciasTec = [];
       var AUS_TIPOS = ['Falta', 'Atestado', 'Folga', 'Férias', 'Outro'];
+      function ausenciaDe(tec, iso) { return ausenciasTec.filter(function(a) { return a.tec === tec && a.ini <= iso && a.fim >= iso; })[0] || null; }
+      function bloqueioAus(pares) {
+        for (var i = 0; i < pares.length; i++) {
+          var a = pares[i].d && ausenciaDe(pares[i].t, pares[i].d);
+          if (a) return pares[i].t + ' está de ' + a.tipo.toLowerCase() + ' em ' + formatDateBR(pares[i].d) + (a.obs ? ' (' + a.obs + ')' : '') + ' (' + formatDateBR(a.ini) + (a.fim !== a.ini ? ' a ' + formatDateBR(a.fim) : '') + '). Não dá para lançar serviço para ele nesse dia — escolha outro técnico ou outra data.';
+        }
+        return '';
+      }
       function ausHoje(t) { var h = getTodayISO(); return ausenciasTec.filter(function(a) { return a.tec === t && a.ini <= h && a.fim >= h; })[0] || null; }
       function splitTec(x) { return String(x || '').split(/\s*,\s*|\s+e\s+/).map(function(n) { return n.trim(); }).filter(Boolean); }
       function recente(iso) { var df = getDiffDays(iso); return df <= 0 && df >= -7; }
@@ -6564,6 +6573,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             alert('Informe o dia, o serviço a fazer e pelo menos um técnico.');
             return;
           }
+          var msgS = bloqueioAus(tecsS.map(function(t) { return { t: t, d: dataS }; }));
+          if (msgS) { alert(msgS); return; }
           if (!appData.servicos) appData.servicos = [];
           if (servicoEditId) {
             var svE = appData.servicos.find(function(x) { return x.id === servicoEditId; });
@@ -7081,6 +7092,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 }
               }
 
+              (function() {
+                var pares = [];
+                if (id) {
+                  var d0 = appData.demandas.find(function(d) { return d.id === id; });
+                  if (d0 && !d0.usaServicos && status === 'Em andamento') pares.push({ t: tecnico, d: dataAtend });
+                } else if (!isRecorrente) { execsUnico.forEach(function(t) { pares.push({ t: t, d: dataAtend }); }); }
+                var msgA = bloqueioAus(pares);
+                if (msgA) { alert(msgA); tecnico = null; }
+              })();
+              if (tecnico === null) return;
+
               if (id) {
                 // Editar existente
                 var dem = appData.demandas.find(function(d) { return d.id === id; });
@@ -7133,6 +7155,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   return;
                 }
 
+                (function() {
+                  var cur0 = new Date(firstDate), pr = [];
+                  while (toISODate(cur0) <= dataLimiteStr && pr.length < 52) { pr.push({ t: tecnico, d: toISODate(cur0) }); cur0.setDate(cur0.getDate() + 7); }
+                  var m0 = bloqueioAus(pr); if (m0) { alert(m0); tecnico = null; }
+                })();
+                if (tecnico === null) return;
                 // Gera as ocorrências semanais até a data limite (máximo 52 para segurança)
                 var occurrences = [];
                 var curD = new Date(firstDate);
@@ -7475,6 +7503,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         var DEF = [
           { k: 'demandas', t: 'Demandas', ic: '📋' },
           { k: 'locacoes', t: 'Locações', ic: '🚜' },
+          { k: 'frota', t: 'Frota', ic: '🚛' },
           { k: 'rh', t: 'RH', ic: '👥' },
           { k: 'comercial', t: 'Comercial', ic: '💼' },
           { k: 'manutencao', t: 'Manutenção', ic: '🔧' },
@@ -7557,7 +7586,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function setSetor(k, sub) {
           if (!permitido(k)) { var l = setoresPermitidos(); k = l.length ? l[0].k : null; }
           var b = document.body;
-          b.classList.remove('setor-demandas', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-manutencao', 'setor-clientes', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
+          b.classList.remove('setor-demandas', 'setor-frota', 'setor-locacoes', 'setor-rh', 'setor-comercial', 'setor-manutencao', 'setor-clientes', 'setor-gerencial', 'setor-fora', 'setor-nenhum');
           if (!k) { b.classList.add('setor-nenhum', 'setor-fora'); setorAtual = null; desenharRail(); return; }
           setorAtual = k;
           b.classList.add('setor-' + k);
@@ -7566,6 +7595,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var sub2 = document.querySelector('.pls-brand-sub');
           if (sub2) sub2.textContent = k === 'gerencial' ? 'Empilhadeiras — Gerencial' : 'Empilhadeiras — Gestão de ' + DEF.filter(function(s) { return s.k === k; })[0].t;
           if (k === 'locacoes') { if (sub) subLoc = sub; entrarLoc(); }
+          else if (k === 'frota') { entrarFrota(); }
           else if (k === 'rh') { if (sub) subRh = sub; entrarRh(); }
           else if (k === 'comercial') { if (sub) C.sub = sub; entrarCom(); }
           else if (k === 'manutencao') { if (sub) M.sub = sub; entrarMan(); }
@@ -7601,7 +7631,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // LOCAÇÕES
         // =================================================================
         var L = { itens: [], fat: {}, props: {}, comp: compAtual(), fTipo: '', fSit: '', fBusca: '', cStatus: '', cBusca: '', sBusca: '' };
-        var STATUS_LOC = ['LOCADA', 'EM MANUTENÇÃO', 'DISPONÍVEL'];
+        var STATUS_LOC = ['LOCADA', 'EM MANUTENÇÃO', 'DISPONÍVEL', 'BAIXADO'];
 
         function carregarLoc() {
           var de = addMes(compAtual() < L.comp ? compAtual() : L.comp, -3);
@@ -7690,7 +7720,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           el.innerHTML =
             '<div class="sx-subnav no-print">' +
               '<button type="button" class="sx-subbtn" data-sx="lo-sub" data-v="faturas">🧾 Faturas do mês</button>' +
-              '<button type="button" class="sx-subbtn" data-sx="lo-sub" data-v="locacoes">🚜 Locações e frota</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="lo-sub" data-v="locacoes">🚜 Locações</button>' +
               '<button type="button" class="sx-subbtn" data-sx="lo-sub" data-v="servicos">🛠 Contratos de serviço</button>' +
             '</div>' +
             '<div id="lo-p-faturas" class="sx-pane">' +
@@ -7708,9 +7738,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '</div>' +
             '<div id="lo-p-locacoes" class="sx-pane">' +
               '<div class="sx-toolbar">' +
-                '<select id="lo-c-status" class="form-control sx-w"><option value="">Todos os status</option>' + opts(STATUS_LOC) + '</select>' +
                 '<input id="lo-c-busca" class="form-control sx-w2" placeholder="Buscar cliente, equipamento ou dono…">' +
-                '<button type="button" class="btn-pls-primary" data-sx="lo-novo" data-tipo="locacao">➕ Nova locação / equipamento</button>' +
+                '<button type="button" class="btn-pls-primary" data-sx="lo-novo" data-tipo="locacao">➕ Nova locação</button>' +
+                '<span class="sx-muted">O equipamento é cadastrado no setor <b>Frota</b>; aqui só ficam as locações em andamento.</span>' +
               '</div>' +
               '<div id="lo-c-kpis" class="kpi-grid"></div>' +
               '<div class="table-container" id="lo-c-tabela"></div>' +
@@ -7730,6 +7760,83 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           carregarLoc().then(function() { renderLoc(); desenharRail(); avisoDoDia(); })
             .catch(function(e) { console.error(e); showToast('Não foi possível carregar as locações: ' + (e.message || e), 5000); });
           renderLoc();
+        }
+
+
+        // ---------- FROTA ----------
+        var F = { itens: [], st: '', q: '' };
+        function montarFrota() {
+          var el = $('setor-frota'); if (!el || el.getAttribute('data-ok')) return;
+          el.setAttribute('data-ok', '1');
+          el.innerHTML =
+            '<div class="sx-toolbar">' +
+              '<select id="fr-f-st" class="form-control sx-w"><option value="">Em operação (sem baixados)</option><option value="DISPONÍVEL">Disponíveis</option><option value="LOCADA">Locadas</option><option value="EM MANUTENÇÃO">Em manutenção</option><option value="BAIXADO">Vendidos / baixados</option><option value="todos">Todos</option></select>' +
+              '<input id="fr-f-busca" class="form-control sx-w2" placeholder="Buscar equipamento, dono ou anotação…">' +
+              '<button type="button" class="btn-pls-primary" data-sx="fr-novo">➕ Novo equipamento</button>' +
+            '</div>' +
+            '<div id="fr-kpis" class="kpi-grid"></div><div class="table-container" id="fr-tabela"></div>';
+        }
+        function entrarFrota() {
+          montarFrota(); renderFrota();
+          carregarFrota().then(renderFrota).catch(function(e) { console.error(e); showToast('Não foi possível carregar a frota: ' + (e.message || e), 5000); });
+        }
+        function carregarFrota() { return chk(sb.rpc('frota_listar')).then(function(r) { F.itens = r.data || []; }); }
+        function frotaPorId(id) { return F.itens.filter(function(i) { return i.id === id; })[0]; }
+        function renderFrota() {
+          montarFrota();
+          var n = { total: 0, 'DISPONÍVEL': 0, LOCADA: 0, 'EM MANUTENÇÃO': 0, BAIXADO: 0 }, q = norm(F.q);
+          F.itens.forEach(function(i) { if (i.status === 'BAIXADO') n.BAIXADO++; else { n.total++; n[i.status] = (n[i.status] || 0) + 1; } });
+          $('fr-kpis').innerHTML = kpi('Equipamentos em operação', n.total, '', '#334155') + kpi('Disponíveis', n['DISPONÍVEL'], '', '#2563eb') + kpi('Locadas', n.LOCADA, '', '#16a34a') + kpi('Em manutenção', n['EM MANUTENÇÃO'], '', 'var(--pls-red)') + kpi('Vendidos / baixados', n.BAIXADO, '', '#64748b');
+          var lista = F.itens.filter(function(i) {
+            if (F.st === 'todos') { } else if (F.st) { if (i.status !== F.st) return false; } else if (i.status === 'BAIXADO') return false;
+            return !q || norm((i.equipamento || '') + ' ' + (i.dono || '') + ' ' + (i.anotacoes || '') + ' ' + (i.baixa_motivo || '')).indexOf(q) >= 0;
+          }).sort(function(a, b) { return STATUS_LOC.indexOf(a.status) - STATUS_LOC.indexOf(b.status) || String(a.equipamento).localeCompare(String(b.equipamento), 'pt-BR'); });
+          $('fr-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Equipamento</th><th>Dono</th><th>Anotações</th><th>Baixa</th><th></th></tr></thead><tbody>' +
+            lista.map(function(i) {
+              var bx = i.status === 'BAIXADO' ? '<b>' + esc(i.baixa_motivo || '') + '</b><br><span class="sx-muted">' + fd(i.baixa_em) + '</span>' : '—';
+              return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b>' + (i.foto_path ? ' <span title="Com foto">📷</span>' : '') + '</td><td>' + esc(i.dono || '—') + '</td><td>' + esc(i.anotacoes || '') + '</td><td>' + bx + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="fr-editar" data-id="' + i.id + '">Editar</button>' +
+                (i.status !== 'BAIXADO' && i.status !== 'LOCADA' ? ' <button type="button" class="btn-pls-secondary sx-del" data-sx="fr-baixar" data-id="' + i.id + '" title="Registrar venda ou baixa do equipamento">Vender / baixar</button>' : '') + '</td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento neste filtro.</div>';
+        }
+        function formFrota(it, forcaBaixa) {
+          it = it || { status: 'DISPONÍVEL' }; if (forcaBaixa) it = Object.assign({}, it, { status: 'BAIXADO' });
+          var donos = {}; F.itens.forEach(function(i) { if (i.dono) donos[i.dono] = 1; });
+          var locada = it.status === 'LOCADA';
+          return '<div class="form-grid">' +
+            '<div class="form-group full-width"><label class="form-label">Equipamento <span class="req-star">*</span></label><input id="fr-m-equip" class="form-control" value="' + esc(it.equipamento || '') + '"></div>' +
+            '<div class="form-group"><label class="form-label">Dono do equipamento</label><input id="fr-m-dono" class="form-control" list="fr-dl-dono" value="' + esc(it.dono || '') + '"><datalist id="fr-dl-dono">' + Object.keys(donos).map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>' +
+            '<div class="form-group"><label class="form-label">Status</label>' + (locada ? '<input class="form-control" value="LOCADA (encerre a locação em Locações para mudar)" disabled><input type="hidden" id="fr-m-status" value="LOCADA">' :
+              '<select id="fr-m-status" class="form-control">' + opts([{ v: 'DISPONÍVEL', t: 'DISPONÍVEL' }, { v: 'EM MANUTENÇÃO', t: 'EM MANUTENÇÃO' }, { v: 'BAIXADO', t: 'VENDIDO / BAIXADO' }], it.status) + '</select>') + '</div>' +
+            '<div class="form-group full-width" id="fr-m-baixa" style="display:' + (it.status === 'BAIXADO' ? 'block' : 'none') + '"><div class="form-grid"><div class="form-group"><label class="form-label">Motivo da baixa <span class="req-star">*</span></label><input id="fr-m-motivo" class="form-control" placeholder="Ex.: vendido para Fulano, sucata, roubo…" value="' + esc(it.baixa_motivo || '') + '"></div>' +
+              '<div class="form-group"><label class="form-label">Data da venda / baixa</label><input id="fr-m-baixaem" type="date" class="form-control" value="' + esc(it.baixa_em || hoje()) + '"></div></div></div>' +
+            '<details class="form-group full-width" style="margin:0.2rem 0"' + (it.ficha || it.foto_path ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">📄 Ficha técnica e foto</summary>' +
+              '<div class="form-grid" style="margin-top:0.5rem"><div class="form-group full-width"><label class="form-label">Especificação — uma linha por item, no formato Rótulo: valor</label><textarea id="fr-m-ficha" class="form-control" rows="9">' + esc(it.ficha || FICHA_PADRAO) + '</textarea></div>' +
+              '<div class="form-group full-width"><label class="form-label">Foto ilustrativa do equipamento</label><div class="sx-muted">' + (it.foto_path ? 'Já tem foto — envie outra para trocar.' : 'Sem foto.') + '</div><input id="fr-m-foto" type="file" accept="image/*" class="form-control">' +
+              (it.foto_path ? '<label class="sx-chkl" style="margin-top:0.3rem"><input type="checkbox" id="fr-m-fotodel"> Remover a foto atual</label>' : '') + '</div></div></details>' +
+            '<div class="form-group full-width"><label class="form-label">Anotações</label><input id="fr-m-obs" class="form-control" value="' + esc(it.anotacoes || '') + '"></div></div>';
+        }
+        function abrirFrota(id, forcaBaixa) {
+          var it = id ? frotaPorId(id) : null;
+          abrirModal(forcaBaixa ? 'Vender / baixar equipamento' : (it ? 'Editar equipamento' : 'Novo equipamento da frota'), formFrota(it, forcaBaixa), 'Salvar', function() {
+            var st = $('fr-m-status').value, equip = $('fr-m-equip').value.trim();
+            if (!equip) throw new Error('Informe o equipamento.');
+            if (st === 'BAIXADO' && !$('fr-m-motivo').value.trim()) throw new Error('Informe o motivo da baixa (vendido, sucata…).');
+            var pay = { id: it ? it.id : null, equipamento: equip, dono: $('fr-m-dono').value.trim(), status: st, anotacoes: $('fr-m-obs').value.trim(),
+              ficha: fichaLinhas($('fr-m-ficha').value).length ? $('fr-m-ficha').value.trim() : '', baixa_motivo: st === 'BAIXADO' ? $('fr-m-motivo').value.trim() : '', baixa_em: st === 'BAIXADO' ? ($('fr-m-baixaem').value || hoje()) : '' };
+            var arq = $('fr-m-foto').files[0], tirar = $('fr-m-fotodel') && $('fr-m-fotodel').checked, fotoAntiga = it ? it.foto_path : null, passo = Promise.resolve();
+            if (arq) passo = comprimirImagem(arq).then(function(o) {
+              if (o.blob.size > 10 * 1048576) throw new Error('A foto passa de 10 MB.');
+              var caminho = 'equip/' + novoUUID() + '-' + nomeSeguro(o.nome);
+              return chk(sb.storage.from('com-fotos').upload(caminho, o.blob, { contentType: o.mime || 'image/jpeg', upsert: false })).then(function() { pay.foto_path = caminho; });
+            }); else if (tirar) pay.foto_path = '';
+            else if (!it) pay.foto_path = '';
+            else pay.foto_path = fotoAntiga || '';
+            return passo.then(function() { return chk(sb.rpc('frota_salvar', { p: pay })); }).then(function() {
+              if ((arq || tirar) && fotoAntiga) sb.storage.from('com-fotos').remove([fotoAntiga]);
+              return carregarFrota();
+            }).then(function() { renderFrota(); if (L && carregado.locacoes) carregarLoc().then(function() { renderLoc(); }); showToast(st === 'BAIXADO' ? 'Equipamento baixado e registrado ✔' : 'Equipamento salvo ✔'); });
+          });
         }
 
         function renderLoc() {
@@ -7824,8 +7931,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return L.itens.filter(function(it) { return it.tipo === tipo; });
         }
         function badgeStatus(s) {
-          var c = s === 'LOCADA' || s === 'ATIVO' ? 'ok' : s === 'DISPONÍVEL' ? 'disp' : s === 'ENCERRADO' ? 'enc' : 'manut';
-          return '<span class="sx-pill sx-st-' + c + '">' + esc(s) + '</span>';
+          var c = s === 'LOCADA' || s === 'ATIVO' ? 'ok' : s === 'DISPONÍVEL' ? 'disp' : s === 'ENCERRADO' || s === 'BAIXADO' ? 'enc' : 'manut';
+          return '<span class="sx-pill sx-st-' + c + '">' + esc(s === 'BAIXADO' ? 'VENDIDO / BAIXADO' : s) + '</span>';
         }
         function cellContrato(i) {
           var pr = i.proposta_id && L.props[i.proposta_id]; if (!pr) return '—';
@@ -7835,10 +7942,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var todos = rowsContratos('locacao'), q = norm(L.cBusca);
           var n = { LOCADA: 0, 'EM MANUTENÇÃO': 0, 'DISPONÍVEL': 0 }, rec = 0;
           todos.forEach(function(i) { n[i.status] = (n[i.status] || 0) + 1; if (i.status === 'LOCADA') rec += Number(i.valor || 0); });
-          $('lo-c-kpis').innerHTML = kpi('Locadas', n.LOCADA, '', '#16a34a') + kpi('Disponíveis', n['DISPONÍVEL'], '', '#2563eb') +
-            kpi('Em manutenção', n['EM MANUTENÇÃO'], '', 'var(--pls-red)') + kpi('Receita mensal de locação', brl(rec), 'equipamentos locados', '#334155');
+          $('lo-c-kpis').innerHTML = kpi('Locadas', n.LOCADA, '', '#16a34a') + kpi('Receita mensal de locação', brl(rec), 'equipamentos locados', '#334155') + kpi('Disponíveis para locar', n['DISPONÍVEL'], 'cadastro em Frota', '#2563eb');
           var lista = todos.filter(function(i) {
-            if (L.cStatus && i.status !== L.cStatus) return false;
+            if (i.status !== 'LOCADA') return false;
             return !q || norm(i.cliente + ' ' + i.equipamento + ' ' + i.dono).indexOf(q) >= 0;
           }).sort(function(a, b) {
             return STATUS_LOC.indexOf(a.status) - STATUS_LOC.indexOf(b.status) || String(a.cliente || 'zzz').localeCompare(String(b.cliente || 'zzz'));
@@ -7848,7 +7954,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               return '<tr><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td>' + esc(i.dono || '—') + '</td>' +
                 '<td style="text-align:right;font-weight:700">' + brl(i.valor) + '</td><td>' + (i.cliente && i.dias_antes != null ? i.dias_antes + ' dias antes' : '—') + '</td><td>' + (i.dia_vencimento ? 'dia ' + i.dia_vencimento : '—') + '</td><td>' + cellContrato(i) + '</td><td>' + esc(i.anotacoes || '') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="lo-editar" data-id="' + i.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="lo-excluir" data-id="' + i.id + '">Excluir</button></td></tr>';
-            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento encontrado.</div>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma locação ativa. Use “Nova locação” (o equipamento precisa estar DISPONÍVEL na Frota).</div>';
         }
         function renderServicos() {
           var todos = rowsContratos('servico'), q = norm(L.sBusca), rec = 0, ativos = 0;
@@ -7878,7 +7984,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group full-width"><label class="form-label">Cliente' + (serv ? ' <span class="req-star">*</span>' : ' (vazio se estiver parado)') + '</label><input id="lo-m-cliente" class="form-control" list="lo-dl-cli" value="' + esc(it.cliente || '') + '"><datalist id="lo-dl-cli">' + nomesClientes().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>' +
             (serv ? '' : '<div class="form-group full-width"><label class="form-label">Equipamento <span class="req-star">*</span></label><input id="lo-m-equip" class="form-control" value="' + esc(it.equipamento || '') + '"></div>' +
               '<div class="form-group"><label class="form-label">Dono do equipamento</label><input id="lo-m-dono" class="form-control" list="lo-dl-dono" value="' + esc(it.dono || '') + '"><datalist id="lo-dl-dono">' + Object.keys(donos).map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>') +
-            '<div class="form-group"><label class="form-label">Status</label><select id="lo-m-status" class="form-control">' + opts(serv ? ['ATIVO', 'ENCERRADO'] : STATUS_LOC, it.status) + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Status</label><select id="lo-m-status" class="form-control">' + opts(serv ? ['ATIVO', 'ENCERRADO'] : ['LOCADA', 'EM MANUTENÇÃO', 'DISPONÍVEL'], it.status) + '</select></div>' +
             '<div class="form-group"><label class="form-label">Valor mensal (R$)</label><input id="lo-m-valor" class="form-control" inputmode="decimal" value="' + numStr(it.valor) + '"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-m-envio" type="number" min="0" max="180" class="form-control" value="' + (it.dias_antes != null ? it.dias_antes : 30) + '"></div>' +
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31)</label><input id="lo-m-venc" type="number" min="1" max="31" class="form-control" value="' + (it.dia_vencimento || '') + '"></div>' +
@@ -7892,9 +7998,28 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group full-width"><label class="form-label">Anotações</label><input id="lo-m-obs" class="form-control" value="' + esc(it.anotacoes || '') + '"></div>' +
             '</div>';
         }
+        function abrirNovaLocacao() {
+          var disp = L.itens.filter(function(i) { return i.tipo === 'locacao' && i.status === 'DISPONÍVEL' && i.ativo !== false; }).sort(function(a, b) { return String(a.equipamento).localeCompare(String(b.equipamento), 'pt-BR'); });
+          if (!disp.length) { showToast('Nenhum equipamento DISPONÍVEL. Cadastre ou libere o equipamento no setor Frota.', 5000); return; }
+          abrirModal('Nova locação', '<div class="form-grid">' +
+            '<div class="form-group full-width"><label class="form-label">Equipamento disponível (da Frota) <span class="req-star">*</span></label><select id="lo-n-eq" class="form-control">' + opts(disp.map(function(i) { return { v: i.id, t: i.equipamento + (i.dono ? ' — ' + i.dono : '') }; })) + '</select></div>' +
+            '<div class="form-group full-width"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="lo-n-cli" class="form-control" list="lo-dl-cli2"><datalist id="lo-dl-cli2">' + nomesClientes().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>' +
+            '<div class="form-group"><label class="form-label">Valor mensal (R$)</label><input id="lo-n-valor" class="form-control" inputmode="decimal" value="0,00"></div>' +
+            '<div class="form-group"><label class="form-label">Dia do vencimento (1–31) <span class="req-star">*</span></label><input id="lo-n-venc" type="number" min="1" max="31" class="form-control"></div>' +
+            '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-n-antes" type="number" min="0" max="180" class="form-control" value="30"></div>' +
+            '<div class="form-group full-width"><label class="form-label">Anotações</label><input id="lo-n-obs" class="form-control"></div></div>', 'Criar locação', function() {
+            var eq = $('lo-n-eq').value, cli = $('lo-n-cli').value.trim(), venc = parseInt($('lo-n-venc').value, 10), antes = parseInt($('lo-n-antes').value, 10);
+            if (!eq) throw new Error('Escolha o equipamento.'); if (!cli) throw new Error('Informe o cliente.');
+            if (!(venc >= 1 && venc <= 31)) throw new Error('Dia do vencimento de 1 a 31.'); if (isNaN(antes) || antes < 0 || antes > 180) throw new Error('Dias antes: de 0 a 180.');
+            var d = { status: 'LOCADA', cliente: cli, valor: r2(parseValor($('lo-n-valor').value)), dia_vencimento: venc, dias_antes: antes }; var ob = $('lo-n-obs').value.trim(); if (ob) d.anotacoes = ob;
+            return chk(sb.from('loc_itens').update(d).eq('id', eq).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregarLoc(); })
+              .then(function() { renderLoc(); desenharRail(); showToast('Locação criada ✔'); });
+          });
+        }
         function abrirItem(id, tipo) {
           var it = id ? L.itens.filter(function(i) { return i.id === id; })[0] : null;
           tipo = it ? it.tipo : tipo;
+          if (!it && tipo === 'locacao') { abrirNovaLocacao(); return; }
           abrirModal((it ? 'Editar ' : 'Novo ') + (tipo === 'servico' ? 'contrato de serviço' : 'equipamento / locação'), formItem(it, tipo), 'Salvar', function() {
             var serv = tipo === 'servico';
             var d = {
@@ -11509,6 +11634,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'lo-sub': subLoc = a.getAttribute('data-v'); renderLoc(); break;
             case 'lo-mes': { var d = parseInt(a.getAttribute('data-d'), 10); L.comp = d === 0 ? compAtual() : addMes(L.comp, d); if (L.comp < '2026-10') L.comp = '2026-10'; carregarLoc().then(renderFaturas); renderFaturas(); break; }
             case 'lo-novo': abrirItem(null, a.getAttribute('data-tipo')); break;
+            case 'fr-novo': abrirFrota(null); break;
+            case 'fr-editar': abrirFrota(id); break;
+            case 'fr-baixar': abrirFrota(id, true); break;
             case 'lo-editar': abrirItem(id); break;
             case 'lo-excluir': excluirItem(id); break;
             case 'lo-contrato': abrirAssinado(L.props[id]); break;
@@ -11614,6 +11742,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'lo-c-busca': L.cBusca = t.value; renderContratos(); break;
             case 'lo-s-busca': L.sBusca = t.value; renderServicos(); break;
             case 'rh-f-busca': R.fBusca = t.value; renderColab(); break;
+            case 'fr-f-st': F.st = t.value; renderFrota(); break;
+            case 'fr-f-busca': F.q = t.value; renderFrota(); break;
           }
         });
 
@@ -11626,6 +11756,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       var PERMISSOES = [
         { k: 'setor_demandas', g: 'setores', t: 'Demandas' },
         { k: 'setor_locacoes', g: 'setores', t: 'Locações' },
+        { k: 'setor_frota', g: 'setores', t: 'Frota (cadastro de equipamentos, sem valores)' },
         { k: 'setor_rh', g: 'setores', t: 'RH' },
         { k: 'setor_comercial', g: 'setores', t: 'Comercial' },
         { k: 'setor_manutencao', g: 'setores', t: 'Manutenção' },
@@ -11790,6 +11921,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var ini = document.getElementById('au-ini').value, fim = document.getElementById('au-fim').value || ini;
             if (!ini) throw new Error('Informe a data.');
             if (fim < ini) throw new Error('A data final é antes da inicial.');
+            var conf = itensAgenda().filter(function(x) { return x.tec === tec && !x.done && x.data >= ini && x.data <= fim; });
+            if (conf.length) throw new Error(tec + ' tem ' + conf.length + ' serviço(s)/demanda(s) em andamento nesse período: ' + conf.slice(0, 6).map(function(x) { return formatDateBR(x.data) + ' — ' + x.cliente; }).join('; ') + (conf.length > 6 ? '…' : '') + '. Passe esses serviços para outro técnico antes de lançar a ausência.');
             var row = { id: crypto.randomUUID(), tecnico: tec, data_ini: ini, data_fim: fim, tipo: document.getElementById('au-tipo').value, obs: document.getElementById('au-obs').value.trim() || null };
             return chk(sb.from('tec_ausencias').insert(row).select('id')).then(function(r) {
               if (!r.data.length) throw new Error('Você não tem permissão para isso.');

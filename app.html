@@ -926,6 +926,8 @@ function salvarAus(){
   var tec=$('sheet').getAttribute('data-id'),ini=$('au-ini').value,fim=$('au-fim').value||ini;
   if(!ini){toast('Informe a data.');return;}
   if(fim<ini){toast('A data final é antes da inicial.');return;}
+  var conf=itens().filter(function(i){return i.tec===tec&&!i.done&&i.data>=ini&&i.data<=fim;});
+  if(conf.length){toast('⚠ '+tec+' tem '+conf.length+' serviço(s) em andamento nesse período. Passe para outro técnico antes de lançar a ausência.',6000);return;}
   var row={id:uuid(),tecnico:tec,data_ini:ini,data_fim:fim,tipo:$('au-tipo').value,obs:$('au-obs').value.trim()||null};
   chk(sb.from('tec_ausencias').insert(row).select('id')).then(function(r){
     if(!r.data.length)throw new Error('Você não tem permissão para isso.');
