@@ -2438,6 +2438,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .mpb-nt { font-size: 6.6pt; margin-top: 0.8mm; }
     .mpb-rgb { border: 1px solid #111827; padding: 1.5mm 2.5mm; }
     .mpb-rgb p { margin: 1.2mm 0; font-size: 6.6pt; }
+    .rs-page { page-break-after: always; padding: 4mm 6mm; font-family: Arial, sans-serif; color: #000; }
+    .rs-dados { width: 100%; border-collapse: collapse; margin: 2mm 0; font-size: 9pt; } .rs-dados th { text-align: left; background: #f1f5f9; border: 1px solid #94a3b8; padding: 1mm 2mm; width: 15%; } .rs-dados td { border: 1px solid #94a3b8; padding: 1mm 2mm; }
+    .rs-loc { margin-top: 8mm; font-size: 10pt; } .rs-ass { display: flex; gap: 14mm; margin-top: 16mm; } .rs-ass div { flex: 1; text-align: center; font-size: 8pt; } .rs-ass i { display: block; border-bottom: 1px solid #000; height: 8mm; margin-bottom: 1mm; } .rs-test { margin-top: 10mm; }
+    .rs-doc.rc { height: auto; }
     .pls-tip { position: fixed; z-index: 2147483000; background: #111827; color: #fff; font: 600 14px/1.25 Arial, sans-serif; padding: 7px 12px; border-radius: 8px; pointer-events: none; box-shadow: 0 6px 18px rgba(0,0,0,.35); max-width: 280px; display: none; }
     .mn-pc-row { display: grid; grid-template-columns: 1.7fr 1fr 1.2fr 0.6fr 1.3fr auto; gap: 4px; margin-bottom: 4px; }
     .mn-pc-row input { min-width: 0; }
@@ -2560,7 +2564,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v46 — 09/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v49 — 09/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7977,7 +7981,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         function compPadraoRh() { var d = parseInt(hoje().slice(8, 10), 10); return d <= 10 ? addMes(compAtual(), -1) : compAtual(); }
         var R = { empresas: [], colab: [], lanc: [], rec: [], ferias: [], prest: [], pjpag: [], arq: [], compPj: compPadraoRh(), comp: compPadraoRh(), compL: compPadraoRh(),
-                  fSit: 'ativos', fBusca: '', lFiltroColab: '', rEmpresa: '', over: {}, sel: {}, dec: [], decAno: parseInt(hoje().slice(0, 4), 10), decModo: {}, decSel: {}, decEmp: '' };
+                  fSit: 'ativos', fBusca: '', lFiltroColab: '', rEmpresa: '', over: {}, sel: {}, dec: [], decAno: parseInt(hoje().slice(0, 4), 10), decModo: {}, decSel: {}, decEmp: '', resc: [], rs: { id: '', tipo: 'sem_justa', dt: '', aviso: 'indenizado', fgts: '', itens: [] } };
         var CAT = {
           vale:   { cod: 115, desc: 'Vales', nat: 'desconto', t: 'Vale / adiantamento em dinheiro' },
           refeicao: { cod: 118, desc: 'Adiantamento Refeição', nat: 'desconto', t: 'Adiantamento de refeição' },
@@ -7997,8 +8001,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('rh_prestadores').select('*').order('nome')),
             buscarTudo('rh_pj_pagamentos', function(q) { return q.order('competencia', { ascending: false }); }),
             buscarTudo('rh_arquivos', function(q) { return q.order('created_at', { ascending: false }); }),
-            chk(sb.from('rh_decimo').select('*'))
+            chk(sb.from('rh_decimo').select('*')),
+            chk(sb.from('rh_rescisoes').select('*').order('created_at', { ascending: false })).catch(function() { return { data: [] }; })
           ]).then(function(r) {
+            R.resc = (r[9].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); x.total_vencimentos = Number(x.total_vencimentos || 0); x.total_descontos = Number(x.total_descontos || 0); return x; });
             R.arq = r[7] || [];
             R.dec = (r[8].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); return x; });
             R.prest = (r[5].data || []).map(function(p) { p.servicos = Array.isArray(p.servicos) ? p.servicos : []; return p; }); R.pjpag = (r[6] || []).map(function(g) { g.total = Number(g.total || 0); g.itens = Array.isArray(g.itens) ? g.itens : []; return g; });
@@ -8018,16 +8024,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           el.innerHTML =
             '<div class="sx-subnav no-print">' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="colab">👥 Colaboradores</button>' +
-              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="pj">🤝 Prestadores (PJ)</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="lanc">✏ Descontos e vales</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="recibos">🧾 Recibos de pagamento</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="ferias">🏖 Férias</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="dec">🎄 13º salário</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="resc">📝 Rescisão</button>' +
             '</div>' +
             '<div id="rh-p-colab" class="sx-pane">' +
               '<div class="sx-toolbar">' +
                 '<select id="rh-f-sit" class="form-control sx-w"><option value="ativos">Ativos</option><option value="demitidos">Desligados</option><option value="todos">Todos</option></select>' +
-                '<input id="rh-f-busca" class="form-control sx-w2" placeholder="Buscar nome, CPF ou função…">' +
+                '<select id="rh-f-reg" class="form-control sx-w"><option value="">CLT e PJ</option><option value="clt">Só CLT</option><option value="pj">Só PJ</option></select>' +
+                '<input id="rh-f-busca" class="form-control sx-w2" placeholder="Buscar nome, CPF/CNPJ ou função…">' +
                 '<button type="button" class="btn-pls-secondary" data-sx="rh-empresas">🏢 Empresas dos recibos</button>' +
                 '<button type="button" class="btn-pls-primary" data-sx="rh-novo">➕ Novo colaborador</button>' +
               '</div>' +
@@ -8080,6 +8087,18 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div id="rh-d-kpis" class="kpi-grid"></div>' +
               '<div class="table-container" id="rh-d-tabela"></div>' +
             '</div>' +
+            '<div id="rh-p-resc" class="sx-pane">' +
+              '<div class="sx-toolbar">' +
+                '<select id="rh-rs-colab" class="form-control sx-w2"></select>' +
+                '<select id="rh-rs-tipo" class="form-control sx-w2"><option value="sem_justa">Demitido sem justa causa</option><option value="pedido">Pediu demissão</option><option value="acordo">Acordo (comum acordo)</option><option value="justa">Demitido por justa causa</option></select>' +
+                '<label class="sx-chkl">Data do desligamento <input id="rh-rs-data" type="date" class="form-control" style="width:auto"></label>' +
+                '<select id="rh-rs-aviso" class="form-control sx-w2"><option value="indenizado">Aviso prévio indenizado (paga o aviso)</option><option value="trabalhado">Aviso trabalhado / sem aviso a pagar</option><option value="nao_cumprido">Não cumpriu o aviso (desconta)</option></select>' +
+              '</div>' +
+              '<div class="sx-dica">O cálculo puxa o cadastro (admissão, salário, benefícios), as <b>férias já gozadas</b>, o <b>13º já pago</b> e os <b>vales/descontos lançados</b> a partir do mês do desligamento. É uma <b>estimativa para conferência</b>: todos os valores podem ser editados antes de imprimir, e vale conferir com o contador (principalmente INSS, IRRF e o saldo do FGTS).</div>' +
+              '<div id="rh-rs-corpo"></div>' +
+              '<h4 class="sx-h4">Rescisões geradas</h4>' +
+              '<div class="table-container" id="rh-rs-hist"></div>' +
+            '</div>' +
             '<div id="rh-p-ferias" class="sx-pane">' +
               '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="rh-fer-novo">➕ Lançar férias</button></div>' +
               '<div class="sx-dica">Período aquisitivo = 12 meses desde a admissão. Depois dele, a empresa tem mais 12 meses (período concessivo) para conceder as férias; passou disso, ficam <b>vencidas</b>.</div>' +
@@ -8097,9 +8116,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderRh() {
           montarRh();
-          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
+          if (subRh === 'pj') subRh = 'colab';
+          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
           document.querySelectorAll('#setor-rh .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === subRh); });
-          if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else renderFerias();
+          if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
         }
 
         // ---------- férias ----------
@@ -8146,27 +8166,41 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           });
           return t;
         }
+        function pjValor(p) { var v = Number(p.valor_mensal || 0); if (v > 0) return v; var t = 0; (p.servicos || []).forEach(function(x) { if (x.recorrente) t += Number(x.valor || 0); }); return t; }
         function renderColab() {
-          var q = norm(R.fBusca), todos = R.colab, at = todos.filter(ativo);
+          var q = norm(R.fBusca), todos = R.colab, at = todos.filter(ativo), reg = R.fReg || '';
           var folha = 0, venc = 0, alerta = 0;
           at.forEach(function(c) { folha += folhaMensal(c); var s = feriasStatus(c); if (s.v === 2) venc++; else if (s.v === 1) alerta++; });
-          $('rh-kpis').innerHTML = kpi('Colaboradores ativos', at.length, '', '#16a34a') + kpi('Folha mensal estimada', brl(folha), 'salário + benefícios fixos', '#334155') +
-            kpi('Férias vencidas', venc, '', 'var(--pls-red)') + kpi('Férias a vencer (90 dias)', alerta, '', 'var(--accent)') + kpi('Desligados', todos.length - at.length, '', '#64748b');
-          var lista = todos.filter(function(c) {
+          var pat = R.prest.filter(prestAtivo); pat.forEach(function(p) { folha += pjValor(p); });
+          $('rh-kpis').innerHTML = kpi('Ativos', at.length + pat.length, at.length + ' CLT · ' + pat.length + ' PJ', '#16a34a') + kpi('Folha mensal estimada', brl(folha), 'salário + benefícios fixos + PJ', '#334155') +
+            kpi('Férias vencidas (CLT)', venc, '', 'var(--pls-red)') + kpi('Férias a vencer (90 dias)', alerta, '', 'var(--accent)') + kpi('Desligados / encerrados', (todos.length - at.length) + (R.prest.length - pat.length), '', '#64748b');
+          var lista = reg === 'pj' ? [] : todos.filter(function(c) {
             if (R.fSit === 'ativos' && !ativo(c)) return false;
             if (R.fSit === 'demitidos' && ativo(c)) return false;
             return !q || norm(c.nome + ' ' + (c.cpf || '') + ' ' + (c.funcao || '')).indexOf(q) >= 0;
           });
-          $('rh-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nome</th><th>Função</th><th>Empresa</th><th>Admissão</th><th>Tempo</th><th style="text-align:right">Salário</th><th>Benefícios</th><th>Férias</th><th>Situação</th><th></th></tr></thead><tbody>' +
-            lista.map(function(c) {
-              var e = empPorId(c.empresa_id), fs = feriasStatus(c);
-              return '<tr' + (ativo(c) ? '' : ' class="sx-row-enc"') + '><td><b>' + esc(c.nome) + '</b><br><span class="sx-muted">' + esc(c.cpf || '') + '</span></td><td>' + esc(c.funcao || '—') + '</td><td>' + esc(e ? e.nome.split(' ').slice(0, 2).join(' ') : '—') + '</td>' +
-                '<td>' + fd(c.admissao) + '</td><td>' + tempoCasa(c) + '</td><td style="text-align:right;font-weight:700">' + brl(c.salario) + '</td>' +
-                '<td>' + (c.beneficios.length ? c.beneficios.map(function(b) { return esc(b.desc); }).join(', ') : '—') + '</td>' +
-                '<td><span class="sx-pill sx-' + fs.c + '">' + esc(fs.t) + '</span></td>' +
-                '<td>' + (ativo(c) ? '<span class="sx-pill sx-st-ok">ATIVO</span>' : '<span class="sx-pill sx-st-enc">DESLIGADO ' + fd(c.demissao) + '</span>') + '</td>' +
-                '<td class="sx-acoes">' + btnPasta('colaborador', c.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-editar" data-id="' + c.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-excluir" data-id="' + c.id + '">Excluir</button></td></tr>';
-            }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum colaborador. Clique em “Novo colaborador”.</div>';
+          var listaPj = reg === 'clt' ? [] : R.prest.filter(function(p) {
+            if (R.fSit === 'ativos' && !prestAtivo(p)) return false;
+            if (R.fSit === 'demitidos' && prestAtivo(p)) return false;
+            return !q || norm(p.nome + ' ' + (p.cnpj || '') + ' ' + (p.cpf || '') + ' ' + (p.funcao || '') + ' ' + (p.razao_social || '')).indexOf(q) >= 0;
+          });
+          var rowsC = lista.map(function(c) {
+            var e = empPorId(c.empresa_id), fs = feriasStatus(c);
+            return { nome: c.nome, h: '<tr' + (ativo(c) ? '' : ' class="sx-row-enc"') + '><td><b>' + esc(c.nome) + '</b> <span class="sx-pill sx-ok">CLT</span><br><span class="sx-muted">' + esc(c.cpf || '') + '</span></td><td>' + esc(c.funcao || '—') + '</td><td>' + esc(e ? e.nome.split(' ').slice(0, 2).join(' ') : '—') + '</td>' +
+              '<td>' + fd(c.admissao) + '</td><td>' + tempoCasa(c) + '</td><td style="text-align:right;font-weight:700">' + brl(c.salario) + '</td>' +
+              '<td>' + (ativo(c) ? '<span class="sx-pill sx-st-ok">ATIVO</span>' : '<span class="sx-pill sx-st-enc">DESLIGADO ' + fd(c.demissao) + '</span>') + '</td>' +
+              '<td class="sx-acoes">' + btnPasta('colaborador', c.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-editar" data-id="' + c.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-excluir" data-id="' + c.id + '">Excluir</button></td></tr>' };
+          });
+          var rowsP = listaPj.map(function(p) {
+            var e = empPorId(p.empresa_id);
+            return { nome: p.nome, h: '<tr' + (prestAtivo(p) ? '' : ' class="sx-row-enc"') + '><td><b>' + esc(p.nome) + '</b> <span class="sx-pill sx-hoje">PJ</span><br><span class="sx-muted">' + esc(p.cnpj ? 'CNPJ ' + p.cnpj : p.cpf ? 'CPF ' + p.cpf : '') + '</span></td><td>' + esc(p.funcao || '—') + '</td><td>' + esc(e ? e.nome.split(' ').slice(0, 2).join(' ') : '—') + '</td>' +
+              '<td>' + fd(p.inicio) + '</td><td>' + (p.contrato_assinado ? 'Contrato assinado' : '<span class="sx-muted">Sem contrato</span>') + '</td><td style="text-align:right;font-weight:700">' + brl(pjValor(p)) + '</td>' +
+              '<td>' + (prestAtivo(p) ? '<span class="sx-pill sx-st-ok">ATIVO</span>' : '<span class="sx-pill sx-st-enc">ENCERRADO ' + fd(p.fim) + '</span>') + '</td>' +
+              '<td class="sx-acoes">' + btnPasta('prestador', p.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-editar" data-id="' + p.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pj-excluir" data-id="' + p.id + '">Excluir</button></td></tr>' };
+          });
+          var todasL = rowsC.concat(rowsP).sort(function(a, b) { return norm(a.nome).localeCompare(norm(b.nome)); });
+          $('rh-tabela').innerHTML = todasL.length ? '<table class="table-pls"><thead><tr><th>Nome</th><th>Função</th><th>Empresa</th><th>Admissão / início</th><th>Tempo / contrato</th><th style="text-align:right">Salário / valor mensal</th><th>Situação</th><th></th></tr></thead><tbody>' +
+            todasL.map(function(x) { return x.h; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum colaborador. Clique em “Novo colaborador”.</div>';
         }
 
         function codBen(desc) { var d = norm(desc); return d.indexOf('transp') >= 0 ? 111 : d.indexOf('alim') >= 0 ? 110 : d.indexOf('refei') >= 0 ? 110 : 150; }
@@ -8199,9 +8233,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="sx-bens-add"><button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="transp">+ Transporte (por dia)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="alim">+ Alimentação (fixo)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="outro">+ Outro</button></div>' +
             '<div class="form-group full-width" style="margin-top:.7rem"><label class="form-label">Observações</label><textarea id="rh-m-obs" class="form-control" rows="2">' + esc(c.obs || '') + '</textarea></div>';
         }
-        function abrirColab(id) {
+        function abrirColab(id, nomePre) {
           var c = id ? colabPorId(id) : null;
-          abrirModal(c ? 'Editar colaborador' : 'Novo colaborador', formColab(c), 'Salvar', function() {
+          var regSel = c ? '' : '<div class="form-group" style="margin-bottom:.6rem"><label class="form-label">Regime</label><select id="rh-m-regime" class="form-control"><option value="clt" selected>CLT (colaborador)</option><option value="pj">PJ (prestador de serviço)</option></select></div>';
+          abrirModal(c ? 'Editar colaborador' : 'Novo colaborador', regSel + formColab(c || (nomePre ? { nome: nomePre, salario: 0, fgts_separado: true, beneficios: [] } : null)), 'Salvar', function() {
             var bens = [];
             document.querySelectorAll('#rh-bens .rh-ben').forEach(function(r) {
               var desc = r.querySelector('.rh-b-desc').value.trim(); if (!desc) return;
@@ -8384,7 +8419,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="cl-h1"><span>' + esc(String(e.nome).toUpperCase()) + '</span><b>' + esc(op && op.titulo ? op.titulo : 'Demonstrativo de Pagamento de Salário') + '</b></div>' +
             '<div class="cl-h2">' + esc(String(e.endereco || '').toUpperCase()) + '</div>' +
             '<div class="cl-h3"><span>' + (op && op.periodo ? esc(op.periodo) : fd(comp + '-01') + ' a ' + fd(ult)) + '</span><span>' + esc(c.departamento || '') + '</span><span>' + esc(doc) + '</span></div>' +
-            '<div class="cl-h4"><span>' + esc(matriculaDe(c)) + ' ' + esc(c.nome) + '</span><span>' + esc(c.funcao || '') + '</span></div>' +
+            '<div class="cl-h4"><span>' + esc(matriculaDe(c)) + ' ' + esc(c.nome) + '</span><span>' + esc(c.funcao || '') + '</span><span>CPF ' + esc(c.cpf || '—') + '</span></div>' +
             '<table class="cl-tab"><thead><tr><th style="width:8%">Cód.</th><th>Descrição</th><th style="width:15%">Referência</th><th style="width:17%">Vencimentos</th><th style="width:17%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
             '<tfoot><tr><td colspan="3" class="cl-sp"></td><td class="r">' + m(t.v) + '</td><td class="r">' + m(t.d) + '</td></tr><tr><td colspan="3" class="cl-sp"></td><td class="r"><b>Valor Líquido</b></td><td class="r"><b>' + m(t.l) + '</b></td></tr></tfoot></table>' +
             '<table class="cl-bases"><thead><tr><th>Salário Base</th><th>Sal. Contri. INSS</th><th>Base INSS Dif. Sal.</th><th>Base Cál. FGTS</th><th>F.G.T.S do mês</th><th>Base FGTS Dif. Sal.</th><th>Base Cálc. IRRF</th><th>Alíq. IRRF</th></tr></thead><tbody><tr><td>' + m(b.salario) + '</td><td>' + m(b.inss) + '</td><td>' + m(b.difInss) + '</td><td>' + m(b.fgts) + '</td><td>' + m(b.fgtsMes) + '</td><td>' + m(b.difFgts) + '</td><td>' + m(b.irrf) + '</td><td>' + m(b.aliq) + ' %</td></tr></tbody></table>' +
@@ -8419,11 +8454,29 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function recSalvo(cid, comp) { return R.rec.filter(function(r) { return r.colaborador_id === cid && r.competencia === comp; })[0]; }
 
         function renderRecibos() {
+          R.compPj = R.comp;
           $('rh-mes-txt').textContent = nomeMes(R.comp);
           var se = $('rh-r-emp'), ant = R.rEmpresa;
           se.innerHTML = opts(R.empresas.map(function(e) { return { v: e.id, t: e.nome }; }), ant, 'Todas as empresas');
           var lista = R.colab.filter(function(c) { return rhElegivel(c, R.comp) && (!ant || c.empresa_id === ant); });
           var tv = 0, td = 0, tl = 0, pagos = 0;
+          var pjl = pjElegiveis(), pjLinhas = pjl.map(function(p) {
+            var g = pjPag(p.id, R.comp), it = g ? g.itens : pjItensPadrao(p).concat(pjLancItens(p.id, R.comp)), t = pjTots(it), sit, ac, vid = 'pj:' + p.id;
+            tv += t.v; td += t.d; tl += t.l; if (g && g.pago) pagos++;
+            if (g) {
+              var precisaNf = p.exige_nf && !g.nf_recebida;
+              sit = (g.pago ? '<span class="sx-pill sx-ok">Pago ' + fd(g.data_pagamento) + '</span>' : '<span class="sx-pill sx-hoje">Gerado</span>') + (p.exige_nf ? (g.nf_recebida ? ' <span class="sx-pill sx-ok">NF ' + esc(g.nf_numero || '') + '</span>' : ' <span class="sx-pill sx-atraso">NF pendente</span>') : '');
+              ac = '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-ajustar" data-id="' + g.id + '">Ajustar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-pj-nf" data-id="' + g.id + '">NF</button> ' + btnPasta('prestador', p.id, 'nf', g.competencia, '📎 NF') +
+                (precisaNf ? '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-cobrar" data-id="' + g.id + '" title="Copia a mensagem de cobrança da nota fiscal">Cobrar NF</button> ' : '') +
+                '<button type="button" class="btn-pls-secondary" data-sx="rh-r-um" data-id="' + vid + '">🖨</button> <button type="button" class="btn-pls-secondary" data-sx="rh-pj-pago" data-id="' + g.id + '" data-v="' + (g.pago ? 0 : 1) + '">' + (g.pago ? 'Desfazer pago' : 'Marcar pago') + '</button> <button type="button" class="btn-pls-secondary" data-sx="rh-pj-des" data-id="' + g.id + '" title="Volta este recibo para Não gerado">Desfazer geração</button>';
+            } else {
+              sit = '<span class="sx-pill sx-espera">Não gerado</span>';
+              ac = '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-gerar" data-id="' + p.id + '">Gerar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-r-um" data-id="' + vid + '">🖨</button>';
+            }
+            return '<tr><td style="text-align:center"><input type="checkbox" class="sx-chk" data-sx="rh-r-sel" data-id="' + vid + '"' + (R.sel[vid] ? ' checked' : '') + '></td>' +
+              '<td><b>' + esc(p.nome) + '</b> <span class="sx-pill sx-hoje">PJ</span></td><td>' + esc((empPorId(p.empresa_id) || {}).nome || '—') + '</td>' +
+              '<td style="text-align:right">' + brl(t.v) + '</td><td style="text-align:right;color:var(--pls-red)">' + brl(t.d) + '</td><td style="text-align:right;font-weight:800">' + brl(t.l) + '</td><td>' + sit + '</td><td class="sx-acoes">' + ac + '</td></tr>';
+          });
           var linhas = lista.map(function(c) {
             var it = itensRecibo(c, R.comp), t = totais(it), s = recSalvo(c.id, R.comp);
             tv += t.v; td += t.d; tl += t.l; if (s && s.pago) pagos++;
@@ -8433,13 +8486,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             else sit = '<span class="sx-pill sx-espera">Não gerado</span>';
             if (arqDe('colaborador', c.id).some(function(a) { return a.categoria === 'recibo' && a.competencia === R.comp; })) sit += ' <span class="sx-pill sx-ok">assinado ✔</span>';
             return '<tr><td style="text-align:center"><input type="checkbox" class="sx-chk" data-sx="rh-r-sel" data-id="' + c.id + '"' + (R.sel[c.id] ? ' checked' : '') + '></td>' +
-              '<td><b>' + esc(c.nome) + '</b>' + (c.carteira_assinada ? ' <span class="sx-pill sx-ok">CLT</span>' : '') + (R.over[c.id + '|' + R.comp] ? ' <span class="sx-pill sx-hoje">ajustado</span>' : '') + '</td><td>' + esc((empPorId(c.empresa_id) || {}).nome ? empPorId(c.empresa_id).nome.split(' ').slice(0, 2).join(' ') : '— sem empresa —') + '</td>' +
+              '<td><b>' + esc(c.nome) + '</b>' + ' <span class="sx-pill sx-ok">CLT</span>' + (R.over[c.id + '|' + R.comp] ? ' <span class="sx-pill sx-hoje">ajustado</span>' : '') + '</td><td>' + esc((empPorId(c.empresa_id) || {}).nome ? empPorId(c.empresa_id).nome.split(' ').slice(0, 2).join(' ') : '— sem empresa —') + '</td>' +
               '<td style="text-align:right">' + brl(t.v) + '</td><td style="text-align:right;color:var(--pls-red)">' + brl(t.d) + '</td><td style="text-align:right;font-weight:800">' + brl(t.l) + '</td><td>' + sit + '</td>' +
               '<td class="sx-acoes">' + btnPasta('colaborador', c.id, 'recibo', R.comp, '📎 Assinado') + '<button type="button" class="btn-pls-secondary" data-sx="rh-r-ajustar" data-id="' + c.id + '">Ajustar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-r-um" data-id="' + c.id + '">🖨</button> ' +
-              (s && s.pago ? '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="0">Desfazer pago</button>' : '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="1">Marcar pago</button>') + '</td></tr>';
+              (s && s.pago ? '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="0">Desfazer pago</button>' : '<button type="button" class="btn-pls-secondary" data-sx="rh-r-pago" data-id="' + c.id + '" data-v="1">Marcar pago</button>') + (s ? ' <button type="button" class="btn-pls-secondary" data-sx="rh-r-des" data-id="' + c.id + '" title="Volta este recibo para Não gerado">Desfazer geração</button>' : '') + '</td></tr>';
           });
-          $('rh-r-kpis').innerHTML = kpi('Recibos do mês', lista.length, pagos + ' pagos', '#334155') + kpi('Total de vencimentos', brl(tv), '', '#16a34a') + kpi('Total de descontos', brl(td), '', 'var(--pls-red)') + kpi('Líquido a pagar', brl(tl), '', 'var(--accent)');
-          $('rh-r-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Empresa</th><th style="text-align:right">Vencimentos</th><th style="text-align:right">Descontos</th><th style="text-align:right">Líquido</th><th>Situação</th><th></th></tr></thead><tbody>' + linhas.join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum colaborador com salário neste mês.</div>';
+          $('rh-r-kpis').innerHTML = kpi('Recibos do mês', lista.length + pjl.length, pagos + ' pagos', '#334155') + kpi('Total de vencimentos', brl(tv), '', '#16a34a') + kpi('Total de descontos', brl(td), '', 'var(--pls-red)') + kpi('Líquido a pagar', brl(tl), '', 'var(--accent)');
+          lista = lista.concat(pjl);
+          $('rh-r-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th style="width:36px"></th><th>Colaborador</th><th>Empresa</th><th style="text-align:right">Vencimentos</th><th style="text-align:right">Descontos</th><th style="text-align:right">Líquido</th><th>Situação</th><th></th></tr></thead><tbody>' + linhas.concat(pjLinhas).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum colaborador com salário neste mês.</div>';
         }
 
         function abrirAjuste(id, ov) {
@@ -8479,7 +8533,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">' + esc(op && op.titulo ? op.titulo : 'RECIBO DE PAGAMENTO') + '</div></div>' +
             '<div class="rc-emp"><div><b>' + esc(e.nome) + '</b><br>' + esc(e.endereco || '') + (e.endereco ? '<br>' : '') + esc(e.documento || '') + '</div>' +
             '<div class="rc-per"><span>' + (op && op.rotulo ? esc(op.rotulo) : 'Período de serviço') + '</span><b>' + (op && op.periodo ? esc(op.periodo) : fd(comp + '-01') + ' a ' + fd(ult)) + '</b></div></div>' +
-            '<div class="rc-nome"><div><span>Nome completo</span><b>' + esc(c.nome) + '</b></div><div><span>CPF</span><b>' + esc(c.cpf || '') + '</b></div></div>' +
+            '<div class="rc-nome"><div><span>Nome completo</span><b>' + esc(c.nome) + '</b></div><div><span>Função</span><b>' + esc(c.funcao || '—') + '</b></div><div><span>CPF</span><b>' + esc(c.cpf || '—') + '</b></div></div>' +
             '<table class="rc-tab"><thead><tr><th style="width:9%">Cód</th><th>Descrição</th><th style="width:12%">Referência</th><th style="width:19%">Vencimento</th><th style="width:19%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
             '<tfoot><tr><td colspan="3" class="r">Total de vencimentos / descontos</td><td class="r"><b>' + m(t.v) + '</b></td><td class="r"><b>' + m(t.d) + '</b></td></tr>' +
             '<tr class="rc-liq"><td colspan="3" class="r">Líquido recebido &gt;&gt;&gt;&gt;</td><td colspan="2" class="r"><b>R$ ' + m(t.l) + '</b></td></tr></tfoot></table>' +
@@ -8487,8 +8541,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="rc-ass"><div><i></i>DATA</div><div><i></i>ASSINATURA DO FUNCIONÁRIO</div></div></div>';
         }
         function gerarRecibos(ids) {
+          var falt = ids.filter(function(i) { return /^pj:/.test(i) && !pjPag(i.slice(3), R.comp); }).map(function(i) { return prestPorId(i.slice(3)); }).filter(Boolean);
+          if (falt.length) {
+            var rowsF = falt.map(function(p) { var it = pjItensPadrao(p).concat(pjLancItens(p.id, R.comp)); return { prestador_id: p.id, competencia: R.comp, itens: it, total: pjTotal(it) }; });
+            chk(sb.from('rh_pj_pagamentos').insert(rowsF).select()).then(carregarRh).then(function() { gerarRecibos(ids); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+            return;
+          }
           var vias = $('rh-r-vias') && $('rh-r-vias').checked, htmls = [], snaps = [];
           ids.forEach(function(id) {
+            if (/^pj:/.test(id)) { var gp = pjPag(id.slice(3), R.comp); if (gp) { var hp = pjReciboHtml(gp); htmls.push(hp); if (vias) htmls.push(hp); } return; }
             var c = colabPorId(id); if (!c) return;
             var it = itensRecibo(c, R.comp), t = totais(it), h = reciboHtml(c, R.comp, it);
             htmls.push(h); if (vias) htmls.push(h);
@@ -8498,9 +8559,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var pag = '';
           for (var i = 0; i < htmls.length; i += 2) pag += '<div class="rc-page">' + htmls[i] + (htmls[i + 1] || '') + '</div>';
           $('rh-print-area').innerHTML = pag;
-          chk(sb.from('rh_recibos').upsert(snaps, { onConflict: 'colaborador_id,competencia' })).then(carregarRh).then(function() { renderRecibos(); })
+          (snaps.length ? chk(sb.from('rh_recibos').upsert(snaps, { onConflict: 'colaborador_id,competencia' })) : Promise.resolve()).then(carregarRh).then(function() { renderRecibos(); })
             .catch(function(e) { showToast('O recibo foi montado, mas não consegui gravar o registro: ' + (e.message || e), 5000); });
           imprimirArea('print-rh', 'portrait');
+        }
+        function desfazerRecibo(id) {
+          var c = colabPorId(id), sv = recSalvo(id, R.comp); if (!c || !sv) return;
+          if (!confirm('Voltar o recibo de ' + c.nome + ' (' + nomeMes(R.comp) + ') para "Não gerado"?' + (sv.pago ? '\n\nEle está marcado como PAGO — essa marcação também será apagada.' : ''))) return;
+          chk(sb.from('rh_recibos').delete().eq('colaborador_id', id).eq('competencia', R.comp).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para desfazer.'); return carregarRh(); })
+            .then(function() { renderRecibos(); showToast('Recibo voltou para Não gerado.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function desfazerPj(gid) {
+          var g = R.pjpag.filter(function(x) { return x.id === gid; })[0]; if (!g) return; var pr = prestPorId(g.prestador_id);
+          if (!confirm('Voltar o pagamento de ' + (pr ? pr.nome : '') + ' (' + nomeMes(g.competencia) + ') para "Não gerado"?' + (g.pago ? '\n\nEle está marcado como PAGO — essa marcação também será apagada.' : ''))) return;
+          chk(sb.from('rh_pj_pagamentos').delete().eq('id', gid).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para desfazer.'); return carregarRh(); })
+            .then(function() { renderRh(); showToast('Pagamento voltou para Não gerado.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
         function marcarPago(id, pago) {
           var c = colabPorId(id), it = itensRecibo(c, R.comp), t = totais(it), s = recSalvo(id, R.comp);
@@ -8629,6 +8702,257 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
 
+
+        // ---------- rescisão ----------
+        function rsC(id) {
+          if (/^pj:/.test(id || '')) { var p = prestPorId(id.slice(3)); if (!p) return null; return { _pj: true, id: 'pj:' + p.id, nome: p.nome, cpf: p.cnpj || p.cpf || '', cpfRot: p.cnpj ? 'CNPJ' : 'CPF', funcao: p.funcao, admissao: p.inicio, demissao: p.fim, salario: pjValor(p), empresa_id: p.empresa_id, rg: '', ctps: '', pis: '', carteira_assinada: false }; }
+          return colabPorId(id);
+        }
+        function rsCrec(x) { return rsC(x.prestador_id ? 'pj:' + x.prestador_id : x.colaborador_id); }
+        var RS_PJ = ['pj_empresa', 'pj_prestador', 'pj_prazo'];
+        var RS_TIPOS = { pj_empresa: 'Encerramento do contrato pela empresa', pj_prestador: 'Encerramento do contrato a pedido do prestador', pj_prazo: 'Término do contrato (prazo)', sem_justa: 'Dispensa sem justa causa', pedido: 'Pedido de demissão', acordo: 'Rescisão por acordo (comum acordo)', justa: 'Dispensa por justa causa' };
+        var RS_AVISO = { indenizado: 'Aviso prévio indenizado', trabalhado: 'Aviso trabalhado / sem aviso a pagar', nao_cumprido: 'Aviso não cumprido pelo empregado' };
+        function addMeses(iso, n) {
+          var d = mkUTC(iso), dia = d.getUTCDate(); d.setUTCDate(1); d.setUTCMonth(d.getUTCMonth() + n);
+          var ult = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate(); d.setUTCDate(Math.min(dia, ult)); return isoUTC(d);
+        }
+        function avosEntre(ini, fim) {
+          var n = 0;
+          for (var m = 0; m < 14; m++) {
+            var a = addMeses(ini, m), b = addDias(addMeses(ini, m + 1), -1); if (a > fim) break;
+            var e = b < fim ? b : fim; if (difDias(a, e) + 1 >= 15) n++;
+          }
+          return Math.min(n, 12);
+        }
+        function avos13Ate(c, ano, ate) {
+          var n = 0;
+          for (var m = 1; m <= 12; m++) {
+            var mm = String(m).padStart(2, '0'), ini = ano + '-' + mm + '-01', fim = ano + '-' + mm + '-' + String(diasNoMes(ano + '-' + mm)).padStart(2, '0');
+            var a = c.admissao && c.admissao > ini ? c.admissao : ini, b = ate < fim ? ate : fim;
+            if (a <= b && difDias(a, b) + 1 >= 15) n++;
+          }
+          return n;
+        }
+        function rescCalc(c, dt, tipo, aviso, fgtsInformado) {
+          var it = [], sal = Number(c.salario || 0), info = { alertas: [] };
+          if (!c.admissao) info.alertas.push('Colaborador sem data de admissão no cadastro.');
+          var adm = c.admissao || dt;
+          var meses = Math.max(0, (parseInt(dt.slice(0, 4), 10) - parseInt(adm.slice(0, 4), 10)) * 12 + parseInt(dt.slice(5, 7), 10) - parseInt(adm.slice(5, 7), 10) - (parseInt(dt.slice(8, 10), 10) < parseInt(adm.slice(8, 10), 10) ? 1 : 0));
+          var anos = Math.floor(meses / 12), diasAviso = Math.min(90, 30 + 3 * anos);
+          var indeniz = aviso === 'indenizado' && (tipo === 'sem_justa' || tipo === 'acordo');
+          var proj = indeniz ? addDias(dt, diasAviso) : dt;
+          var carteira = !!c.carteira_assinada, fgSep = !carteira && c.fgts_separado, cod = 100;
+          function add(desc, ref, venc, dsc) { it.push({ cod: cod++, desc: desc, ref: ref == null ? '' : ref, venc: r2(venc || 0), dsc: r2(dsc || 0) }); }
+          // saldo de salário
+          var dMes = parseInt(dt.slice(8, 10), 10), iniMes = dt.slice(0, 7);
+          if (adm.slice(0, 7) === iniMes) dMes = dMes - parseInt(adm.slice(8, 10), 10) + 1;
+          dMes = Math.max(0, Math.min(30, dMes));
+          var saldo = r2(sal * dMes / 30);
+          add('Saldo de salário', dMes + ' dias', saldo, 0);
+          var base13 = 0, aviso$ = 0, avosI = 0;
+          if (indeniz) { aviso$ = r2(sal * diasAviso / 30 * (tipo === 'acordo' ? 0.5 : 1)); add('Aviso prévio indenizado' + (tipo === 'acordo' ? ' (50%)' : ''), diasAviso + ' dias', aviso$, 0); }
+          if (tipo === 'pedido' && aviso === 'nao_cumprido') add('Aviso prévio não cumprido (desconto)', '30 dias', 0, sal);
+          // 13º proporcional
+          var ano = proj.slice(0, 4), a13 = 0;
+          if (tipo !== 'justa') {
+            a13 = avos13Ate(c, ano, proj); base13 = r2(sal * a13 / 12);
+            add('13º salário proporcional', a13 + '/12', base13, 0);
+            var d1 = R.dec.filter(function(x) { return x.colaborador_id === c.id && String(x.ano) === String(ano) && x.parcela === '1'; })[0];
+            if (d1 && d1.pago) add('Adiantamento 13º – 1ª parcela (já paga)', null, 0, Number(d1.total_vencimentos || 0));
+          } else info.alertas.push('Justa causa: sem 13º proporcional, sem férias proporcionais e sem multa do FGTS.');
+          // férias
+          var gozaFerias = c.goza_ferias !== false, feriasTot = 0;
+          if (gozaFerias) {
+            for (var n = 0; n < 60; n++) {
+              var ini = addAnos(adm, n); if (ini > dt) break;
+              var fim = addDias(addAnos(adm, n + 1), -1), gz = 0;
+              R.ferias.forEach(function(f) { if (f.colaborador_id === c.id && f.periodo_ini === ini) gz += Number(f.dias) + Number(f.abono_dias || 0); });
+              if (fim < dt) {
+                var sd = Math.max(0, 30 - gz); if (sd <= 0) continue;
+                var dobro = addAnos(fim, 1) < dt, v = r2(sal * sd / 30 * (dobro ? 2 : 1));
+                add('Férias vencidas' + (dobro ? ' EM DOBRO' : '') + ' (' + fd(ini) + ' a ' + fd(fim) + ')', sd + ' dias', v, 0);
+                add('1/3 constitucional sobre férias vencidas' + (dobro ? ' (em dobro)' : ''), null, r2(v / 3), 0); feriasTot += v + r2(v / 3);
+                if (dobro) info.alertas.push('Há férias vencidas além do período concessivo — pagas em dobro.');
+              } else if (tipo !== 'justa') {
+                var av = avosEntre(ini, proj); if (av > 0) {
+                  var vf = r2(sal * av / 12); add('Férias proporcionais', av + '/12', vf, 0); add('1/3 constitucional sobre férias proporcionais', null, r2(vf / 3), 0); feriasTot += vf + r2(vf / 3);
+                }
+              }
+            }
+          }
+          // benefícios fixos que entram no saldo? (não inclui) | FGTS separado
+          var baseFg = saldo + aviso$ + base13;
+          if (fgSep && baseFg > 0) add('FGTS 8% sobre as verbas', null, r2(baseFg * 0.08), 0);
+          // multa
+          if (tipo === 'sem_justa' || tipo === 'acordo') {
+            var estim = r2(0.08 * sal * meses * (1 + 1 / 12) + 0.08 * baseFg);
+            var sdo = fgtsInformado > 0 ? fgtsInformado : estim; info.fgtsEstim = estim;
+            var pc = tipo === 'acordo' ? 0.2 : 0.4;
+            add('Multa de ' + (pc * 100) + '% do FGTS' + (fgtsInformado > 0 ? '' : ' (estimada — confira o extrato)'), null, r2(sdo * pc), 0);
+          }
+          // INSS / IRRF (carteira)
+          if (carteira) {
+            var inssS = calcInss(saldo); if (inssS > 0) add('INSS sobre saldo de salário', null, 0, inssS);
+            var irS = calcIrrf(saldo, inssS).imposto; if (irS > 0) add('IRRF sobre saldo de salário', null, 0, irS);
+            var inss13 = calcInss(base13); if (inss13 > 0) add('INSS sobre 13º', null, 0, inss13);
+          }
+          // lançamentos pendentes
+          R.lanc.forEach(function(l) {
+            if (l.colaborador_id !== c.id || !l.competencia || l.competencia < iniMes) return;
+            add((l.natureza === 'provento' ? '' : 'Desconto: ') + l.descricao + ' (' + l.competencia.slice(5) + '/' + l.competencia.slice(0, 4) + ')', null, l.natureza === 'provento' ? l.valor : 0, l.natureza === 'provento' ? 0 : l.valor);
+          });
+          info.meses = meses; info.diasAviso = diasAviso; info.proj = proj;
+          return { itens: it, info: info };
+        }
+        function pjEncCalc(c, dt) {
+          var p = prestPorId(c.id.slice(3)), it = [], info = { alertas: ['PJ: 13º, férias, 1/3, FGTS e multa já são pagos todo mês no recibo — não entram aqui. Só o proporcional do último mês e os descontos pendentes.'] };
+          var iniMes = dt.slice(0, 7), dMes = parseInt(dt.slice(8, 10), 10);
+          if (p.inicio && p.inicio.slice(0, 7) === iniMes) dMes = dMes - parseInt(p.inicio.slice(8, 10), 10) + 1;
+          dMes = Math.max(0, Math.min(30, dMes));
+          var mensal = pjValor(p), prop = r2(mensal * dMes / 30), cod = 100;
+          function add(desc, ref, venc, dsc) { it.push({ cod: cod++, desc: desc, ref: ref == null ? '' : ref, venc: r2(venc || 0), dsc: r2(dsc || 0) }); }
+          if (Number(p.valor_mensal) > 0) pjCompor(prop).forEach(function(x, i) { add(x.desc + (i === 0 ? ' (proporcional)' : ''), i === 0 ? dMes + ' dias' : '', x.unit, 0); });
+          else add('Serviços prestados (proporcional ao mês)', dMes + ' dias', prop, 0);
+          var g = pjPag(p.id, iniMes);
+          if (g) info.alertas.push('Já existe pagamento de ' + nomeMes(iniMes) + ' gerado para este prestador (' + brl(g.total) + '). Confira para não pagar o mês duas vezes: se ele já foi pago inteiro, apague as linhas do proporcional.');
+          R.lanc.forEach(function(l) {
+            if (l.prestador_id !== p.id || !l.competencia || l.competencia < iniMes) return;
+            add((l.natureza === 'provento' ? '' : 'Desconto: ') + l.descricao + ' (' + l.competencia.slice(5) + '/' + l.competencia.slice(0, 4) + ')', null, l.natureza === 'provento' ? l.valor : 0, l.natureza === 'provento' ? 0 : l.valor);
+          });
+          info.meses = null; return { itens: it, info: info };
+        }
+        function rsRecalc() {
+          var S = R.rs, c = rsC(S.id);
+          if (!c) { S.itens = []; S.info = { alertas: [] }; return; }
+          var r = c._pj ? pjEncCalc(c, S.dt || hoje()) : rescCalc(c, S.dt || hoje(), S.tipo, S.aviso, parseValor(S.fgts || '0'));
+          S.itens = r.itens; S.info = r.info;
+        }
+        function rsLerTabela() {
+          var out = [];
+          document.querySelectorAll('#rh-rs-lin tr').forEach(function(tr) {
+            var d = tr.querySelector('.rs-desc').value.trim(); if (!d) return;
+            var rf = tr.querySelector('.rs-ref').value.trim();
+            out.push({ cod: 199, desc: d, ref: rf, venc: r2(parseValor(tr.querySelector('.rs-venc').value)), dsc: r2(parseValor(tr.querySelector('.rs-dsc').value)) });
+          });
+          return out;
+        }
+        function rsLinha(x) {
+          return '<tr><td><input class="form-control rs-desc" value="' + esc(x.desc) + '"></td><td><input class="form-control rs-ref" style="width:90px" value="' + esc(x.ref == null ? '' : x.ref) + '"></td>' +
+            '<td><input class="form-control rs-venc" style="width:120px" value="' + (x.venc ? numStr(x.venc) : '') + '"></td><td><input class="form-control rs-dsc" style="width:120px" value="' + (x.dsc ? numStr(x.dsc) : '') + '"></td>' +
+            '<td><button type="button" class="btn-pls-secondary sx-del" data-sx="rh-rs-ldel" title="Remover linha">✕</button></td></tr>';
+        }
+        function rsTotais() { var t = totais(rsLerTabela()); var e = $('rh-rs-tot'); if (e) e.innerHTML = 'Vencimentos <b>' + brl(t.v) + '</b> · Descontos <b style="color:var(--pls-red)">' + brl(t.d) + '</b> · <span style="font-size:1.15rem">Líquido a receber <b>' + brl(t.l) + '</b></span>'; }
+        function renderRescisao() {
+          var S = R.rs, sc = $('rh-rs-colab');
+          var lista = R.colab.slice().sort(function(a, b) { return (ativo(b) ? 1 : 0) - (ativo(a) ? 1 : 0) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'); });
+          var opcoes = lista.map(function(x) { return { v: x.id, t: x.nome + ' — CLT' + (ativo(x) ? '' : ' (desligado)') }; })
+            .concat(R.prest.slice().sort(function(a, b) { return String(a.nome).localeCompare(String(b.nome), 'pt-BR'); }).map(function(x) { return { v: 'pj:' + x.id, t: x.nome + ' — PJ' + (prestAtivo(x) ? '' : ' (encerrado)') }; }));
+          if (!S.id || !rsC(S.id)) { S.id = opcoes.length ? opcoes[0].v : ''; S.dt = ''; S.itens = null; }
+          var c = rsC(S.id);
+          sc.innerHTML = opts(opcoes, S.id);
+          var isPj = !!(c && c._pj), st = $('rh-rs-tipo');
+          st.innerHTML = isPj ? '<option value="pj_empresa">Encerramento pela empresa</option><option value="pj_prestador">A pedido do prestador</option><option value="pj_prazo">Término do contrato (prazo)</option>'
+            : '<option value="sem_justa">Demitido sem justa causa</option><option value="pedido">Pediu demissão</option><option value="acordo">Acordo (comum acordo)</option><option value="justa">Demitido por justa causa</option>';
+          if (isPj !== (RS_PJ.indexOf(S.tipo) >= 0)) S.tipo = isPj ? 'pj_empresa' : 'sem_justa';
+          $('rh-rs-aviso').style.display = isPj ? 'none' : '';
+          if (!S.dt) S.dt = c && c.demissao ? c.demissao : hoje();
+          st.value = S.tipo; $('rh-rs-data').value = S.dt; $('rh-rs-aviso').value = S.aviso;
+          if (!S.itens) rsRecalc();
+          if (!c) { $('rh-rs-corpo').innerHTML = '<div class="sx-vazio">Nenhum colaborador cadastrado.</div>'; }
+          else {
+            var inf = S.info || { alertas: [] };
+            $('rh-rs-corpo').innerHTML =
+              '<div class="sx-dica" style="margin-top:0"><b>' + esc(c.nome) + '</b> · ' + esc(c.funcao || 'sem função') + ' · admissão ' + fd(c.admissao) + ' · salário ' + brl(c.salario) + ' · ' + (inf.meses != null ? Math.floor(inf.meses / 12) + 'a ' + (inf.meses % 12) + 'm de casa' : '') +
+              (inf.diasAviso ? ' · aviso prévio de ' + inf.diasAviso + ' dias' : '') + (c._pj ? ' · <b>PJ (prestador)</b>' : c.carteira_assinada ? ' · <b>carteira assinada</b>' : ' · sem carteira') + '</div>' +
+              (inf.alertas || []).map(function(a) { return '<div class="sx-dica" style="background:#fef2f2;border-color:#fecaca">⚠ ' + esc(a) + '</div>'; }).join('') +
+              '<div class="sx-toolbar" style="margin:.4rem 0">' + (c._pj ? '' : '<label class="sx-chkl">Saldo do FGTS p/ multa (R$) <input id="rh-rs-fgts" class="form-control" style="width:130px" inputmode="decimal" placeholder="' + (inf.fgtsEstim ? numStr(inf.fgtsEstim) + ' (estimado)' : '—') + '" value="' + esc(S.fgts || '') + '"></label>') +
+              '<button type="button" class="btn-pls-secondary" data-sx="rh-rs-calc" title="Recalcula tudo e descarta as edições manuais">↻ Recalcular tudo</button></div>' +
+              '<div class="table-container"><table class="table-pls"><thead><tr><th>Descrição</th><th>Referência</th><th>Vencimentos (R$)</th><th>Descontos (R$)</th><th></th></tr></thead><tbody id="rh-rs-lin">' + S.itens.map(rsLinha).join('') + '</tbody></table></div>' +
+              '<div style="margin:.5rem 0"><button type="button" class="btn-pls-secondary" data-sx="rh-rs-add">+ Linha</button></div>' +
+              '<div id="rh-rs-tot" style="padding:.5rem .7rem;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.6rem"></div>' +
+              '<div class="sx-toolbar"><label class="sx-chkl"><input type="checkbox" id="rh-rs-grava" checked> Gravar ' + (c._pj ? 'o fim do contrato' : 'data e motivo do desligamento') + ' no cadastro</label>' +
+              '<label class="sx-chkl"><input type="checkbox" id="rh-rs-vias" checked> 2 vias</label>' +
+              '<button type="button" class="btn-pls-primary" data-sx="rh-rs-imprimir">🖨 Gerar e imprimir o termo de rescisão</button></div>';
+            rsTotais();
+          }
+          var h = R.resc.map(function(x) {
+            var cc = rsCrec(x);
+            return '<tr><td><b>' + esc(cc ? cc.nome : '—') + '</b></td><td>' + fd(x.data_desligamento) + '</td><td>' + esc(RS_TIPOS[x.tipo] || x.tipo) + '</td><td style="text-align:right;font-weight:800">' + brl(x.liquido) + '</td>' +
+              '<td>' + (x.pago ? '<span class="sx-pill sx-ok">Pago ' + fd(x.data_pagamento) + '</span>' : '<span class="sx-pill sx-hoje">Gerado</span>') + '</td>' +
+              '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="rh-rs-reimp" data-id="' + x.id + '">🖨 Reimprimir</button> <button type="button" class="btn-pls-secondary" data-sx="rh-rs-pago" data-id="' + x.id + '" data-v="' + (x.pago ? 0 : 1) + '">' + (x.pago ? 'Desfazer pago' : 'Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-rs-hdel" data-id="' + x.id + '">Desfazer rescisão</button></td></tr>';
+          });
+          $('rh-rs-hist').innerHTML = h.length ? '<table class="table-pls"><thead><tr><th>Colaborador</th><th>Desligamento</th><th>Motivo</th><th style="text-align:right">Líquido</th><th>Situação</th><th></th></tr></thead><tbody>' + h.join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma rescisão gerada ainda.</div>';
+        }
+        function extenso(v) {
+          var U = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove', 'dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'],
+            D = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'], C = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+          function ate999(n) {
+            if (n === 100) return 'cem'; var o = [], c = Math.floor(n / 100), r = n % 100; if (c) o.push(C[c]);
+            if (r) o.push(r < 20 ? U[r] : D[Math.floor(r / 10)] + (r % 10 ? ' e ' + U[r % 10] : '')); return o.join(' e ');
+          }
+          function inteiro(n) {
+            if (n === 0) return 'zero'; var mi = Math.floor(n / 1000000), mil = Math.floor((n % 1000000) / 1000), r = n % 1000, p = [];
+            if (mi) p.push(ate999(mi) + (mi === 1 ? ' milhão' : ' milhões')); if (mil) p.push(mil === 1 ? 'mil' : ate999(mil) + ' mil'); if (r) p.push(ate999(r));
+            return p.join(r && (mil || mi) && (r < 100 || r % 100 === 0) ? ' e ' : ', ').replace(', ', ', ');
+          }
+          v = Math.round(Number(v) * 100) / 100; var rs = Math.floor(v), ct = Math.round((v - rs) * 100), out = [];
+          if (rs > 0) out.push(inteiro(rs) + (rs === 1 ? ' real' : (rs % 1000000 === 0 ? ' de reais' : ' reais')));
+          if (ct > 0) out.push(inteiro(ct) + (ct === 1 ? ' centavo' : ' centavos'));
+          return out.length ? out.join(' e ') : 'zero reais';
+        }
+        function rescHtml(c, rec) {
+          var e = empPorId(c.empresa_id) || { nome: 'PLS EMPILHADEIRAS', documento: '', endereco: '' }, t = totais(rec.itens);
+          function m(n) { return numStr(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+          var linhas = rec.itens.map(function(i) { return '<tr><td>' + esc(i.desc) + '</td><td class="c">' + esc(i.ref == null ? '' : i.ref) + '</td><td class="r">' + (i.venc ? m(i.venc) : '') + '</td><td class="r">' + (i.dsc ? m(i.dsc) : '') + '</td></tr>'; });
+          while (linhas.length < 8) linhas.push('<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>');
+          if (c._pj) {
+            var ep = e;
+            return '<div class="rs-page"><div class="rc rs-doc">' +
+              '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">TERMO DE ENCERRAMENTO DE CONTRATO<br><span style="font-size:9pt;font-weight:600">Prestação de serviços — recibo de quitação</span></div></div>' +
+              '<div class="rc-emp"><div><span style="font-size:8pt">CONTRATANTE</span><br><b>' + esc(ep.nome) + '</b><br>' + esc(ep.endereco || '') + (ep.endereco ? '<br>' : '') + esc(ep.documento || '') + '</div></div>' +
+              '<table class="rs-dados"><tr><th>Prestador</th><td>' + esc(c.nome) + '</td><th>' + esc(c.cpfRot) + '</th><td>' + esc(c.cpf || '—') + '</td></tr>' +
+              '<tr><th>Função</th><td>' + esc(c.funcao || '—') + '</td><th>Valor mensal</th><td>R$ ' + m(c.salario) + '</td></tr>' +
+              '<tr><th>Início</th><td>' + fd(c.admissao) + '</td><th>Encerramento</th><td>' + fd(rec.data_desligamento) + '</td></tr>' +
+              '<tr><th>Motivo</th><td colspan="3">' + esc(RS_TIPOS[rec.tipo] || rec.tipo) + '</td></tr></table>' +
+              '<table class="rc-tab"><thead><tr><th>Descrição</th><th style="width:13%">Referência</th><th style="width:19%">Vencimentos</th><th style="width:19%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
+              '<tfoot><tr><td colspan="2" class="r">Totais</td><td class="r"><b>' + m(t.v) + '</b></td><td class="r"><b>' + m(t.d) + '</b></td></tr><tr class="rc-liq"><td colspan="2" class="r">Valor líquido a receber &gt;&gt;&gt;&gt;</td><td colspan="2" class="r"><b>R$ ' + m(t.l) + '</b></td></tr></tfoot></table>' +
+              '<div class="rc-decl">Recebi de <b>' + esc(ep.nome) + '</b> a importância líquida de <b>R$ ' + m(t.l) + '</b> (' + esc(extenso(t.l)) + '), referente ao último pagamento pelos serviços prestados até a data de encerramento do contrato. Declaro que o 13º, as férias, o terço de férias e o FGTS foram pagos mensalmente junto com a remuneração, e dou plena e geral quitação do contrato de prestação de serviços, nada mais tendo a reclamar a qualquer título.</div>' +
+              '<div class="rs-loc">Local e data: ______________________, ____ / ____ / ________</div>' +
+              '<div class="rs-ass"><div><i></i>ASSINATURA DO PRESTADOR</div><div><i></i>CONTRATANTE / REPRESENTANTE</div></div>' +
+              '<div class="rs-ass rs-test"><div><i></i>TESTEMUNHA 1 (nome / CPF)</div><div><i></i>TESTEMUNHA 2 (nome / CPF)</div></div></div></div>';
+          }
+          return '<div class="rs-page"><div class="rc rs-doc">' +
+            '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">TERMO DE RESCISÃO DO CONTRATO DE TRABALHO<br><span style="font-size:9pt;font-weight:600">Recibo de quitação das verbas rescisórias</span></div></div>' +
+            '<div class="rc-emp"><div><span style="font-size:8pt">EMPREGADOR</span><br><b>' + esc(e.nome) + '</b><br>' + esc(e.endereco || '') + (e.endereco ? '<br>' : '') + esc(e.documento || '') + '</div></div>' +
+            '<table class="rs-dados"><tr><th>Empregado</th><td>' + esc(c.nome) + '</td><th>CPF</th><td>' + esc(c.cpf || '—') + '</td></tr>' +
+            '<tr><th>Função</th><td>' + esc(c.funcao || '—') + '</td><th>RG</th><td>' + esc(c.rg || '—') + '</td></tr>' +
+            '<tr><th>Admissão</th><td>' + fd(c.admissao) + '</td><th>Desligamento</th><td>' + fd(rec.data_desligamento) + '</td></tr>' +
+            '<tr><th>Motivo</th><td>' + esc(RS_TIPOS[rec.tipo] || rec.tipo) + '</td><th>Aviso prévio</th><td>' + esc(RS_AVISO[rec.aviso] || '—') + '</td></tr>' +
+            '<tr><th>Último salário</th><td>R$ ' + m(c.salario) + '</td><th>CTPS / PIS</th><td>' + esc([c.ctps, c.pis].filter(Boolean).join(' / ') || '—') + '</td></tr></table>' +
+            '<table class="rc-tab"><thead><tr><th>Verba</th><th style="width:13%">Referência</th><th style="width:19%">Vencimentos</th><th style="width:19%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
+            '<tfoot><tr><td colspan="2" class="r">Totais</td><td class="r"><b>' + m(t.v) + '</b></td><td class="r"><b>' + m(t.d) + '</b></td></tr><tr class="rc-liq"><td colspan="2" class="r">Líquido a receber &gt;&gt;&gt;&gt;</td><td colspan="2" class="r"><b>R$ ' + m(t.l) + '</b></td></tr></tfoot></table>' +
+            '<div class="rc-decl">Recebi de <b>' + esc(e.nome) + '</b> a importância líquida de <b>R$ ' + m(t.l) + '</b> (' + esc(extenso(t.l)) + '), referente às verbas rescisórias acima discriminadas, dando plena quitação das parcelas aqui descritas. Declaro ter conferido os valores e estar de acordo.</div>' +
+            '<div class="rs-loc">Local e data: ______________________, ____ / ____ / ________</div>' +
+            '<div class="rs-ass"><div><i></i>ASSINATURA DO EMPREGADO</div><div><i></i>EMPREGADOR / REPRESENTANTE</div></div>' +
+            '<div class="rs-ass rs-test"><div><i></i>TESTEMUNHA 1 (nome / CPF)</div><div><i></i>TESTEMUNHA 2 (nome / CPF)</div></div></div></div>';
+        }
+        function imprimirRescisoes(lista, vias) {
+          var h = ''; lista.forEach(function(x) { var c = rsCrec(x); if (!c) return; var d = rescHtml(c, x); h += d; if (vias) h += d; });
+          $('rh-print-area').innerHTML = h; imprimirArea('print-rh', 'portrait');
+        }
+        function gerarRescisao() {
+          var S = R.rs, c = rsC(S.id); if (!c) return;
+          var itens = rsLerTabela(); if (!itens.length) { showToast('Nada a pagar — adicione as verbas.'); return; }
+          var t = totais(itens), rec = { colaborador_id: c._pj ? null : c.id, prestador_id: c._pj ? c.id.slice(3) : null, data_desligamento: S.dt, tipo: S.tipo, aviso: c._pj ? null : S.aviso, itens: itens, total_vencimentos: t.v, total_descontos: t.d, liquido: t.l };
+          var grava = $('rh-rs-grava') && $('rh-rs-grava').checked, vias = $('rh-rs-vias') && $('rh-rs-vias').checked;
+          chk(sb.from('rh_rescisoes').insert(rec).select()).then(function(r) {
+            if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
+            if (!grava) return null;
+            return c._pj ? chk(sb.from('rh_prestadores').update({ fim: S.dt }).eq('id', c.id.slice(3)).select()) : chk(sb.from('rh_colaboradores').update({ demissao: S.dt, motivo_demissao: RS_TIPOS[S.tipo] }).eq('id', c.id).select());
+          }).then(carregarRh).then(function() { renderRescisao(); imprimirRescisoes([rec], vias); showToast('Rescisão gerada ✔'); })
+            .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+
         // ---------- férias ----------
         function renderFerias() {
           var at = R.colab.filter(function(c) { return ativo(c) && c.goza_ferias !== false; }), venc = 0, alerta = 0;
@@ -8698,6 +9022,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         function prestPorId(id) { return R.prest.filter(function(p) { return p.id === id; })[0]; }
         function prestAtivo(p) { return !p.fim || p.fim >= hoje(); }
+        function pjElegiveis() { var ant = R.rEmpresa; return R.prest.filter(function(p) { return (prestAtivo(p) || pjPag(p.id, R.comp)) && (!ant || p.empresa_id === ant) && (!p.inicio || p.inicio.slice(0, 7) <= R.comp); }); }
         function pjPag(pid, comp) { return R.pjpag.filter(function(x) { return x.prestador_id === pid && x.competencia === comp; })[0]; }
         function pjTotal(itens) { var t = 0; itens.forEach(function(i) { var v = Number(i.qtd || 0) * Number(i.unit || 0); t += i.d ? -v : v; }); return r2(t); }
         function pjLancItens(pid, comp) {
@@ -8705,7 +9030,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var o = { desc: l.descricao, qtd: 1, unit: l.valor, lid: l.id }; if (l.natureza === 'desconto') o.d = 1; return o;
           });
         }
+        function pjCompor(total) {
+          total = r2(total); var S = r2(total / 1.2), fg = r2(S * 0.08), d13 = r2(S / 12), f13 = r2(d13 * 0.08), fe = r2(S / 36), ffe = r2(fe * 0.08);
+          S = r2(total - fg - d13 - f13 - fe - ffe);
+          return [{ desc: 'SALÁRIO', ref: '30', qtd: 1, unit: S }, { desc: 'FGTS', qtd: 1, unit: fg }, { desc: '13º SALÁRIO', qtd: 1, unit: d13 }, { desc: 'FGTS SOBRE O 13º', qtd: 1, unit: f13 },
+            { desc: '1/3 DE FÉRIAS', qtd: 1, unit: fe }, { desc: 'FGTS SOBRE 1/3 DE FÉRIAS', qtd: 1, unit: ffe }];
+        }
+        function pjTots(itens) { var v = 0, d = 0; (itens || []).forEach(function(i) { var x = Number(i.qtd || 0) * Number(i.unit || 0); if (i.d) d += x; else v += x; }); return { v: r2(v), d: r2(d), l: r2(v - d) }; }
         function pjItensPadrao(p) {
+          if (Number(p.valor_mensal) > 0) return pjCompor(p.valor_mensal);
           return (p.servicos || []).filter(function(s) { return s.recorrente; }).map(function(s) { return { desc: s.desc, qtd: 1, unit: Number(s.valor || 0) }; });
         }
         var FORMAS = [{ v: 'mensal', t: 'Mensal (valor fixo)' }, { v: 'por_servico', t: 'Por serviço' }, { v: 'diaria', t: 'Por diária' }];
@@ -8749,15 +9082,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<label class="sx-chkl" title="Entra automaticamente em todo mês"><input type="checkbox" class="sv-rec"' + (s.recorrente ? ' checked' : '') + '> todo mês</label>' +
             '<button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pjsv-del">✕</button></div>';
         }
-        function abrirPrestador(id) {
-          var p = id ? prestPorId(id) : { forma: 'mensal', servicos: [], exige_nf: true, contrato_assinado: false };
+        function abrirPrestador(id, nomePre) {
+          var p = id ? prestPorId(id) : { forma: 'mensal', servicos: [], exige_nf: true, contrato_assinado: false, nome: nomePre || '' };
           function f(i, lbl, v, tipo, full) { return '<div class="form-group' + (full ? ' full-width' : '') + '"><label class="form-label">' + lbl + '</label><input id="pj-m-' + i + '" class="form-control" type="' + (tipo || 'text') + '" value="' + esc(v || '') + '"></div>'; }
-          abrirModal(id ? 'Editar prestador (PJ)' : 'Novo prestador (PJ)',
+          abrirModal(id ? 'Editar colaborador PJ' : 'Novo colaborador',
+            (id ? '' : '<div class="form-group" style="margin-bottom:.6rem"><label class="form-label">Regime</label><select id="pj-m-regime" class="form-control"><option value="clt">CLT (colaborador)</option><option value="pj" selected>PJ (prestador de serviço)</option></select></div>') +
             '<div class="sx-sec">Prestador</div><div class="form-grid">' + f('nome', 'Nome <span class="req-star">*</span>', p.nome, 'text', true) + f('razao', 'Razão social', p.razao_social) + f('cnpj', 'CNPJ', p.cnpj) + f('cpf', 'CPF do titular', p.cpf) +
             f('func', 'Função / especialidade', p.funcao) + f('tel', 'Telefone', p.telefone) + f('email', 'E-mail', p.email, 'email') + f('end', 'Endereço', p.endereco, 'text', true) + f('pix', 'PIX / conta para pagamento', p.pix, 'text', true) + '</div>' +
             '<div class="sx-sec">Contrato de prestação de serviço</div><div class="form-grid">' +
             '<div class="form-group"><label class="form-label">Contratante (empresa que paga)</label><select id="pj-m-emp" class="form-control">' + opts(R.empresas.map(function(e) { return { v: e.id, t: e.nome }; }), p.empresa_id, '— escolher —') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Forma de cobrança</label><select id="pj-m-forma" class="form-control">' + opts(FORMAS, p.forma) + '</select></div>' +
+            '<div class="form-group full-width"><label class="form-label">Valor mensal combinado (R$) — total que a empresa paga</label><input id="pj-m-vm" class="form-control" inputmode="decimal" value="' + numStr(p.valor_mensal) + '"><div class="sx-muted" style="font-size:0.75rem;margin-top:2px">O recibo sai dividido em salário, FGTS, 13º, FGTS s/ 13º, 1/3 de férias e FGTS s/ 1/3 de férias, somando exatamente este valor (o PJ recebe tudo todo mês e não tira férias). Deixe 0 para usar só a lista de serviços abaixo.</div></div>' +
             f('ini', 'Início do contrato', p.inicio, 'date') + f('fim', 'Fim do contrato (vazio = indeterminado)', p.fim, 'date') +
             '<div class="form-group"><label class="form-label">Contrato assinado?</label><select id="pj-m-ass" class="form-control">' + opts([{ v: '1', t: 'Sim, assinado' }, { v: '0', t: 'Ainda não' }], p.contrato_assinado ? '1' : '0') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Exige nota fiscal para pagar?</label><select id="pj-m-nf" class="form-control">' + opts([{ v: '1', t: 'Sim, cobrar NF' }, { v: '0', t: 'Não' }], p.exige_nf ? '1' : '0') + '</select></div></div>' +
@@ -8774,7 +9109,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 nome: $('pj-m-nome').value.trim(), razao_social: $('pj-m-razao').value.trim() || null, cnpj: $('pj-m-cnpj').value.trim() || null, cpf: $('pj-m-cpf').value.trim() || null,
                 funcao: $('pj-m-func').value.trim() || null, telefone: $('pj-m-tel').value.trim() || null, email: $('pj-m-email').value.trim() || null, endereco: $('pj-m-end').value.trim() || null, pix: $('pj-m-pix').value.trim() || null,
                 empresa_id: $('pj-m-emp').value || null, forma: $('pj-m-forma').value, inicio: $('pj-m-ini').value || null, fim: $('pj-m-fim').value || null,
-                contrato_assinado: $('pj-m-ass').value === '1', exige_nf: $('pj-m-nf').value === '1', servicos: svs, obs: $('pj-m-obs').value.trim() || null
+                valor_mensal: r2(parseValor($('pj-m-vm').value)), contrato_assinado: $('pj-m-ass').value === '1', exige_nf: $('pj-m-nf').value === '1', servicos: svs, obs: $('pj-m-obs').value.trim() || null
               };
               if (!d.nome) throw new Error('Informe o nome.');
               if (d.inicio && d.fim && d.fim < d.inicio) throw new Error('O fim do contrato não pode ser antes do início.');
@@ -8795,17 +9130,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var it = pjItensPadrao(p).concat(pjLancItens(p.id, R.compPj)); return { prestador_id: p.id, competencia: R.compPj, itens: it, total: pjTotal(it) };
           });
           if (!rows.length) { showToast('Todos os pagamentos deste mês já foram gerados.'); return; }
-          chk(sb.from('rh_pj_pagamentos').insert(rows).select()).then(carregarRh).then(function() { renderPj(); showToast(rows.length + ' pagamento(s) gerado(s) ✔'); })
+          chk(sb.from('rh_pj_pagamentos').insert(rows).select()).then(carregarRh).then(function() { renderRh(); showToast(rows.length + ' pagamento(s) gerado(s) ✔'); })
             .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
         function atualizarPag(id, campos) {
-          return chk(sb.from('rh_pj_pagamentos').update(campos).eq('id', id).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão.'); return carregarRh(); }).then(renderPj)
+          return chk(sb.from('rh_pj_pagamentos').update(campos).eq('id', id).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão.'); return carregarRh(); }).then(renderRh)
             .catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
         function abrirAjustePj(gid) {
           var g = R.pjpag.filter(function(x) { return x.id === gid; })[0], p = prestPorId(g.prestador_id);
           function linha(i) {
-            return '<tr' + (i.lid ? ' data-lid="' + i.lid + '"' : '') + (i.d ? ' data-d="1" style="background:#fef2f2"' : '') + '><td>' + (i.d ? '<span class="sx-pill sx-atraso">DESCONTO</span> ' : '') + '<input class="form-control aj-desc" value="' + esc(i.desc) + '"></td><td><input class="form-control aj-qtd" style="width:70px" value="' + (i.qtd == null ? 1 : i.qtd) + '"></td>' +
+            return '<tr' + (i.lid ? ' data-lid="' + i.lid + '"' : '') + (i.ref ? ' data-ref="' + esc(i.ref) + '"' : '') + (i.d ? ' data-d="1" style="background:#fef2f2"' : '') + '><td>' + (i.d ? '<span class="sx-pill sx-atraso">DESCONTO</span> ' : '') + '<input class="form-control aj-desc" value="' + esc(i.desc) + '"></td><td><input class="form-control aj-qtd" style="width:70px" value="' + (i.qtd == null ? 1 : i.qtd) + '"></td>' +
               '<td><input class="form-control aj-unit" style="width:110px" value="' + numStr(i.unit) + '"></td><td><button type="button" class="btn-pls-secondary sx-del" data-sx="rh-aj-del">✕</button></td></tr>';
           }
           R._pjLinha = linha; R._pjSrv = p.servicos || [];
@@ -8814,13 +9149,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem">' +
             (R._pjSrv.length ? '<select id="pj-aj-srv" class="form-control" style="width:auto;flex:1">' + opts(R._pjSrv.map(function(s, i) { return { v: i, t: s.desc + ' — ' + brl(s.valor) }; }), '', '+ incluir um serviço do contrato…') + '</select>' : '') +
             '<button type="button" class="btn-pls-secondary" data-sx="rh-pjaj-add">+ Linha em branco</button>' +
+            '<button type="button" class="btn-pls-secondary" data-sx="rh-pjaj-calc" title="Pega o valor da linha SALÁRIO e calcula FGTS, 13º, FGTS s/ 13º, 1/3 de férias e FGTS s/ 1/3">⚙ Calcular o restante pelo salário</button>' +
+            '<button type="button" class="btn-pls-secondary" data-sx="rh-pjaj-total" title="Digite o total combinado e o sistema divide em salário + encargos">Σ Dividir a partir do total</button>' +
+            '<label class="sx-chkl" style="align-self:center"><input type="checkbox" id="pj-aj-auto" checked> Calcular sozinho ao mudar o salário</label>' +
             '<button type="button" class="btn-pls-secondary" data-sx="rh-pjaj-lanc" data-id="' + g.id + '" title="Traz para esta lista os descontos e adicionais lançados em Descontos e vales">↻ Puxar descontos lançados</button></div>' +
             '<div class="form-group full-width" style="margin-top:.7rem"><label class="form-label">Observação</label><input id="pj-aj-obs" class="form-control" value="' + esc(g.obs || '') + '"></div>',
             'Salvar', function() {
               var it = [];
               document.querySelectorAll('#aj-corpo tr').forEach(function(tr) {
                 var desc = tr.querySelector('.aj-desc').value.trim(); if (!desc) return;
-                var o = { desc: desc, qtd: parseValor(tr.querySelector('.aj-qtd').value) || 1, unit: r2(parseValor(tr.querySelector('.aj-unit').value)) }; if (tr.getAttribute('data-d')) o.d = 1; if (tr.getAttribute('data-lid')) o.lid = tr.getAttribute('data-lid'); it.push(o);
+                var o = { desc: desc, qtd: parseValor(tr.querySelector('.aj-qtd').value) || 1, unit: r2(parseValor(tr.querySelector('.aj-unit').value)) }; if (tr.getAttribute('data-d')) o.d = 1; if (tr.getAttribute('data-lid')) o.lid = tr.getAttribute('data-lid'); if (tr.getAttribute('data-ref')) o.ref = tr.getAttribute('data-ref'); it.push(o);
               });
               return atualizarPag(gid, { itens: it, total: pjTotal(it), obs: $('pj-aj-obs').value.trim() || null }).then(function() { return true; });
             });
@@ -8830,6 +9168,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var s = R._pjSrv[parseInt(sel.value, 10)];
             $('aj-corpo').insertAdjacentHTML('beforeend', R._pjLinha({ desc: s.desc, qtd: 1, unit: s.valor })); sel.value = '';
           });
+        }
+        function ajPjRecalc(S) {
+          var corpo = $('aj-corpo'); if (!corpo) return;
+          var rows = [].slice.call(corpo.querySelectorAll('tr'));
+          function acha(re) { return rows.filter(function(tr) { return re.test(tr.querySelector('.aj-desc').value.trim()); })[0]; }
+          var trS = acha(/^SAL[ÁA]RIO/i);
+          if (S == null) { if (!trS) { showToast('Não achei a linha SALÁRIO.'); return; } S = r2(parseValor(trS.querySelector('.aj-unit').value)); }
+          var fg = r2(S * 0.08), d13 = r2(S / 12), f13 = r2(d13 * 0.08), fe = r2(S / 36), ffe = r2(fe * 0.08);
+          var alvos = [[/^SAL[ÁA]RIO/i, 'SALÁRIO', S, '30'], [/^FGTS$/i, 'FGTS', fg], [/^13º SAL/i, '13º SALÁRIO', d13], [/^FGTS SOBRE O 13/i, 'FGTS SOBRE O 13º', f13], [/^1\/3 DE F/i, '1/3 DE FÉRIAS', fe], [/^FGTS SOBRE 1\/3/i, 'FGTS SOBRE 1/3 DE FÉRIAS', ffe]];
+          alvos.forEach(function(a) {
+            var tr = acha(a[0]);
+            if (!tr) { corpo.insertAdjacentHTML('beforeend', R._pjLinha({ desc: a[1], qtd: 1, unit: a[2], ref: a[3] })); }
+            else { tr.querySelector('.aj-unit').value = numStr(a[2]); tr.querySelector('.aj-qtd').value = '1'; }
+          });
+          showToast('Encargos calculados sobre o salário de ' + brl(S) + ' (total ' + brl(r2(S + fg + d13 + f13 + fe + ffe)) + ').', 3500);
         }
         function abrirNf(gid) {
           var g = R.pjpag.filter(function(x) { return x.id === gid; })[0];
@@ -8849,20 +9202,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function pjReciboHtml(g) {
           var p = prestPorId(g.prestador_id), e = empPorId(p.empresa_id) || { nome: 'PLS EMPILHADEIRAS', documento: '', endereco: '' };
-          var ult = g.competencia + '-' + String(diasNoMes(g.competencia)).padStart(2, '0');
+          var ult = g.competencia + '-' + String(diasNoMes(g.competencia)).padStart(2, '0'), t = pjTots(g.itens);
           function m(n) { return numStr(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
           var linhas = (g.itens || []).map(function(i) {
-            return i.d ? '<tr><td>(−) ' + esc(i.desc) + '</td><td class="c">' + esc(i.qtd) + '</td><td class="r">−' + m(i.unit) + '</td><td class="r">−' + m(Number(i.qtd) * Number(i.unit)) + '</td></tr>'
-              : '<tr><td>' + esc(i.desc) + '</td><td class="c">' + esc(i.qtd) + '</td><td class="r">' + m(i.unit) + '</td><td class="r">' + m(Number(i.qtd) * Number(i.unit)) + '</td></tr>';
+            var v = r2(Number(i.qtd || 0) * Number(i.unit || 0)), ref = i.ref || (Number(i.qtd) !== 1 ? i.qtd : '');
+            return '<tr><td>' + esc(i.desc) + '</td><td class="c">' + esc(ref) + '</td><td class="r">' + (i.d ? '' : m(v)) + '</td><td class="r">' + (i.d ? m(v) : '') + '</td></tr>';
           });
-          while (linhas.length < 6) linhas.push('<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>');
+          while (linhas.length < 7) linhas.push('<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>');
           return '<div class="rc">' +
             '<div class="rc-top"><img class="rc-logo" src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div class="rc-title">RECIBO DE PAGAMENTO<br><span style="font-size:9pt;font-weight:600">Prestação de serviços</span></div></div>' +
             '<div class="rc-emp"><div><span style="font-size:8pt">CONTRATANTE</span><br><b>' + esc(e.nome) + '</b><br>' + esc(e.documento || '') + '</div><div class="rc-per"><span>Período</span><b>' + fd(g.competencia + '-01') + ' a ' + fd(ult) + '</b></div></div>' +
-            '<div class="rc-nome"><div><span>Prestador de serviço</span><b>' + esc(p.razao_social || p.nome) + '</b></div><div><span>' + (p.cnpj ? 'CNPJ' : 'CPF') + '</span><b>' + esc(p.cnpj || p.cpf || '') + '</b></div></div>' +
-            '<table class="rc-tab"><thead><tr><th>Serviço</th><th style="width:10%">Qtd</th><th style="width:20%">Valor unit.</th><th style="width:20%">Total</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
-            '<tfoot><tr class="rc-liq"><td colspan="3" class="r">Total líquido recebido &gt;&gt;&gt;&gt;</td><td class="r"><b>R$ ' + m(g.total) + '</b></td></tr></tfoot></table>' +
-            '<div class="rc-decl">Declaro ter recebido a importância acima, referente aos serviços prestados no período indicado.' + (g.nf_numero ? ' Nota fiscal nº ' + esc(g.nf_numero) + (g.nf_data ? ' de ' + fd(g.nf_data) : '') + '.' : '') + '</div>' +
+            '<div class="rc-nome"><div><span>Nome / razão social</span><b>' + esc(p.razao_social || p.nome) + '</b></div><div><span>Função</span><b>' + esc(p.funcao || '—') + '</b></div><div><span>' + (p.cnpj ? 'CNPJ' : 'CPF') + '</span><b>' + esc(p.cnpj || p.cpf || '—') + '</b></div></div>' +
+            '<table class="rc-tab"><thead><tr><th>Descrição</th><th style="width:12%">Referência</th><th style="width:19%">Vencimentos</th><th style="width:19%">Descontos</th></tr></thead><tbody>' + linhas.join('') + '</tbody>' +
+            '<tfoot><tr><td colspan="2" class="r">Total de vencimentos / descontos</td><td class="r"><b>' + m(t.v) + '</b></td><td class="r"><b>' + m(t.d) + '</b></td></tr>' +
+            '<tr class="rc-liq"><td colspan="2" class="r">Valor líquido recebido &gt;&gt;&gt;&gt;</td><td colspan="2" class="r"><b>R$ ' + m(t.l) + '</b></td></tr></tfoot></table>' +
+            '<div class="rc-decl">Declaro ter recebido a importância líquida discriminada neste recibo, referente aos serviços prestados no período.' + (g.nf_numero ? ' Nota fiscal nº ' + esc(g.nf_numero) + (g.nf_data ? ' de ' + fd(g.nf_data) : '') + '.' : '') + '</div>' +
             '<div class="rc-ass"><div><i></i>DATA</div><div><i></i>ASSINATURA DO PRESTADOR</div></div></div>';
         }
         function imprimirPj(gid) {
@@ -11176,7 +11530,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'rh-lanc-editar': abrirLanc(id); break;
             case 'rh-lanc-excluir': excluirLanc(id); break;
             case 'rh-mes': R.comp = addMes(R.comp, parseInt(a.getAttribute('data-d'), 10)); R.sel = {}; renderRecibos(); break;
-            case 'rh-r-todos': { var lista = R.colab.filter(function(c) { return rhElegivel(c, R.comp) && (!R.rEmpresa || c.empresa_id === R.rEmpresa); }); var todos = lista.every(function(c) { return R.sel[c.id]; }); R.sel = {}; if (!todos) lista.forEach(function(c) { R.sel[c.id] = true; }); renderRecibos(); break; }
+            case 'rh-r-todos': { var ids = R.colab.filter(function(c) { return rhElegivel(c, R.comp) && (!R.rEmpresa || c.empresa_id === R.rEmpresa); }).map(function(c) { return c.id; }).concat(pjElegiveis().map(function(p) { return 'pj:' + p.id; })); var todos = ids.every(function(i) { return R.sel[i]; }); R.sel = {}; if (!todos) ids.forEach(function(i) { R.sel[i] = true; }); renderRecibos(); break; }
             case 'rh-r-imprimir': gerarRecibos(Object.keys(R.sel).filter(function(i) { return R.sel[i]; })); break;
             case 'rh-r-um': gerarRecibos([id]); break;
             case 'rh-r-ajustar': abrirAjuste(id); break;
@@ -11196,6 +11550,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'rh-arq-del': excluirArquivo(id); break;
             case 'rh-pj-mes': R.compPj = addMes(R.compPj, parseInt(a.getAttribute('data-d'), 10)); renderPj(); break;
             case 'rh-pj-novo': abrirPrestador(null); break;
+            case 'rh-r-des': desfazerRecibo(id); break;
+            case 'rh-rs-calc': R.rs.fgts = ($('rh-rs-fgts') || {}).value || ''; rsRecalc(); renderRescisao(); break;
+            case 'rh-rs-add': $('rh-rs-lin').insertAdjacentHTML('beforeend', rsLinha({ desc: '', ref: '', venc: 0, dsc: 0 })); break;
+            case 'rh-rs-ldel': a.closest('tr').remove(); rsTotais(); break;
+            case 'rh-rs-imprimir': gerarRescisao(); break;
+            case 'rh-rs-reimp': { var rx = R.resc.filter(function(x) { return x.id === id; })[0]; if (rx) imprimirRescisoes([rx], true); break; }
+            case 'rh-rs-pago': chk(sb.from('rh_rescisoes').update({ pago: a.getAttribute('data-v') === '1', data_pagamento: a.getAttribute('data-v') === '1' ? hoje() : null }).eq('id', id).select()).then(carregarRh).then(renderRescisao).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); break;
+            case 'rh-rs-hdel': if (confirm('Desfazer esta rescisão? O registro será apagado (o cadastro do colaborador não muda).')) chk(sb.from('rh_rescisoes').delete().eq('id', id).select()).then(carregarRh).then(renderRescisao).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); break;
+            case 'rh-pj-des': desfazerPj(id); break;
             case 'rh-pj-editar': abrirPrestador(id); break;
             case 'rh-pj-excluir': excluirPrestador(id); break;
             case 'rh-pj-gerar': gerarPj(id); break;
@@ -11212,13 +11575,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               pjLancItens(gg.prestador_id, gg.competencia).forEach(function(i) { if (!ja[i.lid]) { $('aj-corpo').insertAdjacentHTML('beforeend', R._pjLinha(i)); novos++; } });
               showToast(novos ? novos + ' lançamento(s) incluído(s). Clique em Salvar.' : 'Nenhum lançamento novo neste mês.'); break;
             }
+            case 'rh-pjaj-calc': ajPjRecalc(null); break;
+            case 'rh-pjaj-total': { var tt = prompt('Valor TOTAL combinado (salário + encargos), em R$:'); if (tt == null) break; var tv2 = parseValor(tt); if (!(tv2 > 0)) { showToast('Valor inválido.'); break; } ajPjRecalc(r2(tv2 / 1.2)); break; }
             case 'rh-pjaj-add': $('aj-corpo').insertAdjacentHTML('beforeend', R._pjLinha({ desc: '', qtd: 1, unit: 0 })); break;
             case 'rh-fer-excluir': excluirFerias(id); break;
           }
         });
+        document.addEventListener('input', function(evt) { var t = evt.target; if (t && t.classList && /(^| )rs-(venc|dsc|desc|ref)( |$)/.test(t.className)) rsTotais(); });
         document.addEventListener('change', function(evt) {
           var t = evt.target, a = t.closest ? t.closest('[data-sx]') : null;
           if (a && a.getAttribute('data-sx') === 'lo-enviar') { marcarEnviada(a.getAttribute('data-id'), a.getAttribute('data-x'), a.checked); return; }
+          if (t.classList && t.classList.contains('aj-unit') && $('pj-aj-auto') && $('pj-aj-auto').checked) { var trA = t.closest('tr'); if (trA && /^SAL[ÁA]RIO/i.test(trA.querySelector('.aj-desc').value.trim())) { ajPjRecalc(); return; } }
           if (a && a.getAttribute('data-sx') === 'rh-r-sel') { R.sel[a.getAttribute('data-id')] = a.checked; return; }
           if (a && a.getAttribute('data-sx') === 'rh-d-sel') { R.decSel[a.getAttribute('data-id')] = a.checked; return; }
           if (a && a.getAttribute('data-sx') === 'rh-d-modo') { mudarModoDec(a.getAttribute('data-id'), a.value); return; }
@@ -11227,9 +11594,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'lo-f-sit': L.fSit = t.value; renderFaturas(); break;
             case 'lo-c-status': L.cStatus = t.value; renderContratos(); break;
             case 'rh-f-sit': R.fSit = t.value; renderColab(); break;
+            case 'rh-f-reg': R.fReg = t.value; renderColab(); break;
+            case 'rh-m-regime': if (t.value === 'pj') { var nm1 = ($('rh-m-nome') || {}).value || ''; fecharModal(); abrirPrestador(null, nm1); } break;
+            case 'pj-m-regime': if (t.value === 'clt') { var nm2 = ($('pj-m-nome') || {}).value || ''; fecharModal(); abrirColab(null, nm2); } break;
             case 'rh-l-colab': R.lFiltroColab = t.value; renderLanc(); break;
             case 'rh-r-emp': R.rEmpresa = t.value; renderRecibos(); break;
             case 'rh-d-emp': R.decEmp = t.value; renderDecimo(); break;
+            case 'rh-rs-colab': R.rs.id = t.value; R.rs.tipo = /^pj:/.test(t.value) ? 'pj_empresa' : 'sem_justa'; R.rs.dt = ''; R.rs.fgts = ''; R.rs.itens = null; renderRescisao(); break;
+            case 'rh-rs-tipo': R.rs.tipo = t.value; if (t.value === 'pedido' && R.rs.aviso === 'indenizado') R.rs.aviso = 'trabalhado'; rsRecalc(); renderRescisao(); break;
+            case 'rh-rs-data': R.rs.dt = t.value || hoje(); rsRecalc(); renderRescisao(); break;
+            case 'rh-rs-aviso': R.rs.aviso = t.value; rsRecalc(); renderRescisao(); break;
+            case 'rh-rs-fgts': R.rs.fgts = t.value; rsRecalc(); renderRescisao(); break;
           }
         });
         document.addEventListener('input', function(evt) {
