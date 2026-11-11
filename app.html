@@ -146,6 +146,7 @@ input.q{margin-bottom:8px}
     <button data-t="lancar" class="add"><span class="i">+</span>Lançar</button>
     <button data-t="calendario"><span class="i">📅</span>Calendário</button>
     <button data-t="checklist" id="nav-ck"><span class="i">✅</span>Checklist</button>
+    <button data-t="parceiros" id="nav-parc" style="display:none"><span class="i">🤝</span>Parceiros</button>
     <button data-t="rh" id="nav-rh" style="display:none"><span class="i">👥</span>RH</button>
   </nav>
 </div>
@@ -804,18 +805,18 @@ function telaCal(){
   return h;
 }
 
-var TITULOS={painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH',checklist:'Checklist'};
+var TITULOS={parceiros:'Parceiros',painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH',checklist:'Checklist'};
 function render(){
   var m=$('main'),sc=m.scrollTop,foco=document.activeElement&&document.activeElement.id;
   $('h-title').childNodes[0].nodeValue=TITULOS[tab];
   $('h-sub').textContent=perfil?perfil.nome:'';
-  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh,checklist:telaChecklist}[tab];
+  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh,checklist:telaChecklist,parceiros:telaParc}[tab];
   if(tab==='lancar'&&document.getElementById('f-lanc'))return; /* não apaga o formulário em edição */
   m.innerHTML=fn();m.scrollTop=sc;
   if(foco==='busca'){var b=$('busca');if(b){b.focus();var v=b.value;b.value='';b.value=v;}}
   [].forEach.call(document.querySelectorAll('#nav button'),function(b){b.classList.toggle('on',b.getAttribute('data-t')===tab);});
 }
-function ir(t){pendDup=null;tab=t;if(t==='rh'&&temRh())carregarRh().then(function(){if(tab==='rh'&&!document.querySelector('#sheet-bg.on'))render();}).catch(function(e){toast('⚠ '+erro(e),4000);});if(t==='lancar'){var f=$('f-lanc');if(f)f.remove();lancModo='simples';}$('main').scrollTop=0;render();}
+function ir(t){pendDup=null;tab=t;if(t==='parceiros'&&temParc())carregarParc().then(function(){if(tab==='parceiros')render();}).catch(function(e){toast('⚠ '+erro(e),4000);});if(t==='rh'&&temRh())carregarRh().then(function(){if(tab==='rh'&&!document.querySelector('#sheet-bg.on'))render();}).catch(function(e){toast('⚠ '+erro(e),4000);});if(t==='lancar'){var f=$('f-lanc');if(f)f.remove();lancModo='simples';}$('main').scrollTop=0;render();}
 
 /* ---------- detalhe ---------- */
 function selOpts(lista,atual,ph){
@@ -1055,13 +1056,39 @@ var CATS_RH={
   colaborador:[['atestado','Atestado médico'],['recibo','Recibo de pagamento assinado'],['contrato','Contrato / admissão'],['documento','Documento pessoal'],['aso','Exame / ASO'],['ferias','Férias (aviso / recibo)'],['outros','Outros']],
   prestador:[['contrato','Contrato assinado'],['nf','Nota fiscal'],['recibo','Recibo assinado'],['documento','Documento (CNPJ, etc.)'],['outros','Outros']]
 };
+function ehParc(){return !!(perfil&&perfil.parceiro&&perfil.papel!=='admin');}
+function temParc(){return ehParc()||ehAdmin()||!!(perfil&&perfil.permissoes&&perfil.permissoes.setor_parceiros===true);}
+var PA={d:null,nomes:[],sel:'',sub:'equip'};
+function brlP(v){return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function dBRP(i){return i?String(i).slice(8,10)+'/'+String(i).slice(5,7)+'/'+String(i).slice(0,4):'—';}
+function comP(i){if(!i||i.contrato_modelo!=='PARCEIRO')return 0;return i.comissao_tipo==='fixo'?Number(i.comissao_valor||0):Number(i.valor||0)*Number(i.comissao_valor||0)/100;}
+function carregarParc(){
+  var eu=ehParc(),prep=eu?Promise.resolve():chk(sb.rpc('parceiros_nomes')).then(function(r){PA.nomes=r.data||[];if(!PA.sel||PA.nomes.indexOf(PA.sel)<0)PA.sel=PA.nomes[0]||'';});
+  return prep.then(function(){if(!eu&&!PA.sel){PA.d=null;return;}return chk(sb.rpc('parceiro_painel',{p_parceiro:eu?null:PA.sel})).then(function(r){PA.d=r.data;});});
+}
+function telaParc(){
+  var eu=ehParc(),d=PA.d;
+  var h='<div class="pseg"><button data-pa="equip" class="'+(PA.sub==='equip'?'on':'')+'">🚜 Equip.</button><button data-pa="orc" class="'+(PA.sub==='orc'?'on':'')+'">📝 Orçamentos</button><button data-pa="contr" class="'+(PA.sub==='contr'?'on':'')+'">📑 Contratos</button></div>';
+  if(!eu)h+='<select id="pa-sel" style="width:100%;margin:6px 0;padding:10px;border:1px solid var(--line);border-radius:10px">'+(PA.nomes.length?PA.nomes.map(function(n){return '<option'+(n===PA.sel?' selected':'')+'>'+esc(n)+'</option>';}).join(''):'<option value="">(nenhum parceiro)</option>')+'</select>';
+  if(!d)return h+'<div class="hint">'+(eu?'Carregando…':'Nenhum parceiro cadastrado ainda.')+'</div>';
+  var eq=d.equipamentos||[],pr=(d.propostas||[]).filter(function(x){return x.status!=='RASCUNHO';}),cont=eq.filter(function(i){return i.status==='LOCADA';});
+  var n=function(st){return eq.filter(function(i){return i.status===st;}).length;},com=cont.reduce(function(t,i){return t+comP(i);},0);
+  h+='<div class="stats"><div class="stat blu"><b>'+n('DISPONÍVEL')+'</b><span>Disponíveis</span></div><div class="stat grn"><b>'+n('LOCADA')+'</b><span>Locados</span></div><div class="stat org"><b>'+n('EM MANUTENÇÃO')+'</b><span>Manutenção</span></div></div>';
+  h+='<div class="hint" style="margin:2px 0 8px">Comissão à PLS: <b>'+brlP(com)+'</b>/mês · Orçamentos em aberto: <b>'+pr.filter(function(x){return x.status==='ENVIADA';}).length+'</b></div>';
+  if(PA.sub==='equip')h+=eq.length?eq.map(function(i){var c=i.status==='LOCADA'?'grn':i.status==='DISPONÍVEL'?'blu':i.status==='BAIXADO'?'':'org';return '<div class="card"><b>'+esc(i.equipamento)+'</b> <span class="badge '+c+'">'+esc(i.status==='BAIXADO'?'VENDIDO/BAIXADO':i.status)+'</span>'+(i.cliente?'<div class="hint">Cliente: '+esc(i.cliente)+'</div>':'')+(i.anotacoes?'<div class="hint">'+esc(i.anotacoes)+'</div>':'')+'</div>';}).join(''):'<div class="hint">Nenhum equipamento.</div>';
+  else if(PA.sub==='orc')h+=pr.length?pr.map(function(x){var st=x.status==='ENVIADA'?['EM ABERTO','org']:x.status==='APROVADA'?['FECHOU','grn']:x.status==='RECUSADA'?['NÃO FECHOU','red']:[x.status,''];return '<div class="card"><b>'+esc(x.codigo)+' · '+esc(x.cliente_nome)+'</b> <span class="badge '+st[1]+'">'+st[0]+'</span><div class="hint">'+esc((x.equipamentos||[]).join(', '))+'</div><div class="hint">'+brlP(x.valor_mensal)+'/mês · '+dBRP(x.emissao)+(x.motivo?' · '+esc(x.motivo):'')+'</div></div>';}).join(''):'<div class="hint">Nenhum orçamento.</div>';
+  else h+=cont.length?cont.map(function(i){return '<div class="card"><b>'+esc(i.cliente||'—')+'</b><div>'+esc(i.equipamento)+'</div><div class="hint">'+brlP(i.valor)+'/mês · vence dia '+esc(i.dia_vencimento||'—')+' · '+(i.contrato_modelo==='PARCEIRO'?'Grupo PLS + parceiro · comissão '+brlP(comP(i)):'Padrão PLS')+'</div></div>';}).join(''):'<div class="hint">Nenhum contrato ativo.</div>';
+  return h;
+}
 function temRh(){return ehAdmin()||!!(perfil&&perfil.permissoes&&perfil.permissoes.setor_rh===true);}
 function temDem(){return ehAdmin()||!(perfil&&perfil.permissoes&&perfil.permissoes.setor_demandas===false);}
 function aplicarSetores(){
   [].forEach.call(document.querySelectorAll('#nav button'),function(b){
-    var t=b.getAttribute('data-t');b.style.display=(t==='rh'?temRh():t==='checklist'?(temDem()||pode('setor_manutencao')):temDem())?'':'none';
+    var t=b.getAttribute('data-t');if(ehParc()){b.style.display=t==='parceiros'?'':'none';return;}
+    b.style.display=(t==='parceiros'?temParc():t==='rh'?temRh():t==='checklist'?(temDem()||pode('setor_manutencao')):temDem())?'':'none';
   });
   if(!temDem()&&temRh())tab='rh';
+  if(ehParc()||(!temDem()&&!temRh()&&temParc()))tab='parceiros';
 }
 function carregarRh(){
   return Promise.all([
@@ -1163,9 +1190,11 @@ function excluirArqRh(id){
 }
 
 /* ---------- eventos ---------- */
+document.addEventListener('change',function(e){if(e.target&&e.target.id==='pa-sel'){PA.sel=e.target.value;carregarParc().then(render).catch(function(x){toast('⚠ '+erro(x),4000);});}});
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-rhv],[data-rhopen],[data-rh-abrir],[data-rh-del],[data-rhall],[data-pv],[data-aus],[data-aus-del],#aus-salvar,[data-eqtec],[data-dup-add],#dup-criar,[data-edit-srv],#s-cancel,[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
+  var t=e.target.closest('[data-pa],[data-rhv],[data-rhopen],[data-rh-abrir],[data-rh-del],[data-rhall],[data-pv],[data-aus],[data-aus-del],#aus-salvar,[data-eqtec],[data-dup-add],#dup-criar,[data-edit-srv],#s-cancel,[data-view],[data-del-srv],[data-del-dem],[data-pick],[data-modo],#s-add,[data-open],[data-tec],[data-st],[data-cm],[data-dia],[data-srv],[data-st-set],#fechar,#nav button');if(!t)return;
   if(t.id==='fechar'){fecharSheet();return;}
+  if(t.hasAttribute('data-pa')){PA.sub=t.getAttribute('data-pa');render();return;}
   if(t.hasAttribute('data-rhv')){rhV=t.getAttribute('data-rhv');render();return;}
   if(t.hasAttribute('data-rhall')){rhTodos=!rhTodos;render();return;}
   if(t.hasAttribute('data-rhopen')){var pr=t.getAttribute('data-rhopen').split(':');abrirPastaRh(pr[0],pr[1]);return;}
@@ -1213,9 +1242,9 @@ function entrar(session){
   return chk(sb.from('perfis').select('*').eq('id',session.user.id).maybeSingle()).then(function(r){
     if(!r.data)throw new Error('Seu usuário não tem cadastro no sistema. Fale com o administrador.');
     if(!r.data.ativo)throw new Error('Seu acesso está desativado. Fale com o administrador.');
-    perfil=r.data;return carregar();
+    perfil=r.data;return ehParc()?null:carregar();
   }).then(function(){
-    aplicarSetores();return temRh()?carregarRh().catch(function(e){console.error(e);}):null;
+    aplicarSetores();if(temParc())return carregarParc().catch(function(e){console.error(e);});return temRh()?carregarRh().catch(function(e){console.error(e);}):null;
   }).then(function(){
     $('login').classList.add('off');$('app').classList.add('on');render();ligarTempoReal();
   });
