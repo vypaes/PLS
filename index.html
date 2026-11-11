@@ -2330,7 +2330,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .pp-h2-ac { margin-top: 8mm; color: #EC6623; border-bottom-color: #EC6623; }
     .pp-h3 { font-weight: 700; font-size: 10.5pt; margin: 0 0 1.5mm; color: #EC6623; }
     .pp-espec-in { display: flex; gap: 6mm; align-items: center; }
-    .pp-espec-tb .pp-tb td { padding: 0.6mm 3mm; font-size: 9.3pt; }
+    .pp-espec-tb .pp-tb td { padding: 0.4mm 3mm; font-size: 9.2pt; line-height: 1.15; }
     .pp-espec-tb .pp-tb th { padding: 1mm 3mm; }
     .pp-espec-tb { flex: 1; min-width: 0; }
     .pp-espec-tb th:first-child { width: 46mm !important; }
@@ -2575,7 +2575,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v52 — 11/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v53 — 11/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7820,47 +7820,99 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function montarParc() {
           var el = $('setor-parceiros'); if (!el || el.getAttribute('data-ok')) return; el.setAttribute('data-ok', '1');
           el.innerHTML = '<div class="sx-toolbar"><span id="pa-titulo" style="font-weight:800"></span><select id="pa-sel" class="form-control sx-w" style="display:none"></select>' +
-            '<button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="equip">🚜 Equipamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="orc">📝 Orçamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="contr">📑 Contratos</button></div>' +
+            '<button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="equip">🚜 Equipamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="orc">📝 Orçamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="contr">📑 Contratos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="com">💰 Comissões e acertos</button></div>' +
             '<div id="pa-kpis" class="kpi-grid"></div><div class="table-container" id="pa-tabela"></div>';
         }
         function entrarParc() {
           montarParc(); renderParc();
-          var eu = souParceiro();
-          var prep = eu ? Promise.resolve() : chk(sb.rpc('parceiros_nomes')).then(function(r) { PA.nomes = r.data || []; if (!PA.sel || PA.nomes.indexOf(PA.sel) < 0) PA.sel = PA.nomes[0] || ''; });
-          prep.then(function() {
-            var sel = $('pa-sel'); sel.style.display = eu ? 'none' : '';
-            if (!eu) sel.innerHTML = PA.nomes.length ? opts(PA.nomes, PA.sel) : '<option value="">(nenhum parceiro cadastrado)</option>';
+          chk(sb.rpc('parceiros_nomes')).then(function(r) {
+            PA.nomes = r.data || []; if (!PA.sel || PA.nomes.indexOf(PA.sel) < 0) PA.sel = PA.nomes[0] || '';
+            var sel = $('pa-sel'); sel.style.display = PA.nomes.length > 1 ? '' : 'none';
+            sel.innerHTML = PA.nomes.length ? opts(PA.nomes, PA.sel) : '<option value="">(nenhum parceiro cadastrado)</option>';
             return carregarParc();
           }).then(renderParc).catch(function(e) { console.error(e); showToast('Não foi possível carregar: ' + (e.message || e), 5000); });
         }
         function carregarParc() {
-          var eu = souParceiro();
-          if (!eu && !PA.sel) { PA.d = null; return Promise.resolve(); }
-          return chk(sb.rpc('parceiro_painel', { p_parceiro: eu ? null : PA.sel })).then(function(r) { PA.d = r.data; });
+          if (!PA.sel) { PA.d = null; return Promise.resolve(); }
+          return chk(sb.rpc('parceiro_painel', { p_parceiro: PA.sel })).then(function(r) { PA.d = r.data; });
         }
+        function mesAtual() { return hoje().slice(0, 7); }
         function renderParc() {
           montarParc(); var d = PA.d, eu = souParceiro();
-          $('pa-titulo').textContent = 'Parceiro: ' + (eu ? perfilAtual.parceiro : (PA.sel || '—'));
+          $('pa-titulo').textContent = 'Parceiro: ' + (PA.sel || (eu ? perfilAtual.parceiro : '—'));
           document.querySelectorAll('#setor-parceiros [data-sx=pa-sub]').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-v') === PA.sub); });
           if (!d) { $('pa-kpis').innerHTML = ''; $('pa-tabela').innerHTML = '<div class="sx-vazio">' + (eu ? 'Carregando…' : 'Cadastre equipamentos na Frota com o nome do parceiro em “Dono do equipamento”.') + '</div>'; return; }
-          var eq = d.equipamentos || [], pr = (d.propostas || []).filter(function(x) { return x.status !== 'RASCUNHO'; });
+          var eq = d.equipamentos || [], pr = (d.propostas || []).filter(function(x) { return x.status !== 'RASCUNHO'; }), lc = d.lancamentos || [];
           var cont = eq.filter(function(i) { return i.status === 'LOCADA'; }), n = function(st) { return eq.filter(function(i) { return i.status === st; }).length; };
           var com = cont.reduce(function(t, i) { return t + comissaoDe(i); }, 0), fat = cont.reduce(function(t, i) { return t + Number(i.valor || 0); }, 0);
+          var aRec = lc.filter(function(l) { return l.sentido === 'RECEBER' && !l.pago; }).reduce(function(t, l) { return t + Number(l.valor); }, 0);
+          var aPag = lc.filter(function(l) { return l.sentido === 'PAGAR' && !l.pago; }).reduce(function(t, l) { return t + Number(l.valor); }, 0);
           $('pa-kpis').innerHTML = kpi('Equipamentos', eq.filter(function(i) { return i.status !== 'BAIXADO'; }).length, '', '#334155') + kpi('Disponíveis', n('DISPONÍVEL'), '', '#2563eb') + kpi('Locados', n('LOCADA'), brl(fat) + '/mês', '#16a34a') +
-            kpi('Em manutenção', n('EM MANUTENÇÃO'), '', 'var(--pls-red)') + kpi('Orçamentos em aberto', pr.filter(function(x) { return x.status === 'ENVIADA'; }).length, '', '#d97706') + kpi('Comissão à PLS', brl(com), 'por mês, contratos do grupo', '#7c3aed');
+            kpi('Em manutenção', n('EM MANUTENÇÃO'), '', 'var(--pls-red)') + kpi('Orçamentos em aberto', pr.filter(function(x) { return x.status === 'ENVIADA'; }).length, '', '#d97706') + kpi(eu ? 'Comissão devida à PLS' : 'Comissão prevista à PLS', brl(com), 'por mês, contratos do grupo', '#7c3aed') +
+            kpi(eu ? 'Você deve à PLS' : 'Parceiro deve à PLS', brl(aRec), 'em aberto', '#dc2626') + kpi(eu ? 'PLS deve a você' : 'PLS deve ao parceiro', brl(aPag), 'em aberto', '#0891b2');
           var h = '';
           if (PA.sub === 'equip') {
             h = eq.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Equipamento</th><th>Cliente</th><th>Anotações</th></tr></thead><tbody>' + eq.map(function(i) {
               return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b></td><td>' + esc(i.cliente || '—') + '</td><td>' + esc(i.anotacoes || (i.status === 'BAIXADO' ? (i.baixa_motivo || '') : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento deste parceiro na frota.</div>';
           } else if (PA.sub === 'orc') {
             var cor = { ENVIADA: '#d97706', APROVADA: '#16a34a', RECUSADA: '#dc2626' };
-            h = pr.length ? '<table class="table-pls"><thead><tr><th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th>Motivo</th></tr></thead><tbody>' + pr.map(function(x) {
-              return '<tr><td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td>' + esc(x.motivo || '') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
+            h = pr.length ? '<table class="table-pls"><thead><tr><th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
+              return '<tr><td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
+          } else if (PA.sub === 'contr') {
+            h = cont.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
+              return '<tr><td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
           } else {
-            h = cont.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th></tr></thead><tbody>' + cont.map(function(i) {
-              return '<tr><td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
+            var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele.</span></div>';
+            var rot = function(sen) { return sen === 'RECEBER' ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') : (eu ? 'PLS paga a você' : 'PLS paga ao parceiro'); };
+            h = topo + (lc.length ? '<table class="table-pls"><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + lc.map(function(l) {
+              return '<tr><td>' + esc(l.competencia || '—') + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
+                (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum lançamento ainda.' + (eu ? '' : ' Use “Gerar comissões do mês”.') + '</div>');
           }
           $('pa-tabela').innerHTML = h;
+        }
+        function linhasKV(arr) { return '<table class="table-pls"><tbody>' + arr.filter(function(x) { return x[1] != null && x[1] !== ''; }).map(function(x) { return '<tr><td style="width:38%;font-weight:700">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</tbody></table>'; }
+        function verOrcParc(id) {
+          var x = (PA.d.propostas || []).filter(function(y) { return y.id === id; })[0]; if (!x) return;
+          abrirModal('Orçamento ' + x.codigo, linhasKV([['Cliente', x.cliente_nome], ['Situação', x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status], ['Equipamentos', (x.equipamentos || []).join(', ')], ['Valor mensal', brl(x.valor_mensal)],
+            ['Emissão', fd(x.emissao)], ['Enviada em', x.enviada_em ? fd(x.enviada_em) : ''], ['Aprovada em', x.aprovada_em ? fd(x.aprovada_em) : ''], ['Recusada em', x.recusada_em ? fd(x.recusada_em) : ''], ['Motivo', x.motivo],
+            ['Local de entrega', x.local], ['Início previsto', x.entrega ? fd(x.entrega) : ''], ['Período mínimo', x.periodo_min ? x.periodo_min + ' dias' : ''], ['Modelo', x.modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
+            ['Comissão à PLS', x.modelo === 'PARCEIRO' && x.comissao_valor != null ? (x.comissao_tipo === 'fixo' ? brl(x.comissao_valor) + '/mês' : numStr(x.comissao_valor) + '%') : '']]), 'Fechar', function() {});
+        }
+        function verEqParc(id) {
+          var i = (PA.d.equipamentos || []).filter(function(y) { return y.id === id; })[0]; if (!i) return;
+          abrirModal('Contrato — ' + (i.cliente || ''), linhasKV([['Cliente', i.cliente], ['Equipamento', i.equipamento], ['Valor mensal', brl(i.valor)], ['Vencimento', i.dia_vencimento ? 'todo dia ' + i.dia_vencimento : ''], ['Modelo do contrato', i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
+            ['Comissão à PLS', i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '% do valor)' : ' por mês') : ''], ['Anotações', i.anotacoes]]) +
+            (i.ficha ? '<div class="sx-sec">Ficha técnica</div>' + linhasKV(fichaLinhas(i.ficha).map(function(l) { var k = l.indexOf(':'); return k < 0 ? ['Descrição', l] : [l.slice(0, k).trim(), l.slice(k + 1).trim()]; })) : ''), 'Fechar', function() {});
+        }
+        function gerarComissoes() {
+          var d = PA.d; if (!d) return;
+          abrirModal('Gerar comissões do mês', '<div class="form-group"><label class="form-label">Competência</label><input id="pa-g-mes" type="month" class="form-control" value="' + mesAtual() + '"></div><div class="sx-dica">Cria um lançamento “Parceiro paga à PLS” para cada contrato do grupo em andamento (valor da comissão do contrato). Contratos que já têm lançamento no mês não duplicam.</div>', 'Gerar', function() {
+            var mes = $('pa-g-mes').value; if (!mes) throw new Error('Informe o mês.');
+            var ja = (d.lancamentos || []).filter(function(l) { return l.competencia === mes && l.sentido === 'RECEBER'; }).map(function(l) { return l.item_id; });
+            var novos = (d.equipamentos || []).filter(function(i) { return i.status === 'LOCADA' && i.contrato_modelo === 'PARCEIRO' && comissaoDe(i) > 0 && ja.indexOf(i.id) < 0; }).map(function(i) {
+              return { parceiro: PA.sel, sentido: 'RECEBER', competencia: mes, valor: r2(comissaoDe(i)), descricao: 'Comissão — ' + i.equipamento + (i.cliente ? ' (' + i.cliente + ')' : ''), item_id: i.id };
+            });
+            if (!novos.length) throw new Error('Nada a gerar: não há contrato do grupo com comissão, ou já foi gerado neste mês.');
+            return chk(sb.from('parceiro_lancamentos').insert(novos).select()).then(function() { return carregarParc(); }).then(function() { renderParc(); showToast(novos.length + ' lançamento(s) gerado(s) ✔'); });
+          });
+        }
+        function novoLancParc() {
+          abrirModal('Novo lançamento — ' + PA.sel, '<div class="form-grid"><div class="form-group full-width"><label class="form-label">Quem paga</label><select id="pa-n-sen" class="form-control">' + opts([{ v: 'RECEBER', t: 'Parceiro paga à PLS (comissão / acerto)' }, { v: 'PAGAR', t: 'PLS paga ao parceiro (repasse)' }], 'RECEBER') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Competência</label><input id="pa-n-mes" type="month" class="form-control" value="' + mesAtual() + '"></div>' +
+            '<div class="form-group"><label class="form-label">Valor (R$)</label><input id="pa-n-val" class="form-control" inputmode="decimal" value="0,00"></div>' +
+            '<div class="form-group full-width"><label class="form-label">Descrição</label><input id="pa-n-desc" class="form-control" placeholder="ex.: repasse locação YALE — Kaefer"></div></div>', 'Lançar', function() {
+            var v = r2(parseValor($('pa-n-val').value)); if (!(v > 0)) throw new Error('Informe o valor.');
+            return chk(sb.from('parceiro_lancamentos').insert({ parceiro: PA.sel, sentido: $('pa-n-sen').value, competencia: $('pa-n-mes').value || null, valor: v, descricao: $('pa-n-desc').value.trim() || null }).select())
+              .then(function() { return carregarParc(); }).then(function() { renderParc(); showToast('Lançamento criado ✔'); });
+          });
+        }
+        function pagoLancParc(id) {
+          var l = (PA.d.lancamentos || []).filter(function(x) { return x.id === id; })[0]; if (!l) return;
+          chk(sb.from('parceiro_lancamentos').update({ pago: !l.pago, pago_em: l.pago ? null : hoje() }).eq('id', id).select()).then(function() { return carregarParc(); }).then(renderParc).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function delLancParc(id) {
+          if (!confirm('Excluir este lançamento?')) return;
+          chk(sb.from('parceiro_lancamentos').delete().eq('id', id).select()).then(function() { return carregarParc(); }).then(renderParc).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
 
         function formFrota(it, forcaBaixa) {
@@ -9787,6 +9839,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function htmlProposta(p) {
           var d = p.dados || {}, tipo = p.tipo, loc = tipo === 'locacao';
           var mod = modeloDe(tipo), textos = Object.assign({}, mod.textos, d.textos || {}), intro = introAtual(d, mod);
+          var resum = loc && d.formato !== 'completa', ehContrato = !!d._contrato;
           var tot = totaisDe(p), cliente = p.cliente_nome || '', validade = p.validade_dias || 10;
           var rows = [], pend = '', num = 0;
           function row(h, split) { rows.push('<tr' + (split ? ' class="pp-split"' : '') + '><td>' + pend + h + '</td></tr>'); pend = ''; }
@@ -9804,11 +9857,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (loc) { if (d.local) ident.push({ k: 'Local de entrega', v: d.local }); if (d.entrega) ident.push({ k: 'Prazo de entrega', v: fd(d.entrega) }); }
           else { ident.push({ k: 'Início da vigência', v: fd(d.inicio) }); ident.push({ k: 'Término da vigência', v: fd(d.termino) }); }
           row('<div class="pp-titulo"><div class="pp-tit-sub">PLS EMPILHADEIRAS — ' + (loc ? 'Locação de empilhadeiras sem operador' : 'Serviços técnicos especializados') + '</div>' +
-            '<div class="pp-tit-main">PROPOSTA COMERCIAL</div><div class="pp-tit-tipo">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div></div>');
+            '<div class="pp-tit-main">' + (ehContrato ? 'CONTRATO DE LOCAÇÃO' : 'PROPOSTA COMERCIAL') + '</div><div class="pp-tit-tipo">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div></div>');
           row('<div class="pp-keep">' + tabelaKV('Campo', 'Informação', ident) + '</div>');
-          paras(intro, cliente, validade, tipo, d.periodoMin).forEach(row);
+          if (!resum) paras(intro, cliente, validade, tipo, d.periodoMin).forEach(row);
 
-          BLOCOS[tipo].forEach(function(b) {
+          BLOCOS[tipo].filter(function(b) { return !resum || ['escopo', 'espec', 'cond', 'valor'].indexOf(b.id) >= 0; }).forEach(function(b) {
             if (!b.nohead) head(b.t);
             if (b.k === 'texto') { paras(textos[b.id], cliente, validade, tipo, d.periodoMin).forEach(row); }
             else if (b.k === 'escopo') { paras(d.escopo, cliente, validade, tipo, d.periodoMin).forEach(row); }
@@ -9818,10 +9871,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var kv = fichaLinhas(it.ficha).map(function(l) { var i = l.indexOf(':'); return i < 0 ? { k: 'Descrição', v: l } : { k: l.slice(0, i).trim(), v: l.slice(i + 1).trim() }; });
                 if (!kv.length) kv = [{ k: 'Equipamento', v: it.equipamento }];
                 var foto = it.foto_path ? (C.urls['com-fotos|' + it.foto_path] || {}).url : '';
-                var hKv = 5.5 + kv.length * 5.6, fw = Math.min(64, Math.max(46, Math.round(hKv * 0.95)));
+                var hKv = 5 + kv.length * 4.9, fw = Math.min(50, Math.max(42, Math.round(hKv * 0.8)));
                 row('<div class="pp-keep">' + (its.length > 1 ? '<div class="pp-h3">' + esc(it.equipamento) + '</div>' : '') +
                   '<div class="pp-espec-in"><div class="pp-espec-tb">' + tabelaKV('Característica', 'Especificação', kv) + '</div>' +
-                  (foto ? '<div class="pp-foto" style="flex:0 0 ' + fw + 'mm"><img style="width:' + fw + 'mm;max-height:' + Math.round(hKv) + 'mm" src="' + esc(foto) + '" alt=""><small>Imagem ilustrativa</small></div>' : '') + '</div></div>');
+                  (foto ? '<div class="pp-foto" style="flex:0 0 ' + fw + 'mm"><img style="width:' + fw + 'mm;max-height:' + Math.min(44, Math.round(hKv)) + 'mm" src="' + esc(foto) + '" alt=""><small>Imagem ilustrativa</small></div>' : '') + '</div></div>');
               });
             }
             else if (b.k === 'espec') {
@@ -9834,6 +9887,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var pm = Number(d.periodoMin) || 30;
               row('<div class="pp-li">Prazo mínimo de locação: ' + pm + ' (' + esc(extInt(pm)) + ') dias, prorrogável por períodos iguais e sucessivos mediante manifestação de qualquer das partes.</div>');
               row('<div class="pp-li">Local de entrega e retirada: ' + esc(d.local || '[endereço completo]') + '.</div>');
+              if (resum) {
+                row('<div class="pp-li">Manutenção do equipamento: por conta da <b>' + esc(d.manutPor || 'LOCADORA') + '</b>' + ((d.manutPor || 'LOCADORA') === 'LOCADORA' ? ' (exceto danos por mau uso).' : '.') + '</div>');
+                row('<div class="pp-li">Transporte (entrega e retirada): ' + (d.transPor === 'A COMBINAR' ? 'a combinar.' : 'por conta da <b>' + esc(d.transPor || 'LOCADORA') + '</b>.') + '</div>');
+                row('<div class="pp-li">Demais condições (obrigações das partes, sinistros, reajuste e encargos) conforme o contrato de locação a ser firmado.</div>');
+              } else
               row('<div class="pp-li">A entrega e a retirada do equipamento serão registradas em checklist de vistoria assinado pelas partes, que integra esta proposta.</div>');
             }
             else if (b.k === 'valor') {
@@ -9868,7 +9926,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           row('<div class="pp-sign">' + bloco(com, EMP.nome, lb.a, EMP.cnpj, com ? 'Vyctor Paes da Silva Dias' : '') + bloco(false, nomeAss.toUpperCase(), lb.b, p.cliente_cnpj || '', '') + '</div>');
 
           var grupo = d.modelo === 'PARCEIRO', logoDoc = grupo ? COM_IMG.logoGrupo : COM_IMG.logo, parc = d.parceiro || '';
-          var titulo = 'PROPOSTA COMERCIAL · Nº ' + (p.codigo || '000-00');
+          var titulo = (ehContrato ? 'CONTRATO DE LOCAÇÃO' : 'PROPOSTA COMERCIAL') + ' · Nº ' + (p.codigo || '000-00');
           var capaUrl = capaDe(tipo) ? ((C.urls['com-fotos|' + capaDe(tipo)] || {}).url || '') : '';
           var capa = capaUrl || (loc ? COM_IMG.capaLoc : COM_IMG.capaMan);
           var fones = EMP.fones.map(esc).join('<br>');
@@ -9886,7 +9944,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '</div>' +
             '</section>';
           var header = '<div class="pp-head"><img src="' + logoDoc + '" alt="PLS"><b>' + esc(titulo) + '</b></div>';
-          var footer = '<div class="pp-foot pp-foot-fixed"><div><b>' + EMP.nome + '</b> · CNPJ: ' + EMP.cnpj + ' | Avenida Lacerda Agostinho, 110 | Linha Azul km 03 · Virgem Santa · Macaé/RJ<br>' +
+          var footerGrupo = '<div class="pp-foot pp-foot-fixed"><div><b>' + EMP.nome + '</b> · CNPJ ' + EMP.cnpj + ' · (22) 2006-0763 · ' + esc(EMP.email) + ' · Macaé/RJ<br>' + (function() {
+            var PD = /big\s*maq/i.test(parc) ? { n: 'BIG MAQ EQUIPAMENTOS', c: '21.007.848/0001-12', t: '(11) 2746-3025', l: 'Itaquaquecetuba/SP' } : null;
+            return PD ? '<b>' + PD.n + '</b> · CNPJ ' + PD.c + ' · ' + PD.t + ' · ' + PD.l : (parc ? '<b>' + esc(parc) + '</b>' : '');
+          })() + '</div></div>';
+          var footer = grupo ? footerGrupo : '<div class="pp-foot pp-foot-fixed"><div><b>' + EMP.nome + '</b> · CNPJ: ' + EMP.cnpj + ' | Avenida Lacerda Agostinho, 110 | Linha Azul km 03 · Virgem Santa · Macaé/RJ<br>' +
             'Telefones: (22) 2006-0763 | (22) 99979-7662 | (22) 99989-2079 | E-mail: ' + esc(EMP.email) + '<br>Site: ' + esc(EMP.site) + ' | Instagram: ' + esc(EMP.insta) + '</div></div>';
           return '<div class="pp' + (grupo ? ' pp-grupo' : '') + '">' + cover + '<table class="pp-doc"><thead><tr><td>' + header + '</td></tr></thead><tbody>' + rows.join('') + '</tbody><tfoot><tr><td><div class="pp-foot-sp"></div></td></tr></tfoot></table>' + footer + '</div>';
         }
@@ -9901,7 +9963,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             document.body.classList.add('print-sx');
             var st = $('sx-print-page'); if (st) st.textContent = '@page { size: A4 portrait; margin: 0 0 11mm 0; @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 7.5pt Carlito, Calibri, Arial, sans-serif; color: #5b6270; margin: 0 14mm 3mm 0; } } @page pp-capa { size: A4 portrait; margin: 0; @bottom-right { content: none; } }';
             var tituloAntes = document.title;
-            document.title = (p.tipo === 'locacao' ? 'Proposta ' : 'Contrato ') + (p.codigo || '') + ' - ' + (p.cliente_nome || '');
+            document.title = (p.tipo === 'locacao' && !(p.dados && p.dados._contrato) ? 'Proposta ' : 'Contrato ') + (p.codigo || '') + ' - ' + (p.cliente_nome || '');
             var limpar = function() { document.body.classList.remove('print-sx'); if (st) st.textContent = ''; document.title = tituloAntes; window.removeEventListener('afterprint', limpar); };
             window.addEventListener('afterprint', limpar);
             setTimeout(function() { window.print(); }, 120);
@@ -10037,7 +10099,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var ass = p.assinado_path ? '<span class="sx-pill sx-st-ok">📎 ' + esc(p.assinado_nome || 'anexado') + '</span>' : '<span class="sx-pill sx-hoje">Falta anexar</span>';
               return '<tr><td><b>' + esc(p.codigo) + '</b></td><td>' + (p.tipo === 'locacao' ? 'Locação' : 'Manutenção') + '</td><td><b>' + esc(p.cliente_nome) + '</b></td><td>' + esc(resumoProp(p)) + '</td><td>' + fd(p.aprovada_em) + '</td>' +
                 '<td style="text-align:right;font-weight:700">' + brl(p.valor_mensal) + '</td><td>' + ass + '</td><td class="sx-acoes" style="white-space:normal">' +
-                '<button type="button" class="btn-pls-secondary" data-cm="pdf" data-id="' + p.id + '">🖨 PDF</button> ' +
+                '<button type="button" class="btn-pls-secondary" data-cm="pdf" data-id="' + p.id + '">🖨 PDF</button> ' + (p.tipo === 'locacao' ? '<button type="button" class="btn-pls-secondary" data-cm="contrato" data-id="' + p.id + '" title="Imprime com todas as cláusulas, como contrato">📜 Contrato</button> ' : '') +
                 '<button type="button" class="btn-pls-primary" data-cm="anexar" data-id="' + p.id + '">' + (p.assinado_path ? 'Trocar assinado' : '📎 Anexar assinado') + '</button> ' +
                 (p.assinado_path ? '<button type="button" class="btn-pls-secondary" data-cm="abrir-ass" data-id="' + p.id + '">Abrir assinado</button> ' : '') +
                 '<button type="button" class="btn-pls-secondary" data-cm="ver-loc" data-id="' + p.id + '">Ver em Locações</button> ' +
@@ -10102,7 +10164,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return {
             id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', dest: '', abrev: '', emissao: hoje(), validade: 10,
             itens: [], man: [{ qtd: 1, equip: '', marca: '', tipo: '' }], inicio: '', termino: '', valorBase: 0, diaVenc: 15,
-            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false, modelo: 'PLS', comTipo: 'pct', comValor: 0,
+            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false, modelo: 'PLS', comTipo: 'pct', comValor: 0, formato: 'resumida', manutPor: 'LOCADORA', transPor: 'LOCADORA',
             textos: Object.assign({}, mod.textos), intro: mod.intro, auto: { escopo: true, pagto: true, compl: true, termino: true }
           };
         }
@@ -10110,14 +10172,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var d = p.dados || {}, e = novoEstado(p.tipo);
           e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.dest = p.destinatario || '';
           e.emissao = p.emissao; e.validade = p.validade_dias || 10;
-          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto', 'modelo', 'comTipo', 'comValor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
+          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto', 'modelo', 'comTipo', 'comValor', 'formato', 'manutPor', 'transPor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
           if (d.itens) e.itens = JSON.parse(JSON.stringify(d.itens));
           if (d.man) e.man = JSON.parse(JSON.stringify(d.man));
           if (d.textos) e.textos = Object.assign({}, e.textos, d.textos);
           return e;
         }
         function objDe(E) {
-          var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
+          var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', formato: E.formato || 'resumida', manutPor: E.manutPor || 'LOCADORA', transPor: E.transPor || 'LOCADORA', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
           if (dados.modelo === 'PARCEIRO' && E.itens) { var ps = {}; E.itens.forEach(function(i) { var li = L.itens.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) ps[li.dono] = 1; }); dados.parceiro = Object.keys(ps).join(' / '); }
           if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.diasPagto = E.diasPagto; }
           else { dados.man = E.man; dados.inicio = E.inicio; dados.termino = E.termino; dados.valorBase = E.valorBase; dados.diaVenc = E.diaVenc; }
@@ -10139,6 +10201,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if ($('cm-assin')) E.assin = $('cm-assin').checked;
           if ($('cm-capa')) E.capa = $('cm-capa').checked;
           if (v('cm-modelo') != null) E.modelo = v('cm-modelo');
+          if (v('cm-formato') != null) E.formato = v('cm-formato');
+          if (v('cm-manutpor') != null) E.manutPor = v('cm-manutpor');
+          if (v('cm-transpor') != null) E.transPor = v('cm-transpor');
           if (v('cm-comtipo') != null) E.comTipo = v('cm-comtipo');
           if (v('cm-comvalor') != null) E.comValor = parseValor(v('cm-comvalor'));
           if (v('cm-forma') != null) E.forma = v('cm-forma');
@@ -10267,6 +10332,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="form-group full-width"><label class="form-label">Escopo (' + (loc ? 'preenchido sozinho; pode editar' : 'preenchido sozinho; pode editar') + ')</label><textarea id="cm-escopo" class="form-control" rows="2">' + esc(E.escopo) + '</textarea></div>' +
               '<div class="form-group"><label class="form-label">Forma de pagamento</label><input id="cm-forma" class="form-control" list="cm-dl-forma" value="' + esc(E.forma) + '"><datalist id="cm-dl-forma"><option value="Boleto"><option value="PIX"><option value="Boleto ou PIX"></datalist></div>' +
               '<div class="form-group full-width"><label class="form-label">Vencimento (texto do quadro de valores)</label><input id="cm-pagto" class="form-control" value="' + esc(E.pagtoTxt) + '"></div>' +
+              (loc ? '<div class="form-group"><label class="form-label">Formato da proposta</label><select id="cm-formato" class="form-control">' + opts([{ v: 'resumida', t: 'Resumida (equipamento, prazo, valores)' }, { v: 'completa', t: 'Completa (com todas as cláusulas)' }], E.formato || 'resumida') + '</select></div>' +
+                '<div class="form-group"><label class="form-label">Manutenção por conta de</label><select id="cm-manutpor" class="form-control">' + opts(['LOCADORA', 'LOCATÁRIA'], E.manutPor || 'LOCADORA') + '</select></div>' +
+                '<div class="form-group"><label class="form-label">Transporte por conta de</label><select id="cm-transpor" class="form-control">' + opts(['LOCADORA', 'LOCATÁRIA', 'A COMBINAR'], E.transPor || 'LOCADORA') + '</select></div>' : '') +
               '<div class="form-group"><label class="form-label">Modelo do documento</label><select id="cm-modelo" class="form-control">' + opts([{ v: 'PLS', t: 'Padrão PLS' }, { v: 'PARCEIRO', t: 'Grupo PLS + parceiro (logo e cores do grupo)' }], E.modelo || 'PLS') + '</select></div>' +
               (loc ? '<div class="form-group"><label class="form-label">Comissão do parceiro à PLS (só modelo do grupo)</label><div style="display:flex;gap:0.4rem"><select id="cm-comtipo" class="form-control" style="max-width:90px"><option value="pct"' + (E.comTipo !== 'fixo' ? ' selected' : '') + '>%</option><option value="fixo"' + (E.comTipo === 'fixo' ? ' selected' : '') + '>R$/mês</option></select><input id="cm-comvalor" class="form-control" inputmode="decimal" value="' + numStr(E.comValor || 0) + '"></div></div>' : '') +
               '<div class="form-group full-width"><label class="sx-chkl"><input type="checkbox" id="cm-capa"' + (E.capa === true ? ' checked' : '') + '> Incluir folha de capa com foto (opcional)</label></div>' +
@@ -10450,6 +10518,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'aprovar': abrirAprovacao(id); break;
             case 'reverter': reverterAprovacao(id); break;
             case 'pdf': { var p = propPorId(id); if (p) imprimirProposta(p); break; }
+            case 'contrato': { var pc = propPorId(id); if (pc) { var pc2 = JSON.parse(JSON.stringify(pc)); pc2.dados = pc2.dados || {}; pc2.dados.formato = 'completa'; pc2.dados._contrato = true; pc2.dados.capa = false; imprimirProposta(pc2); } break; }
             case 'anexar': abrirAnexo(id); break;
             case 'abrir-ass': abrirAssinado(id); break;
             case 'ver-loc': setSetor('locacoes', 'locacoes'); break;
@@ -11726,6 +11795,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             case 'lo-novo': abrirItem(null, a.getAttribute('data-tipo')); break;
             case 'fr-novo': abrirFrota(null); break;
             case 'pa-sub': PA.sub = a.getAttribute('data-v'); renderParc(); break;
+            case 'pa-ver-orc': verOrcParc(id); break;
+            case 'pa-ver-eq': verEqParc(id); break;
+            case 'pa-gerar': gerarComissoes(); break;
+            case 'pa-novo': novoLancParc(); break;
+            case 'pa-pago': pagoLancParc(id); break;
+            case 'pa-del': delLancParc(id); break;
             case 'fr-editar': abrirFrota(id); break;
             case 'fr-baixar': abrirFrota(id, true); break;
             case 'lo-editar': abrirItem(id); break;
@@ -12168,7 +12243,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 '<option value="usuario"' + (u.papel !== 'admin' ? ' selected' : '') + '>Usuário — acesso limitado</option>' +
                 '<option value="admin"' + (u.papel === 'admin' ? ' selected' : '') + '>Administrador — mesmos poderes do Vyctor</option>' +
               '</select></div>' +
-            '<div class="form-group full-width"><label class="form-label" for="ed-parceiro">Usuário PARCEIRO? Nome do dono do equipamento (deixe vazio se for da equipe PLS)</label><input type="text" id="ed-parceiro" class="form-control" placeholder="ex.: Big Maq (igual ao “Dono” cadastrado na Frota)" value="' + escapeHtml(u.parceiro || '') + '"><div style="font-size:0.75rem;color:#64748b;margin-top:0.2rem">Parceiro só enxerga o setor Parceiros, apenas com os equipamentos, orçamentos e contratos dele.</div></div>' +
+            '<div class="form-group full-width"><label class="form-label" for="ed-parceiro">Usuário PARCEIRO? Nome(s) do dono do equipamento que ele pode ver, separados por vírgula (vazio = equipe PLS)</label><input type="text" id="ed-parceiro" class="form-control" placeholder="ex.: Big Maq (igual ao “Dono” cadastrado na Frota)" value="' + escapeHtml(u.parceiro || '') + '"><div style="font-size:0.75rem;color:#64748b;margin-top:0.2rem">Parceiro só enxerga o setor Parceiros, apenas com os equipamentos, orçamentos e contratos dele.</div></div>' +
           '</div>' + htmlPermissoes('ed', u.papel === 'admin' ? PERMISSOES_PADRAO : u.permissoes),
           'Salvar privilégios',
           function() {
@@ -12177,6 +12252,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var papel = document.getElementById('ed-papel').value;
             var parc = document.getElementById('ed-parceiro').value.trim() || null, perms = lerPermissoes('ed');
             if (parc && papel === 'admin') throw new Error('Um administrador não pode ser usuário parceiro.');
+            if (!parc && perms.setor_parceiros && papel !== 'admin' && !confirm('Atenção: este usuário está com o setor Parceiros liberado e SEM nome de parceiro — ele verá TODOS os parceiros. Continuar mesmo assim?')) throw new Error('Preencha o campo do parceiro (ex.: BIG MAQ EQUIPAMENTOS) ou desmarque o setor.');
             if (parc) perms = { setor_demandas: false, setor_parceiros: true };
             return chkLinhas(sb.from('perfis').update({ nome: nome, papel: papel, parceiro: parc, permissoes: perms }).eq('id', u.id).select('id'), 1)
               .then(function() {
