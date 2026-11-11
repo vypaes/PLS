@@ -2575,7 +2575,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v53 — 11/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v55 — 11/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -3402,6 +3402,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         <div class="form-actions" style="display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
           <button type="button" class="btn-pls-primary" data-action="salvar-cfg-painel">💾 Salvar configuração do painel</button>
         </div>
+      </div>
+
+      <div class="card-pls">
+        <div class="card-header-title"><div><span>🔗 Links para enviar aos usuários</span></div></div>
+        <div id="links-acesso"></div>
       </div>
 
       <div class="card-pls">
@@ -9856,7 +9861,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (p.destinatario) ident.push({ k: 'A/C', v: p.destinatario });
           if (loc) { if (d.local) ident.push({ k: 'Local de entrega', v: d.local }); if (d.entrega) ident.push({ k: 'Prazo de entrega', v: fd(d.entrega) }); }
           else { ident.push({ k: 'Início da vigência', v: fd(d.inicio) }); ident.push({ k: 'Término da vigência', v: fd(d.termino) }); }
-          row('<div class="pp-titulo"><div class="pp-tit-sub">PLS EMPILHADEIRAS — ' + (loc ? 'Locação de empilhadeiras sem operador' : 'Serviços técnicos especializados') + '</div>' +
+          row('<div class="pp-titulo">' +
             '<div class="pp-tit-main">' + (ehContrato ? 'CONTRATO DE LOCAÇÃO' : 'PROPOSTA COMERCIAL') + '</div><div class="pp-tit-tipo">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div></div>');
           row('<div class="pp-keep">' + tabelaKV('Campo', 'Informação', ident) + '</div>');
           if (!resum) paras(intro, cliente, validade, tipo, d.periodoMin).forEach(row);
@@ -12221,7 +12226,23 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         });
       }
 
+      function urlBase() { return /^https?:/.test(location.origin) && !/localhost|127\.0\.0\.1/.test(location.origin) ? location.origin : 'https://plsdemandas.vercel.app'; }
+      function copiarLink(t) {
+        try { navigator.clipboard.writeText(t).then(function() { showToast('Copiado ✔'); }, function() { prompt('Copie o texto:', t); }); } catch (e) { prompt('Copie o texto:', t); }
+      }
+      function desenharLinks() {
+        var el = document.getElementById('links-acesso'); if (!el) return;
+        var w = urlBase() + '/', a = urlBase() + '/app.html';
+        var item = function(tit, desc, url, msg) {
+          return '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:0.7rem 0.8rem;margin-bottom:0.6rem"><div style="font-weight:800">' + tit + '</div><div style="font-size:0.8rem;color:#64748b;margin-bottom:0.4rem">' + desc + '</div>' +
+            '<input class="form-control" readonly value="' + escapeHtml(url) + '" onclick="this.select()" style="margin-bottom:0.4rem">' +
+            '<div style="display:flex;gap:0.4rem;flex-wrap:wrap"><button type="button" class="btn-row" data-action="lk-copiar" data-v="' + escapeHtml(url) + '">📋 Copiar link</button><button type="button" class="btn-row" data-action="lk-copiar" data-v="' + escapeHtml(msg) + '">📋 Copiar mensagem pronta</button><button type="button" class="btn-row" data-action="lk-zap" data-v="' + escapeHtml(msg) + '">💬 Enviar por WhatsApp</button><button type="button" class="btn-row" data-action="lk-abrir" data-v="' + escapeHtml(url) + '">Abrir</button></div></div>';
+        };
+        el.innerHTML = item('💻 Sistema (computador)', 'Acesso pelo navegador, com todos os setores liberados para cada usuário.', w, 'Olá! Acesse o sistema da PLS Empilhadeiras pelo computador: ' + w + '\nEntre com o seu e-mail e a senha que passei.') +
+          item('📱 Aplicativo (celular)', 'Abra no celular e use “Adicionar à tela inicial” para virar um ícone (iPhone: Compartilhar → Adicionar à Tela de Início; Android: ⋮ → Instalar app).', a, 'Olá! Aplicativo da PLS Empilhadeiras para o celular: ' + a + '\nAbra no navegador do celular, entre com o seu e-mail e senha e use “Adicionar à tela inicial” para ficar como aplicativo.');
+      }
       function prepararAbaConfig() {
+        desenharLinks();
         var wrap = document.getElementById('usr-perms-wrap');
         if (wrap && !wrap.innerHTML) {
           wrap.innerHTML = htmlPermissoes('novo', PERMISSOES_PADRAO);
@@ -12307,6 +12328,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         if (acao === 'logout') sair();
         else if (acao === 'trocar-senha') trocarMinhaSenha();
         else if (acao === 'fechar-modal-generico') fecharModal();
+        else if (acao === 'lk-copiar') copiarLink(alvo.getAttribute('data-v'));
+        else if (acao === 'lk-zap') window.open('https://wa.me/?text=' + encodeURIComponent(alvo.getAttribute('data-v')), '_blank');
+        else if (acao === 'lk-abrir') window.open(alvo.getAttribute('data-v'), '_blank');
         else if (acao === 'usr-editar') editarUsuario(id);
         else if (acao === 'usr-senha') novaSenhaUsuario(id);
         else if (acao === 'usr-ativo') alternarAtivo(id);

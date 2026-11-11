@@ -1254,7 +1254,10 @@ document.addEventListener('change',function(e){
 });
 document.addEventListener('input',function(e){if(e.target.id==='rh-busca'){rhBusca=e.target.value;var l=rhLista();$('rh-lista').innerHTML=l.length?l.map(cardRh).join(''):'<div class="empty">Ninguém encontrado.</div>';return;}if(e.target.id==='busca'){busca=e.target.value;var l=listaDemandas();$('lista').innerHTML=l.length?l.slice(0,80).map(cardDem).join(''):'<div class="empty">Nenhuma demanda.</div>';}});
 document.addEventListener('submit',function(e){if(e.target.id==='f-lanc')enviarLanc(e);if(e.target.id==='f-edit')salvarEdicao(e);});
-$('b-reload').addEventListener('click',function(){carregar().then(function(){return temRh()?carregarRh():null;}).then(function(){render();toast('Atualizado');}).catch(function(e){toast('⚠ '+erro(e),4000);});});
+function atualizarTudo(){
+  return (ehParc()?Promise.resolve():carregar()).then(function(){return temRh()?carregarRh():null;}).then(function(){return temParc()?carregarParc().catch(function(e){console.error(e);}):null;});
+}
+$('b-reload').addEventListener('click',function(){atualizarTudo().then(function(){render();toast('Atualizado');}).catch(function(e){toast('⚠ '+erro(e),4000);});});
 $('b-sair').addEventListener('click',function(){if(confirm('Sair do aplicativo?'))sb.auth.signOut().finally(function(){location.reload();});});
 
 /* ---------- login / sessão ---------- */
@@ -1272,9 +1275,11 @@ function entrar(session){
 }
 function ligarTempoReal(){
   if(rtLigado)return;rtLigado=true;
-  function recarregar(){clearTimeout(rtTimer);rtTimer=setTimeout(function(){carregar().then(function(){return temRh()?carregarRh():null;}).then(function(){if(!document.querySelector('#sheet-bg.on'))render();}).catch(function(){});},800);}
+  function recarregar(){clearTimeout(rtTimer);rtTimer=setTimeout(function(){atualizarTudo().then(function(){if(!document.querySelector('#sheet-bg.on'))render();}).catch(function(){});},800);}
   sb.channel('pls-mobile').on('postgres_changes',{event:'*',schema:'public'},recarregar).subscribe();
   document.addEventListener('visibilitychange',function(){if(!document.hidden)recarregar();});
+  /* parceiro não recebe eventos em tempo real (o banco não deixa ver as tabelas) — confere a cada 25 s */
+  if(temParc())setInterval(function(){if(!document.hidden&&!document.querySelector('#sheet-bg.on'))recarregar();},25000);
 }
 $('lg-btn').addEventListener('click',function(){
   var em=$('lg-email').value.trim(),se=$('lg-senha').value;
