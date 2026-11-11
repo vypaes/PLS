@@ -2575,7 +2575,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v55 — 11/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v56 — 11/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10185,7 +10185,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function objDe(E) {
           var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', formato: E.formato || 'resumida', manutPor: E.manutPor || 'LOCADORA', transPor: E.transPor || 'LOCADORA', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
-          if (dados.modelo === 'PARCEIRO' && E.itens) { var ps = {}; E.itens.forEach(function(i) { var li = L.itens.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) ps[li.dono] = 1; }); dados.parceiro = Object.keys(ps).join(' / '); }
+          if (E.itens) { var ps = {}; E.itens.forEach(function(i) { var li = L.itens.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) i.dono = li.dono; if (i.dono && !/^pls/i.test(i.dono)) ps[i.dono] = 1; }); dados.parceiro = Object.keys(ps).join(' / '); }
           if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.diasPagto = E.diasPagto; }
           else { dados.man = E.man; dados.inicio = E.inicio; dados.termino = E.termino; dados.valorBase = E.valorBase; dados.diaVenc = E.diaVenc; }
           var p = { id: E.id, codigo: E.codigo, tipo: E.tipo, status: E.status, cliente_nome: E.cliente.trim(), cliente_cnpj: E.cnpj.trim() || null, destinatario: E.dest.trim() || null, emissao: E.emissao, validade_dias: E.validade, dados: dados };
