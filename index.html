@@ -2202,6 +2202,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       padding: 0.6rem 0.2rem; cursor: pointer; font-weight: 700; font-size: 0.72rem;
     }
     .setor-btn:hover { border-color: var(--accent); color: #fff; }
+    #setor-tip { position: fixed; z-index: 9999; background: #111827; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 0.4rem 0.7rem; border-radius: 8px; border: 1px solid var(--accent); box-shadow: 0 4px 14px rgba(0,0,0,.35); pointer-events: none; white-space: nowrap; display: none; transform: translateY(-50%); }
+    #setor-tip::before { content: ''; position: absolute; left: -6px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-right-color: var(--accent); border-left: 0; }
     .setor-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .setor-ic { font-size: 1.35rem; line-height: 1; }
     .setor-badge {
@@ -2575,7 +2577,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v56 — 11/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v57 — 11/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7580,7 +7582,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function nomeUsuario() { return perfilAtual ? perfilAtual.nome : ''; }
 
         // ---------- permissões por setor ----------
-        function permitido(k) {
+        (function() {
+        var tip = document.createElement('div'); tip.id = 'setor-tip'; document.body.appendChild(tip);
+        document.addEventListener('mouseover', function(e) {
+          var b = e.target.closest && e.target.closest('.setor-btn[data-tip]');
+          if (!b || window.innerWidth <= 800) { tip.style.display = 'none'; return; }
+          var r = b.getBoundingClientRect(); tip.textContent = b.getAttribute('data-tip');
+          tip.style.left = (r.right + 10) + 'px'; tip.style.top = (r.top + r.height / 2) + 'px'; tip.style.display = 'block';
+        });
+        document.addEventListener('click', function() { tip.style.display = 'none'; });
+      })();
+      function permitido(k) {
           if (!perfilAtual || !DEF.some(function(x) { return x.k === k; })) return false;
           if (k === 'gerencial') return ehAdmin();
           if (ehAdmin()) return true;
@@ -7595,7 +7607,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var lista = setoresPermitidos();
           rail.innerHTML = '<div class="setor-titulo">Setores</div>' + lista.map(function(s) {
             var bd = s.k === 'locacoes' ? contarAlertas() : s.k === 'manutencao' ? contarMan() : 0;
-            return '<button type="button" class="setor-btn' + (s.k === setorAtual ? ' active' : '') + '" data-sx="setor" data-setor="' + s.k + '" title="' + s.t + '">' +
+            return '<button type="button" class="setor-btn' + (s.k === setorAtual ? ' active' : '') + '" data-sx="setor" data-setor="' + s.k + '" data-tip="' + s.t + '" aria-label="' + s.t + '">' +
               '<span class="setor-ic">' + s.ic + '</span><span class="setor-nm">' + s.t + '</span>' +
               (bd ? '<span class="setor-badge" title="' + (s.k === 'manutencao' ? 'Revisões vencidas' : 'Faturas para enviar') + '">' + bd + '</span>' : '') + '</button>';
           }).join('');
@@ -7828,23 +7840,37 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="equip">🚜 Equipamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="orc">📝 Orçamentos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="contr">📑 Contratos</button><button type="button" class="sx-subbtn" data-sx="pa-sub" data-v="com">💰 Comissões e acertos</button></div>' +
             '<div id="pa-kpis" class="kpi-grid"></div><div class="table-container" id="pa-tabela"></div>';
         }
+        var TODOS = '__todos__';
         function entrarParc() {
           montarParc(); renderParc();
           chk(sb.rpc('parceiros_nomes')).then(function(r) {
-            PA.nomes = r.data || []; if (!PA.sel || PA.nomes.indexOf(PA.sel) < 0) PA.sel = PA.nomes[0] || '';
-            var sel = $('pa-sel'); sel.style.display = PA.nomes.length > 1 ? '' : 'none';
-            sel.innerHTML = PA.nomes.length ? opts(PA.nomes, PA.sel) : '<option value="">(nenhum parceiro cadastrado)</option>';
+            PA.nomes = r.data || []; var multi = PA.nomes.length > 1;
+            if (!PA.sel || (PA.sel !== TODOS && PA.nomes.indexOf(PA.sel) < 0) || (PA.sel === TODOS && !multi)) PA.sel = multi ? TODOS : (PA.nomes[0] || '');
+            var sel = $('pa-sel'); sel.style.display = multi ? '' : 'none';
+            sel.innerHTML = (multi ? '<option value="' + TODOS + '"' + (PA.sel === TODOS ? ' selected' : '') + '>★ TODOS OS PARCEIROS</option>' : '') + (PA.nomes.length ? opts(PA.nomes, PA.sel) : '<option value="">(nenhum parceiro cadastrado)</option>');
             return carregarParc();
           }).then(renderParc).catch(function(e) { console.error(e); showToast('Não foi possível carregar: ' + (e.message || e), 5000); });
         }
         function carregarParc() {
           if (!PA.sel) { PA.d = null; return Promise.resolve(); }
+          if (PA.sel === TODOS) {
+            return Promise.all(PA.nomes.map(function(n) { return chk(sb.rpc('parceiro_painel', { p_parceiro: n })).then(function(r) { return r.data; }); })).then(function(lista) {
+              var m = { parceiro: 'Todos', equipamentos: [], propostas: [], lancamentos: [] }, vistos = {};
+              lista.forEach(function(d) {
+                (d.equipamentos || []).forEach(function(x) { x._p = d.parceiro; m.equipamentos.push(x); });
+                (d.propostas || []).forEach(function(x) { if (!vistos[x.id]) { vistos[x.id] = 1; x._p = d.parceiro; m.propostas.push(x); } });
+                (d.lancamentos || []).forEach(function(x) { x._p = d.parceiro; m.lancamentos.push(x); });
+              });
+              PA.d = m;
+            });
+          }
           return chk(sb.rpc('parceiro_painel', { p_parceiro: PA.sel })).then(function(r) { PA.d = r.data; });
         }
         function mesAtual() { return hoje().slice(0, 7); }
         function renderParc() {
           montarParc(); var d = PA.d, eu = souParceiro();
-          $('pa-titulo').textContent = 'Parceiro: ' + (PA.sel || (eu ? perfilAtual.parceiro : '—'));
+          var todos = PA.sel === TODOS, thP = todos ? '<th>Parceiro</th>' : '', tdP = function(x) { return todos ? '<td><b>' + esc(x._p || '') + '</b></td>' : ''; };
+          $('pa-titulo').textContent = todos ? 'Todos os parceiros' : 'Parceiro: ' + (PA.sel || (eu ? perfilAtual.parceiro : '—'));
           document.querySelectorAll('#setor-parceiros [data-sx=pa-sub]').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-v') === PA.sub); });
           if (!d) { $('pa-kpis').innerHTML = ''; $('pa-tabela').innerHTML = '<div class="sx-vazio">' + (eu ? 'Carregando…' : 'Cadastre equipamentos na Frota com o nome do parceiro em “Dono do equipamento”.') + '</div>'; return; }
           var eq = d.equipamentos || [], pr = (d.propostas || []).filter(function(x) { return x.status !== 'RASCUNHO'; }), lc = d.lancamentos || [];
@@ -7857,20 +7883,21 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             kpi(eu ? 'Você deve à PLS' : 'Parceiro deve à PLS', brl(aRec), 'em aberto', '#dc2626') + kpi(eu ? 'PLS deve a você' : 'PLS deve ao parceiro', brl(aPag), 'em aberto', '#0891b2');
           var h = '';
           if (PA.sub === 'equip') {
-            h = eq.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Equipamento</th><th>Cliente</th><th>Anotações</th></tr></thead><tbody>' + eq.map(function(i) {
-              return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b></td><td>' + esc(i.cliente || '—') + '</td><td>' + esc(i.anotacoes || (i.status === 'BAIXADO' ? (i.baixa_motivo || '') : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento deste parceiro na frota.</div>';
+            h = eq.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Status</th><th>Equipamento</th><th>Cliente</th><th>Anotações</th></tr></thead><tbody>' + eq.map(function(i) {
+              return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '>' + tdP(i) + '<td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b></td><td>' + esc(i.cliente || '—') + '</td><td>' + esc(i.anotacoes || (i.status === 'BAIXADO' ? (i.baixa_motivo || '') : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento deste parceiro na frota.</div>';
           } else if (PA.sub === 'orc') {
             var cor = { ENVIADA: '#d97706', APROVADA: '#16a34a', RECUSADA: '#dc2626' };
-            h = pr.length ? '<table class="table-pls"><thead><tr><th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
-              return '<tr><td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
+            h = pr.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
+              return '<tr>' + tdP(x) + '<td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
           } else if (PA.sub === 'contr') {
-            h = cont.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
-              return '<tr><td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
+            h = cont.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
+              return '<tr>' + tdP(i) + '<td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
           } else {
             var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele.</span></div>';
             var rot = function(sen) { return sen === 'RECEBER' ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') : (eu ? 'PLS paga a você' : 'PLS paga ao parceiro'); };
-            h = topo + (lc.length ? '<table class="table-pls"><thead><tr><th>Competência</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + lc.map(function(l) {
-              return '<tr><td>' + esc(l.competencia || '—') + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
+            h = topo + (lc.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Competência</th><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + lc.map(function(l) {
+              var venc = l.vencimento ? (!l.pago && l.vencimento < hoje() ? '<b style="color:#dc2626">' + fd(l.vencimento) + ' · VENCIDO</b>' : fd(l.vencimento)) : '—';
+              return '<tr>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + venc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
                 (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum lançamento ainda.' + (eu ? '' : ' Use “Gerar comissões do mês”.') + '</div>');
           }
           $('pa-tabela').innerHTML = h;
@@ -7891,23 +7918,28 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function gerarComissoes() {
           var d = PA.d; if (!d) return;
-          abrirModal('Gerar comissões do mês', '<div class="form-group"><label class="form-label">Competência</label><input id="pa-g-mes" type="month" class="form-control" value="' + mesAtual() + '"></div><div class="sx-dica">Cria um lançamento “Parceiro paga à PLS” para cada contrato do grupo em andamento (valor da comissão do contrato). Contratos que já têm lançamento no mês não duplicam.</div>', 'Gerar', function() {
+          abrirModal('Gerar comissões do mês', '<div class="form-grid"><div class="form-group"><label class="form-label">Competência</label><input id="pa-g-mes" type="month" class="form-control" value="' + mesAtual() + '"></div><div class="form-group"><label class="form-label">Dia do vencimento (1–31)</label><input id="pa-g-dia" type="number" min="1" max="31" class="form-control" value="10"></div></div><div class="sx-dica">Cria um lançamento “Parceiro paga à PLS” para cada contrato do grupo em andamento (valor da comissão do contrato). Contratos que já têm lançamento no mês não duplicam.</div>', 'Gerar', function() {
             var mes = $('pa-g-mes').value; if (!mes) throw new Error('Informe o mês.');
+            var dia = parseInt($('pa-g-dia').value, 10); if (!(dia >= 1 && dia <= 31)) throw new Error('Dia do vencimento de 1 a 31.');
+            var ult = new Date(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0).getDate(), venc = mes + '-' + String(Math.min(dia, ult)).padStart(2, '0');
             var ja = (d.lancamentos || []).filter(function(l) { return l.competencia === mes && l.sentido === 'RECEBER'; }).map(function(l) { return l.item_id; });
             var novos = (d.equipamentos || []).filter(function(i) { return i.status === 'LOCADA' && i.contrato_modelo === 'PARCEIRO' && comissaoDe(i) > 0 && ja.indexOf(i.id) < 0; }).map(function(i) {
-              return { parceiro: PA.sel, sentido: 'RECEBER', competencia: mes, valor: r2(comissaoDe(i)), descricao: 'Comissão — ' + i.equipamento + (i.cliente ? ' (' + i.cliente + ')' : ''), item_id: i.id };
+              return { parceiro: i._p || PA.sel, sentido: 'RECEBER', competencia: mes, vencimento: venc, valor: r2(comissaoDe(i)), descricao: 'Comissão — ' + i.equipamento + (i.cliente ? ' (' + i.cliente + ')' : ''), item_id: i.id };
             });
+            var vi = {}; novos = novos.filter(function(x) { if (vi[x.item_id]) return false; vi[x.item_id] = 1; return true; });
             if (!novos.length) throw new Error('Nada a gerar: não há contrato do grupo com comissão, ou já foi gerado neste mês.');
             return chk(sb.from('parceiro_lancamentos').insert(novos).select()).then(function() { return carregarParc(); }).then(function() { renderParc(); showToast(novos.length + ' lançamento(s) gerado(s) ✔'); });
           });
         }
         function novoLancParc() {
-          abrirModal('Novo lançamento — ' + PA.sel, '<div class="form-grid"><div class="form-group full-width"><label class="form-label">Quem paga</label><select id="pa-n-sen" class="form-control">' + opts([{ v: 'RECEBER', t: 'Parceiro paga à PLS (comissão / acerto)' }, { v: 'PAGAR', t: 'PLS paga ao parceiro (repasse)' }], 'RECEBER') + '</select></div>' +
+          var todos = PA.sel === TODOS;
+          abrirModal('Novo lançamento' + (todos ? '' : ' — ' + PA.sel), '<div class="form-grid">' + (todos ? '<div class="form-group full-width"><label class="form-label">Parceiro <span class="req-star">*</span></label><select id="pa-n-par" class="form-control">' + opts(PA.nomes) + '</select></div>' : '') + '<div class="form-group full-width"><label class="form-label">Quem paga</label><select id="pa-n-sen" class="form-control">' + opts([{ v: 'RECEBER', t: 'Parceiro paga à PLS (comissão / acerto)' }, { v: 'PAGAR', t: 'PLS paga ao parceiro (repasse)' }], 'RECEBER') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Competência</label><input id="pa-n-mes" type="month" class="form-control" value="' + mesAtual() + '"></div>' +
+            '<div class="form-group"><label class="form-label">Vencimento</label><input id="pa-n-venc" type="date" class="form-control" value="' + hoje() + '"></div>' +
             '<div class="form-group"><label class="form-label">Valor (R$)</label><input id="pa-n-val" class="form-control" inputmode="decimal" value="0,00"></div>' +
             '<div class="form-group full-width"><label class="form-label">Descrição</label><input id="pa-n-desc" class="form-control" placeholder="ex.: repasse locação YALE — Kaefer"></div></div>', 'Lançar', function() {
             var v = r2(parseValor($('pa-n-val').value)); if (!(v > 0)) throw new Error('Informe o valor.');
-            return chk(sb.from('parceiro_lancamentos').insert({ parceiro: PA.sel, sentido: $('pa-n-sen').value, competencia: $('pa-n-mes').value || null, valor: v, descricao: $('pa-n-desc').value.trim() || null }).select())
+            return chk(sb.from('parceiro_lancamentos').insert({ parceiro: todos ? $('pa-n-par').value : PA.sel, sentido: $('pa-n-sen').value, competencia: $('pa-n-mes').value || null, vencimento: $('pa-n-venc').value || null, valor: v, descricao: $('pa-n-desc').value.trim() || null }).select())
               .then(function() { return carregarParc(); }).then(function() { renderParc(); showToast('Lançamento criado ✔'); });
           });
         }

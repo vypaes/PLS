@@ -126,9 +126,12 @@ input.q{margin-bottom:8px}
   <h1>PLS Demandas</h1>
   <p class="s">Entre com o mesmo e-mail e senha do sistema</p>
   <div class="err" id="lg-err"></div>
-  <input id="lg-email" type="email" placeholder="E-mail" autocomplete="username" inputmode="email">
-  <input id="lg-senha" type="password" placeholder="Senha" autocomplete="current-password">
-  <button id="lg-btn" type="button">Entrar</button>
+  <form id="lg-form" autocomplete="on" style="margin:0">
+  <input id="lg-email" name="email" type="email" placeholder="E-mail" autocomplete="username" inputmode="email">
+  <input id="lg-senha" name="password" type="password" placeholder="Senha" autocomplete="current-password">
+  <label style="display:flex;align-items:center;gap:8px;color:#cbd5e1;font-size:14px;margin:2px 0 12px"><input id="lg-manter" type="checkbox" checked style="width:20px;height:20px;margin:0"> Manter conectado neste aparelho</label>
+  <button id="lg-btn" type="submit">Entrar</button>
+  </form>
 </div>
 
 <div id="app">
@@ -1281,17 +1284,22 @@ function ligarTempoReal(){
   /* parceiro não recebe eventos em tempo real (o banco não deixa ver as tabelas) — confere a cada 25 s */
   if(temParc())setInterval(function(){if(!document.hidden&&!document.querySelector('#sheet-bg.on'))recarregar();},25000);
 }
-$('lg-btn').addEventListener('click',function(){
+$('lg-form').addEventListener('submit',function(ev){
+  ev.preventDefault();
   var em=$('lg-email').value.trim(),se=$('lg-senha').value;
   if(!em||!se){mostrarLogin('Informe e-mail e senha.');return;}
   $('lg-btn').disabled=true;$('lg-btn').textContent='Entrando...';
   sb.auth.signInWithPassword({email:em,password:se}).then(function(r){
     if(r.error)throw new Error(/invalid/i.test(r.error.message)?'E-mail ou senha incorretos.':r.error.message);
+    try{localStorage.setItem('pls-email',em);if($('lg-manter').checked)localStorage.removeItem('pls-temp');else{localStorage.setItem('pls-temp','1');sessionStorage.setItem('pls-ativa','1');}}catch(x){}
+    try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(x){}
     return entrar(r.data.session);
   }).catch(function(e){sb.auth.signOut();mostrarLogin(erro(e));});
 });
-$('lg-senha').addEventListener('keydown',function(e){if(e.key==='Enter')$('lg-btn').click();});
+try{var em0=localStorage.getItem('pls-email');if(em0)$('lg-email').value=em0;if(localStorage.getItem('pls-temp'))$('lg-manter').checked=false;}catch(x){}
+var sairAoAbrir=false;try{sairAoAbrir=!!localStorage.getItem('pls-temp')&&!sessionStorage.getItem('pls-ativa');}catch(x){}
 sb.auth.getSession().then(function(r){
+  if(r.data&&r.data.session&&sairAoAbrir){return sb.auth.signOut().then(function(){mostrarLogin('');});}
   if(r.data&&r.data.session)entrar(r.data.session).catch(function(e){mostrarLogin(erro(e));});else mostrarLogin('');
 });
 $('h-logo').src=$('lg-logo').src;
