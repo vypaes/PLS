@@ -2577,7 +2577,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v57 — 11/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v58 — 11/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7585,9 +7585,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         (function() {
         var tip = document.createElement('div'); tip.id = 'setor-tip'; document.body.appendChild(tip);
         document.addEventListener('mouseover', function(e) {
-          var b = e.target.closest && e.target.closest('.setor-btn[data-tip]');
+          var b = e.target.closest && e.target.closest('.setor-btn[data-sn]');
           if (!b || window.innerWidth <= 800) { tip.style.display = 'none'; return; }
-          var r = b.getBoundingClientRect(); tip.textContent = b.getAttribute('data-tip');
+          var r = b.getBoundingClientRect(); tip.textContent = b.getAttribute('data-sn');
           tip.style.left = (r.right + 10) + 'px'; tip.style.top = (r.top + r.height / 2) + 'px'; tip.style.display = 'block';
         });
         document.addEventListener('click', function() { tip.style.display = 'none'; });
@@ -7607,7 +7607,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var lista = setoresPermitidos();
           rail.innerHTML = '<div class="setor-titulo">Setores</div>' + lista.map(function(s) {
             var bd = s.k === 'locacoes' ? contarAlertas() : s.k === 'manutencao' ? contarMan() : 0;
-            return '<button type="button" class="setor-btn' + (s.k === setorAtual ? ' active' : '') + '" data-sx="setor" data-setor="' + s.k + '" data-tip="' + s.t + '" aria-label="' + s.t + '">' +
+            return '<button type="button" class="setor-btn' + (s.k === setorAtual ? ' active' : '') + '" data-sx="setor" data-setor="' + s.k + '" data-sn="' + s.t + '" aria-label="' + s.t + '">' +
               '<span class="setor-ic">' + s.ic + '</span><span class="setor-nm">' + s.t + '</span>' +
               (bd ? '<span class="setor-badge" title="' + (s.k === 'manutencao' ? 'Revisões vencidas' : 'Faturas para enviar') + '">' + bd + '</span>' : '') + '</button>';
           }).join('');
@@ -12581,7 +12581,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     return '';
   }
   document.addEventListener('mouseover', function(ev) {
-    var el = ev.target.closest && ev.target.closest('[title],[data-tip],button'); if (!el) { tip.style.display = 'none'; return; }
+    var el = ev.target.closest && ev.target.closest('[title],[data-tip],button'); if (!el || el.classList.contains('setor-btn')) { tip.style.display = 'none'; return; }
     var t = texto(el); if (!t) { tip.style.display = 'none'; return; }
     tip.textContent = t; tip.style.display = 'block';
     var r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
