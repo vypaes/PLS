@@ -1640,7 +1640,7 @@ var PLSEQ = (function() {
 /* ---------------- Ordem de Serviço ---------------- */
 var PLSOS = (function() {
   var U = PLSU, esc = U.esc, br = U.br, $ = function(id) { return document.getElementById(id); };
-  var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, nome: function() { return ''; }, clientes: function() { return []; }, logo: '', toast: function(m) { alert(m); }, onSaved: null, onClose: null, empresa: 'PLS EMPILHADEIRAS', admin: function() { return false; } };
+  var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, nome: function() { return ''; }, tecnicos: function() { return []; }, clientes: function() { return []; }, logo: '', toast: function(m) { alert(m); }, onSaved: null, onClose: null, empresa: 'PLS EMPILHADEIRAS', admin: function() { return false; } };
   var EMP = { cnpj: '27.133.431/0001-82', l1: 'Avenida Lacerda Agostinho, 110 (KM 03 Linha Azul) - Virgem Santa', l2: 'Macaé/RJ - CEP: 27948-005', tel: '(22)2006-0763 - (22)99979-7662', mail: 'pls@plsempilhadeiras.com.br', site: 'plsempilhadeiras.com.br', resp: 'Carlos Alberto Coelho Fernandes' };
   var CONDS = [['Operando normalmente.', 'Operando'], ['Operando com pendências.', 'Com pendências'], ['Fora de operação.', 'Parado']];
   var S = null, ROOT = null, REG = null, PDFB = null, PDFN = '', PODE_EXC = false, EQS = [], PODE_SIG = null;
@@ -1666,7 +1666,7 @@ var PLSOS = (function() {
   function cliObj(nome) { var l = C.clientes(); for (var i = 0; i < l.length; i++) { var c = l[i]; if ((typeof c === 'string' ? c : c.nome) === nome) return typeof c === 'string' ? { nome: c } : c; } return null; }
   function nomesCli() { return C.clientes().map(function(c) { return typeof c === 'string' ? c : c.nome; }).filter(Boolean).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); }
   function novoEstado() {
-    return { cliente: '', cd: { razao: '', fantasia: '', cnpj: '', end: '', cep: '', cidade: '', tel: '', mail: '' }, equip_id: null, eq: '', marca: '', modelo: '', serie: '', hor: '', extra: [], tecs: [], ent_d: U.hojeISO(), ent_h: U.agora(), sai_d: U.hojeISO(), sai_h: '', acomp: '', cond: CONDS[1][0], defeitos: '', laudo: '', serv: [{ n: '', q: '1', pc: [] }], fotos: [], obs: '', tecnico: C.nome() || '', resp: '', ac: '', at: '', cadEq: true };
+    return { cliente: '', cd: { razao: '', fantasia: '', cnpj: '', end: '', cep: '', cidade: '', tel: '', mail: '' }, equip_id: null, eq: '', marca: '', modelo: '', serie: '', hor: '', extra: [], tecs: [], ent_d: U.hojeISO(), ent_h: U.agora(), sai_d: U.hojeISO(), sai_h: '', acomp: '', cond: CONDS[1][0], defeitos: '', laudo: '', serv: [{ n: '', q: '1', pc: [] }], fotos: [], obs: '', tecnico: (C.tecnicos().indexOf(C.nome()) >= 0 ? C.nome() : ''), tecOrig: [], resp: '', ac: '', at: '', cadEq: true };
   }
   function abrirRoot() { U.css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
   function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; PDFB = null; REG = null; if (C.onClose) C.onClose(); }
@@ -1701,7 +1701,12 @@ var PLSOS = (function() {
       '<div class="row2"><div class="fld"><label>Marca</label><input type="text" class="xm" value="' + esc(x.marca || '') + '"></div><div class="fld"><label>Modelo</label><input type="text" class="xo" value="' + esc(x.modelo || '') + '"></div></div>' +
       '<div class="row2"><div class="fld"><label>Série</label><input type="text" class="xs" value="' + esc(x.serie || '') + '"></div><div class="fld"><label>Horímetro / KM</label><input type="text" class="xh" inputmode="decimal" value="' + esc(x.hor || '') + '"></div></div></div>';
   }
-  function linhaTec(n, i) { return '<div class="fld" style="display:flex;gap:6px;align-items:flex-end"><div style="flex:1;min-width:0"><label>Técnico ' + (i + 2) + '</label><input type="text" class="xt" value="' + esc(n || '') + '" placeholder="Nome do técnico"></div><button type="button" data-a="tdel" style="border:0;background:#fee2e2;color:#991b1b;border-radius:8px;padding:12px 14px">✕</button></div>'; }
+  function selTec(cls, id, v) {
+    var l = C.tecnicos().slice(), o = '<option value="">— Escolha o técnico cadastrado —</option>';
+    if (v && l.indexOf(v) < 0) l.unshift(v);
+    return '<select' + (id ? ' id="' + id + '"' : '') + ' class="' + cls + '">' + o + l.map(function(n) { return '<option value="' + esc(n) + '"' + (n === v ? ' selected' : '') + '>' + esc(n) + (C.tecnicos().indexOf(n) < 0 ? ' (não cadastrado)' : '') + '</option>'; }).join('') + '</select>';
+  }
+  function linhaTec(n, i) { return '<div class="fld" style="display:flex;gap:6px;align-items:flex-end"><div style="flex:1;min-width:0"><label>Técnico ' + (i + 2) + '</label>' + selTec('xt', '', n) + '</div><button type="button" data-a="tdel" style="border:0;background:#fee2e2;color:#991b1b;border-radius:8px;padding:12px 14px">✕</button></div>'; }
   function pintaTecs() { var b = $('o-tecs'); if (b) b.innerHTML = (S.tecs || []).map(linhaTec).join(''); }
   function pintaExtras() { var b = $('o-extras'); if (b) b.innerHTML = (S.extra || []).map(linhaExtra).join(''); }
   function datalistPecas() {
@@ -1756,7 +1761,7 @@ var PLSOS = (function() {
       '<div class="hd">SERVIÇOS E PEÇAS</div><div class="sub">Informe o serviço e, logo abaixo, as peças usadas nele (ex.: serviço “Troca do óleo do motor” → peça “Óleo do motor, 20 L”).</div><datalist id="o-dl-pc"></datalist><div id="o-serv">' + S.serv.map(linhaServ).join('') + '</div><button type="button" class="btn2" id="o-sadd">➕ Adicionar serviço</button>' +
       '<div class="hd">ANEXOS (FOTOS)</div><div id="o-fotos"></div><label class="btn2" style="display:block;text-align:center">📷 Adicionar fotos<input type="file" accept="image/*" multiple id="o-fi" style="display:none"></label>' +
       '<div class="hd">OBSERVAÇÕES</div><div class="fld"><textarea id="o-obs" rows="3">' + esc(S.obs) + '</textarea></div>' +
-      '<div class="hd">ASSINATURAS</div>' + f('o-tec', 'Técnico responsável (é o que assina) *', S.tecnico) + '<div id="o-tecs">' + (S.tecs || []).map(linhaTec).join('') + '</div><button type="button" id="o-tadd" style="width:100%;margin:0 0 10px;border:1px dashed #ea580c;color:#ea580c;background:#fff7ed;border-radius:10px;padding:10px;font-weight:800;font-size:14px">➕ Outro técnico neste serviço</button>' + '<div class="fld"><label>Assinatura do técnico (opcional)</label><canvas class="sig" id="o-at" width="700" height="200"></canvas><button type="button" class="pk-btn g" data-clr="o-at" style="margin-top:6px;padding:8px">Limpar</button></div>' +
+      '<div class="hd">ASSINATURAS</div>' + '<div class="fld"><label>Técnico responsável (é o que assina) *</label>' + selTec('', 'o-tec', S.tecnico) + '</div>' + (C.tecnicos().length ? '' : '<div class="avcli">⚠ Nenhum técnico cadastrado. Cadastre os técnicos em <b>Gerencial → Cadastro de Técnicos</b> para poder fazer a OS.</div>') + '<div id="o-tecs">' + (S.tecs || []).map(linhaTec).join('') + '</div><button type="button" id="o-tadd" style="width:100%;margin:0 0 10px;border:1px dashed #ea580c;color:#ea580c;background:#fff7ed;border-radius:10px;padding:10px;font-weight:800;font-size:14px">➕ Outro técnico neste serviço</button>' + '<div class="fld"><label>Assinatura do técnico (opcional)</label><canvas class="sig" id="o-at" width="700" height="200"></canvas><button type="button" class="pk-btn g" data-clr="o-at" style="margin-top:6px;padding:8px">Limpar</button></div>' +
       f('o-resp', 'Nome de quem recebeu (cliente)', S.resp) + '<div class="fld"><label>Assinatura do cliente</label><canvas class="sig" id="o-ac2" width="700" height="200"></canvas><button type="button" class="pk-btn g" data-clr="o-ac2" style="margin-top:6px;padding:8px">Limpar</button></div></div>';
     shell(S.id ? 'Editar OS nº ' + S.numero : 'Nova ordem de serviço', corpo, '<button type="button" class="pk-btn v" id="o-save">' + (S.id ? 'Salvar alterações' : 'Salvar OS') + '</button>', '✕ Cancelar', function() { if (confirm('Cancelar? O que foi preenchido nesta OS será perdido.')) { if (S.id && REG) telaPronto(REG, false); else fechar(); } });
     pintaFotos(); pintaEqs(); datalistPecas(); assinatura('o-at', 'at'); assinatura('o-ac2', 'ac');
@@ -1810,7 +1815,10 @@ var PLSOS = (function() {
     if (nomesCli().indexOf(S.cliente) < 0) { C.toast('Escolha um cliente da lista cadastrada.'); return; }
     if (!S.eq) { C.toast('Informe o nome do equipamento.'); return; }
     if (S.extra.some(function(x) { return (x.marca || x.modelo || x.serie || x.hor) && !x.eq; })) { C.toast('Informe o nome de cada equipamento adicional (ou remova o que está vazio).'); return; }
-    if (!S.tecnico) { C.toast('Informe o técnico responsável.'); return; }
+    if (!S.tecnico) { C.toast('Escolha o técnico responsável na lista de técnicos cadastrados.'); return; }
+    var okT = C.tecnicos(), invT = [S.tecnico].concat(S.tecs || []).filter(function(n) { return n && okT.indexOf(n) < 0 && (S.tecOrig || []).indexOf(n) < 0; })[0];
+    if (invT) { C.toast('O técnico “' + invT + '” não está cadastrado. Cadastre-o em Gerencial → Cadastro de Técnicos antes de continuar.'); return; }
+    S.tecs = (S.tecs || []).filter(function(n, i, a) { return n && n !== S.tecnico && a.indexOf(n) === i; });
     var eraNovo = !S.id, cad = $('o-cad'); S.cadEq = cad ? cad.checked : false;
     var b = $('o-save'); b.disabled = true; b.textContent = 'Salvando…';
     var pre = Promise.all(S.fotos.map(function(f) { if (f.path || !f.src) return 0; return U.recomprimir(f.src, 1280, 0.6).then(subirDataUrl).then(function(p) { f.path = p; }); }));
@@ -1874,7 +1882,7 @@ var PLSOS = (function() {
     S.equip_id = r.equip_id || null; S.eq = r.equipamento || ''; S.marca = r.marca || ''; S.modelo = r.modelo || ''; S.serie = r.serie || ''; S.hor = r.horimetro || ''; S.extra = (r.equip_extra || []).map(function(x) { return { equip_id: x.equip_id || null, eq: x.eq || '', marca: x.marca || '', modelo: x.modelo || '', serie: x.serie || '', hor: x.hor || '' }; });
     S.ent_d = String(r.entrada_data || '').slice(0, 10); S.ent_h = r.entrada_hora || ''; S.sai_d = String(r.saida_data || '').slice(0, 10); S.sai_h = r.saida_hora || ''; S.acomp = r.acompanhante || ''; S.cond = r.condicao || CONDS[1][0];
     S.defeitos = r.defeitos || ''; S.laudo = r.laudo || ''; S.serv = (r.servicos || []).length ? r.servicos.map(function(s) { return { n: s.n, q: s.q, pc: (s.pc || []).map(function(p) { return { n: p.n, q: p.q }; }) }; }) : [{ n: '', q: '1', pc: [] }]; S.fotos = (r.fotos || []).map(function(f) { return { src: f.src, path: f.path, leg: f.leg || '' }; }); S.origPaths = pathsDe(r.fotos);
-    S.obs = r.observacoes || ''; S.tecnico = r.tecnico || ''; S.tecs = (r.tecnicos_extra || []).slice(); S.resp = r.resp_cliente || ''; S.ac = r.assinatura_cliente || ''; S.at = r.assinatura_tecnico || '';
+    S.obs = r.observacoes || ''; S.tecnico = r.tecnico || ''; S.tecs = (r.tecnicos_extra || []).slice(); S.tecOrig = [r.tecnico].concat(r.tecnicos_extra || []).filter(Boolean); S.resp = r.resp_cliente || ''; S.ac = r.assinatura_cliente || ''; S.at = r.assinatura_tecnico || '';
     Promise.all([carregarEquips(), resolverFotos(S.fotos)]).then(telaForm);
   }
   // ---------- PDF (padrão visual do plano de manutenção: laranja, preto e logo PLS) ----------
@@ -1983,7 +1991,7 @@ var PLSOS = (function() {
 
 PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')ckCarregar();},onClose:function(){if(tab==='checklist')ckCarregar();}});
 PLSEQ.init({sb:sb,chk:chk,clientes:function(){return D.clientes;},toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')mnPintar();},admin:ehAdmin});
-PLSOS.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},admin:ehAdmin});
+PLSOS.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},admin:ehAdmin});
 /* vira o dia com o app aberto */
 var diaAtual=hoje();setInterval(function(){if(hoje()!==diaAtual){diaAtual=hoje();render();}},60000);
 window.__M={RH:RH,D:D,render:render,ir:ir,set perfil(v){perfil=v;},get tab(){return tab;}};
