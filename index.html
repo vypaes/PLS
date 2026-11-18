@@ -2583,7 +2583,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v65 — 16/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v66 — 18/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -9803,18 +9803,20 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function capaDe(tipo) { var c = C.cfg.capas || {}; return c[tipo] || ''; }
 
         // ---------- cálculos ----------
+        function ehDiaria(p) { return !!(p && p.tipo === 'locacao' && p.dados && p.dados.modalidade === 'diaria'); }
         function totaisDe(p) {
-          var d = p.dados || {}, bruto = 0, mob = 0, des = 0;
+          var d = p.dados || {}, bruto = 0, mob = 0, des = 0, porDia = 0, diaria = p.tipo === 'locacao' && d.modalidade === 'diaria', dias = diaria ? (Number(d.dias) || 0) : 0;
           if (p.tipo === 'locacao') (d.itens || []).forEach(function(i) { bruto += Number(i.valor || 0); mob += Number(i.mob || 0); des += Number(i.desmob || 0); });
           else bruto = Number(d.valorBase || 0);
+          porDia = bruto; if (diaria) bruto = r2(bruto * dias);
           var desc = d.descTipo === 'pct' ? r2(bruto * Number(d.desc || 0) / 100) : r2(Number(d.desc || 0));
           if (desc > bruto) desc = bruto; if (desc < 0) desc = 0;
-          return { bruto: r2(bruto), desc: desc, liq: r2(bruto - desc), mob: r2(mob), des: r2(des) };
+          return { bruto: r2(bruto), desc: desc, liq: r2(bruto - desc), mob: r2(mob), des: r2(des), diaria: diaria, dias: dias, porDia: r2(porDia) };
         }
         function liqPorItem(p) {
           var t = totaisDe(p), itens = (p.dados && p.dados.itens) || [], out = [], soma = 0;
           itens.forEach(function(i, k) {
-            var v = t.bruto > 0 ? r2(Number(i.valor || 0) * t.liq / t.bruto) : 0;
+            var v = t.bruto > 0 ? r2(Number(i.valor || 0) * (t.diaria ? t.dias : 1) * t.liq / t.bruto) : 0;
             if (k === itens.length - 1) v = r2(t.liq - soma);
             soma = r2(soma + v); out.push(v);
           });
@@ -9938,7 +9940,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           // título + quadro de identificação
           var ident = [{ k: 'Proposta nº', v: p.codigo || '000-00' }, { k: 'Data de emissão', v: fd(p.emissao) }];
           if (loc) ident.push({ k: 'Validade da proposta', v: validade + ' (' + extInt(validade) + ') dias corridos' });
-          if (loc && d.periodoMin) ident.push({ k: 'Período mínimo de locação', v: d.periodoMin + ' (' + extInt(d.periodoMin) + ') dias' });
+          if (loc && d.modalidade === 'diaria' && d.dias) ident.push({ k: 'Modalidade / período', v: 'Locação por diária — ' + d.dias + ' (' + extInt(d.dias) + ') diária' + (Number(d.dias) === 1 ? '' : 's') });
+          else if (loc && d.periodoMin) ident.push({ k: 'Período mínimo de locação', v: d.periodoMin + ' (' + extInt(d.periodoMin) + ') dias' });
           ident.push({ k: 'Cliente', v: cliente });
           if (p.cliente_cnpj) ident.push({ k: 'CNPJ do cliente', v: p.cliente_cnpj });
           if (p.destinatario) ident.push({ k: 'A/C', v: p.destinatario });
@@ -9973,7 +9976,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var n = (d.itens || []).length;
               row('<div class="pp-li">Quantidade: ' + String(n).padStart(2, '0') + ' (' + esc(extInt(n, true)) + ') unidade' + (n === 1 ? '' : 's') + '.</div>');
               var pm = Number(d.periodoMin) || 30;
-              row('<div class="pp-li">Prazo mínimo de locação: ' + pm + ' (' + esc(extInt(pm)) + ') dias, prorrogável por períodos iguais e sucessivos mediante manifestação de qualquer das partes.</div>');
+              if (tot.diaria) row('<div class="pp-li">Locação por diária: ' + tot.dias + ' (' + esc(extInt(tot.dias)) + ') diária' + (tot.dias === 1 ? '' : 's') + ', contadas a partir da entrega do equipamento. Diárias adicionais, se houver prorrogação, serão cobradas pelo mesmo valor unitário, mediante aviso prévio da LOCATÁRIA.</div>');
+              else row('<div class="pp-li">Prazo mínimo de locação: ' + pm + ' (' + esc(extInt(pm)) + ') dias, prorrogável por períodos iguais e sucessivos mediante manifestação de qualquer das partes.</div>');
               row('<div class="pp-li">Local de entrega e retirada: ' + esc(d.local || '[endereço completo]') + '.</div>');
               if (resum) {
                 row('<div class="pp-li">Manutenção do equipamento: por conta da <b>' + esc(d.manutPor || 'LOCADORA') + '</b>' + ((d.manutPor || 'LOCADORA') === 'LOCADORA' ? ' (exceto danos por mau uso).' : '.') + '</div>');
@@ -9987,12 +9991,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               if (loc) {
                 var its2 = d.itens || [];
                 if (its2.length > 1) {
-                  row('<div class="pp-keep"><table class="pp-tb"><thead><tr><th>Equipamento</th><th style="width:32mm">Valor mensal</th><th style="width:30mm">Mobilização</th><th style="width:34mm">Desmobilização</th></tr></thead><tbody>' +
+                  row('<div class="pp-keep"><table class="pp-tb"><thead><tr><th>Equipamento</th><th style="width:32mm">' + (tot.diaria ? 'Valor da diária' : 'Valor mensal') + '</th><th style="width:30mm">Mobilização</th><th style="width:34mm">Desmobilização</th></tr></thead><tbody>' +
                     its2.map(function(i) { return '<tr><td>' + esc(i.equipamento) + '</td><td class="r">' + moedaPP(i.valor) + '</td><td class="r">' + (Number(i.mob) ? moedaPP(i.mob) : '—') + '</td><td class="r">' + (Number(i.desmob) ? moedaPP(i.desmob) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>');
                 }
+                if (tot.diaria) {
+                  L2.push({ k: its2.length > 1 ? 'Valor da diária (soma)' : 'Valor da diária', v: moedaPP(tot.porDia) });
+                  L2.push({ k: 'Quantidade de diárias', v: tot.dias + ' (' + extInt(tot.dias) + ')' });
+                  L2.push({ k: 'Total da locação', v: moedaPP(tot.bruto) });
+                  if (tot.desc > 0) { L2.push({ k: rotDesc, v: '− ' + moedaPP(tot.desc) }); L2.push({ k: 'Total com desconto', v: moedaPP(tot.liq), b: 1 }); }
+                } else {
                 if (d.periodoMin) L2.push({ k: 'Período mínimo de locação', v: d.periodoMin + ' dias' });
                 L2.push({ k: its2.length > 1 ? 'Valor mensal da locação (soma)' : 'Valor mensal da locação', v: moedaPP(tot.bruto) });
                 if (tot.desc > 0) { L2.push({ k: rotDesc, v: '− ' + moedaPP(tot.desc) }); L2.push({ k: 'Valor mensal com desconto', v: moedaPP(tot.liq), b: 1 }); }
+                }
                 if (its2.length <= 1) { L2.push({ k: 'Mobilização', v: tot.mob ? moedaPP(tot.mob) : '—' }); L2.push({ k: 'Desmobilização', v: tot.des ? moedaPP(tot.des) : '—' }); }
               } else {
                 if (tot.desc > 0) { L2.push({ k: 'Valor mensal', v: moedaPP(tot.bruto) }); L2.push({ k: rotDesc, v: '− ' + moedaPP(tot.desc) }); }
@@ -10157,14 +10168,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (p.status === 'ENVIADA') { valAb += Number(p.valor_mensal || 0); if (vencida(p)) venc++; }
             if (p.status === 'APROVADA' && String(p.aprovada_em || '').slice(0, 7) === mes) apMes++;
           });
-          $('cm-kpis').innerHTML = kpi('Rascunhos', cnt.RASCUNHO, '', '#64748b') + kpi('Aguardando resposta', cnt.ENVIADA, brl(valAb) + '/mês em aberto', '#2563eb') +
+          $('cm-kpis').innerHTML = kpi('Rascunhos', cnt.RASCUNHO, '', '#64748b') + kpi('Aguardando resposta', cnt.ENVIADA, brl(valAb) + ' em aberto', '#2563eb') +
             kpi('Vencidas (sem resposta)', venc, 'validade expirada', 'var(--accent)') + kpi('Aprovadas no mês', apMes, '', '#16a34a') + kpi('Recusadas', cnt.RECUSADA, '', 'var(--pls-red)');
           var lista = todas.filter(function(p) {
             if (C.fTipo && p.tipo !== C.fTipo) return false;
             if (C.fSt && p.status !== C.fSt) return false;
             return !q || norm(p.cliente_nome + ' ' + p.codigo + ' ' + (p.destinatario || '') + ' ' + resumoProp(p)).indexOf(q) >= 0;
           });
-          $('cm-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nº</th><th>Tipo</th><th>Cliente</th><th>Equipamentos</th><th>Emissão</th><th style="text-align:right">Valor mensal</th><th>Status</th><th></th></tr></thead><tbody>' +
+          $('cm-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nº</th><th>Tipo</th><th>Cliente</th><th>Equipamentos</th><th>Emissão</th><th style="text-align:right">Valor</th><th>Status</th><th></th></tr></thead><tbody>' +
             lista.map(function(p) {
               var st = p.status, b = '<button type="button" class="btn-pls-secondary" data-cm="pdf" data-id="' + p.id + '">🖨 PDF</button> ';
               if (st === 'RASCUNHO') b += '<button type="button" class="btn-pls-secondary" data-cm="enviada" data-id="' + p.id + '">✔ Enviada</button> ';
@@ -10175,20 +10186,20 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               if (st !== 'APROVADA') b += ' <button type="button" class="btn-pls-secondary sx-del" data-cm="del" data-id="' + p.id + '">Excluir</button>';
               return '<tr><td><b>' + esc(p.codigo) + '</b></td><td>' + (p.tipo === 'locacao' ? 'Locação' : 'Manutenção') + '</td><td><b>' + esc(p.cliente_nome) + '</b>' + (p.destinatario ? '<br><span class="sx-muted">A/C ' + esc(p.destinatario) + '</span>' : '') + '</td>' +
                 '<td>' + esc(resumoProp(p)) + '</td><td>' + fd(p.emissao) + (st === 'ENVIADA' ? '<br><span class="sx-muted">válida até ' + fd(addDias(p.emissao, p.validade_dias || 10)).slice(0, 5) + '</span>' : '') + '</td>' +
-                '<td style="text-align:right;font-weight:700">' + brl(p.valor_mensal) + '</td><td>' + badgeCom(p) + (p.motivo && st === 'RECUSADA' ? '<br><span class="sx-muted">' + esc(p.motivo) + '</span>' : '') + '</td><td class="sx-acoes" style="white-space:normal">' + b + '</td></tr>';
+                '<td style="text-align:right;font-weight:700">' + brl(p.valor_mensal) + (ehDiaria(p) ? '<br><span class="sx-muted">' + p.dados.dias + ' diária(s) × ' + brl(totaisDe(p).porDia) + '</span>' : '<br><span class="sx-muted">/mês</span>') + '</td><td>' + badgeCom(p) + (p.motivo && st === 'RECUSADA' ? '<br><span class="sx-muted">' + esc(p.motivo) + '</span>' : '') + '</td><td class="sx-acoes" style="white-space:normal">' + b + '</td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma proposta ainda. Clique em “Proposta de locação” ou “Proposta de manutenção”.</div>';
         }
         function renderContratosCom() {
           var q = norm(C.cBusca), ap = C.props.filter(function(p) { return p.status === 'APROVADA'; });
-          var rec = 0, semAss = 0; ap.forEach(function(p) { rec += Number(p.valor_mensal || 0); if (!p.assinado_path) semAss++; });
-          $('cm-c-kpis').innerHTML = kpi('Contratos', ap.length, '', '#16a34a') + kpi('Receita mensal contratada', brl(rec), '', '#334155') + kpi('Sem contrato assinado anexado', semAss, '', semAss ? 'var(--accent)' : '#16a34a');
+          var rec = 0, semAss = 0; ap.forEach(function(p) { if (!ehDiaria(p)) rec += Number(p.valor_mensal || 0); if (!p.assinado_path) semAss++; });
+          $('cm-c-kpis').innerHTML = kpi('Contratos', ap.length, '', '#16a34a') + kpi('Receita mensal contratada', brl(rec), 'sem as locações por diária', '#334155') + kpi('Sem contrato assinado anexado', semAss, '', semAss ? 'var(--accent)' : '#16a34a');
           var lista = ap.filter(function(p) { return !q || norm(p.cliente_nome + ' ' + p.codigo).indexOf(q) >= 0; });
-          $('cm-c-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nº</th><th>Tipo</th><th>Cliente</th><th>Equipamentos</th><th>Aprovado em</th><th style="text-align:right">Valor mensal</th><th>Assinado</th><th></th></tr></thead><tbody>' +
+          $('cm-c-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nº</th><th>Tipo</th><th>Cliente</th><th>Equipamentos</th><th>Aprovado em</th><th style="text-align:right">Valor</th><th>Assinado</th><th></th></tr></thead><tbody>' +
             lista.map(function(p) {
               var ass = p.assinado_path ? '<span class="sx-pill sx-st-ok">📎 ' + esc(p.assinado_nome || 'anexado') + '</span>' : '<span class="sx-pill sx-hoje">Falta anexar</span>';
               return '<tr><td><b>' + esc(p.codigo) + '</b></td><td>' + (p.tipo === 'locacao' ? 'Locação' : 'Manutenção') + '</td><td><b>' + esc(p.cliente_nome) + '</b></td><td>' + esc(resumoProp(p)) + '</td><td>' + fd(p.aprovada_em) + '</td>' +
-                '<td style="text-align:right;font-weight:700">' + brl(p.valor_mensal) + '</td><td>' + ass + '</td><td class="sx-acoes" style="white-space:normal">' +
-                '<button type="button" class="btn-pls-secondary" data-cm="pdf" data-id="' + p.id + '">🖨 PDF</button> ' + (p.tipo === 'locacao' ? '<button type="button" class="btn-pls-secondary" data-cm="contrato" data-id="' + p.id + '" title="Imprime com todas as cláusulas, como contrato">📜 Contrato</button> ' : '') +
+                '<td style="text-align:right;font-weight:700">' + brl(p.valor_mensal) + (ehDiaria(p) ? '<br><span class="sx-muted">total (diária)</span>' : '') + '</td><td>' + ass + '</td><td class="sx-acoes" style="white-space:normal">' +
+                '<button type="button" class="btn-pls-secondary" data-cm="pdf" data-id="' + p.id + '">🖨 PDF</button> ' + (p.tipo === 'locacao' && !ehDiaria(p) ? '<button type="button" class="btn-pls-secondary" data-cm="contrato" data-id="' + p.id + '" title="Imprime com todas as cláusulas, como contrato">📜 Contrato</button> ' : '') +
                 '<button type="button" class="btn-pls-primary" data-cm="anexar" data-id="' + p.id + '">' + (p.assinado_path ? 'Trocar assinado' : '📎 Anexar assinado') + '</button> ' +
                 (p.assinado_path ? '<button type="button" class="btn-pls-secondary" data-cm="abrir-ass" data-id="' + p.id + '">Abrir assinado</button> ' : '') +
                 '<button type="button" class="btn-pls-secondary" data-cm="ver-loc" data-id="' + p.id + '">Ver em Locações</button> ' +
@@ -10253,7 +10264,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return {
             id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', dest: '', abrev: '', emissao: hoje(), validade: 10,
             itens: [], man: [{ qtd: 1, equip: '', marca: '', tipo: '' }], inicio: '', termino: '', valorBase: 0, diaVenc: 15,
-            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false, modelo: 'PLS', comTipo: 'pct', comValor: 0, formato: 'resumida', manutPor: 'LOCADORA', transPor: 'LOCADORA',
+            descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, modalidade: 'mensal', dias: 5, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false, modelo: 'PLS', comTipo: 'pct', comValor: 0, formato: 'resumida', manutPor: 'LOCADORA', transPor: 'LOCADORA',
             textos: Object.assign({}, mod.textos), intro: mod.intro, auto: { escopo: true, pagto: true, compl: true, termino: true }
           };
         }
@@ -10261,7 +10272,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var d = p.dados || {}, e = novoEstado(p.tipo);
           e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.dest = p.destinatario || '';
           e.emissao = p.emissao; e.validade = p.validade_dias || 10;
-          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto', 'modelo', 'comTipo', 'comValor', 'formato', 'manutPor', 'transPor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
+          ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'modalidade', 'dias', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto', 'modelo', 'comTipo', 'comValor', 'formato', 'manutPor', 'transPor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
           if (d.itens) e.itens = JSON.parse(JSON.stringify(d.itens));
           if (d.man) e.man = JSON.parse(JSON.stringify(d.man));
           if (d.textos) e.textos = Object.assign({}, e.textos, d.textos);
@@ -10270,7 +10281,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function objDe(E) {
           var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', formato: E.formato || 'resumida', manutPor: E.manutPor || 'LOCADORA', transPor: E.transPor || 'LOCADORA', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
           if (E.itens) { var ps = {}; E.itens.forEach(function(i) { var li = L.itens.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) i.dono = li.dono; if (i.dono && !/^pls/i.test(i.dono)) ps[i.dono] = 1; }); dados.parceiro = Object.keys(ps).join(' / '); }
-          if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.diasPagto = E.diasPagto; }
+          if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.modalidade = E.modalidade === 'diaria' ? 'diaria' : 'mensal'; dados.dias = Number(E.dias) || 0; dados.diasPagto = E.diasPagto; }
           else { dados.man = E.man; dados.inicio = E.inicio; dados.termino = E.termino; dados.valorBase = E.valorBase; dados.diaVenc = E.diaVenc; }
           var p = { id: E.id, codigo: E.codigo, tipo: E.tipo, status: E.status, cliente_nome: E.cliente.trim(), cliente_cnpj: E.cnpj.trim() || null, destinatario: E.dest.trim() || null, emissao: E.emissao, validade_dias: E.validade, dados: dados };
           p.valor_mensal = totaisDe(p).liq; dados.liq = p.valor_mensal;
@@ -10300,7 +10311,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           document.querySelectorAll('#cm-editor .cm-tx').forEach(function(t) { E.textos[t.getAttribute('data-id')] = t.value; });
           if (E.tipo === 'locacao') {
             if (v('cm-entrega') != null) E.entrega = v('cm-entrega');
+            if (v('cm-modalidade') != null) E.modalidade = v('cm-modalidade');
             if (v('cm-periodo') != null) E.periodoMin = parseInt(v('cm-periodo'), 10) || 0;
+            if (v('cm-dias') != null) E.dias = parseInt(v('cm-dias'), 10) || 0;
             if (v('cm-local') != null) E.local = v('cm-local');
             if (v('cm-diaspagto') != null) E.diasPagto = parseInt(v('cm-diaspagto'), 10) || 0;
             document.querySelectorAll('#cm-editor .cm-it').forEach(function(tr) {
@@ -10335,7 +10348,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           }
           if (E.auto.pagto) {
             E.pagtoTxt = E.tipo === 'locacao'
-              ? (E.diasPagto || 0) + ' dias após a entrega ' + (E.itens.length > 1 ? 'dos equipamentos' : 'do equipamento')
+              ? (E.diasPagto || 0) + ' dias após a ' + (E.modalidade === 'diaria' ? 'devolução ' : 'entrega ') + (E.itens.length > 1 ? 'dos equipamentos' : 'do equipamento')
               : 'dia ' + (E.diaVenc || '__') + ' de cada mês de vigência';
           }
           if (E.tipo === 'manutencao') {
@@ -10350,13 +10363,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function resumoValores() {
           var E = C.ed; if (!E) return; coletar();
           var p = objDe(E), t = totaisDe(p), el = $('cm-resumo'); if (!el) return;
-          el.innerHTML = 'Valor mensal: <b>' + brl(t.bruto) + '</b>' + (t.desc > 0 ? ' − desconto <b>' + brl(t.desc) + '</b> = ' : ' → ') + '<b style="color:var(--accent);font-size:1.05rem">' + brl(t.liq) + '</b>' +
+          el.innerHTML = (t.diaria ? 'Diária: <b>' + brl(t.porDia) + '</b> × ' + t.dias + ' = <b>' + brl(t.bruto) + '</b>' : 'Valor mensal: <b>' + brl(t.bruto) + '</b>') + (t.desc > 0 ? ' − desconto <b>' + brl(t.desc) + '</b> = ' : ' → ') + '<b style="color:var(--accent);font-size:1.05rem">' + brl(t.liq) + '</b>' +
             (E.tipo === 'locacao' && (t.mob || t.des) ? ' <span class="sx-muted">· mobilização ' + brl(t.mob) + ' · desmobilização ' + brl(t.des) + '</span>' : '');
         }
         function linhasItens() {
           var E = C.ed;
           if (!E.itens.length) return '<div class="sx-vazio" style="padding:1rem">Nenhum equipamento escolhido. Use a lista acima para adicionar um equipamento disponível.</div>';
-          return '<table class="table-pls"><thead><tr><th>Equipamento</th><th>Dono</th><th style="width:130px">Valor mensal (R$)</th><th style="width:120px">Mobilização (R$)</th><th style="width:130px">Desmobilização (R$)</th><th></th></tr></thead><tbody>' +
+          return '<table class="table-pls"><thead><tr><th>Equipamento</th><th>Dono</th><th style="width:130px">' + (E.modalidade === 'diaria' ? 'Valor da diária (R$)' : 'Valor mensal (R$)') + '</th><th style="width:120px">Mobilização (R$)</th><th style="width:130px">Desmobilização (R$)</th><th></th></tr></thead><tbody>' +
             E.itens.map(function(i, k) {
               var cad = L.itens.filter(function(x) { return x.id === i.item_id; })[0] || {};
               return '<tr class="cm-it" data-i="' + k + '"><td><b>' + esc(i.equipamento) + '</b>' + (i.foto_path ? ' <span title="Com foto">📷</span>' : ' <span class="sx-muted" title="Cadastre uma foto em Locações → Locações e frota">sem foto</span>') + '</td><td>' + esc(cad.dono || '—') + '</td>' +
@@ -10381,6 +10394,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 '<td><input class="form-control cm-mr-m" value="' + esc(m.marca) + '"></td><td><input class="form-control cm-mr-t" list="cm-dl-tipo" value="' + esc(m.tipo) + '"></td><td><button type="button" class="btn-pls-secondary sx-del" data-cm="ed-rm-mr" data-i="' + k + '">Remover</button></td></tr>';
             }).join('') + '</tbody></table><datalist id="cm-dl-tipo"><option value="Diesel"><option value="Elétrica"><option value="GLP"><option value="Gasolina"><option value="Manual"></datalist>';
         }
+        function aplicarModalidade() {
+          var E = C.ed; if (!E || E.tipo !== 'locacao') return;
+          var dia = E.modalidade === 'diaria';
+          if ($('cm-g-dias')) $('cm-g-dias').style.display = dia ? '' : 'none';
+          if ($('cm-g-mensal')) $('cm-g-mensal').style.display = dia ? 'none' : '';
+        }
         function abrirEditor(id, tipo) {
           var p = id ? propPorId(id) : null;
           if (p && p.status === 'APROVADA') { showToast('Contrato aprovado não pode ser editado. Use “Reverter” se precisar corrigir.', 4500); return; }
@@ -10402,7 +10421,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             h += '<div class="sx-sec">Equipamentos (só os DISPONÍVEIS da frota)</div><div id="cm-seletor">' + seletorEquip() + '</div><div class="table-container" id="cm-itens" style="margin-top:0.5rem">' + linhasItens() + '</div>' +
               '<div class="sx-sec">Entrega e pagamento</div><div class="form-grid">' +
                 '<div class="form-group"><label class="form-label">Prazo de entrega / início da locação <span class="req-star">*</span></label><input id="cm-entrega" type="date" class="form-control" value="' + esc(E.entrega) + '"></div>' +
-                '<div class="form-group"><label class="form-label">Período mínimo de locação (dias) <span class="req-star">*</span></label><input id="cm-periodo" type="number" min="1" max="3650" list="cm-dl-periodo" class="form-control" value="' + (E.periodoMin || '') + '"><datalist id="cm-dl-periodo"><option value="30"><option value="60"><option value="90"><option value="180"><option value="365"></datalist><small class="sx-muted">Ex.: 30, 60, 90, 365. Sai na proposta, no quadro de valores e na cláusula de vigência.</small></div>' +
+                '<div class="form-group"><label class="form-label">Modalidade da locação</label><select id="cm-modalidade" class="form-control">' + opts([{ v: 'mensal', t: 'Mensal' }, { v: 'diaria', t: 'Por diária' }], E.modalidade || 'mensal') + '</select></div>' +
+                '<div class="form-group" id="cm-g-dias"><label class="form-label">Quantidade de diárias <span class="req-star">*</span></label><input id="cm-dias" type="number" min="1" max="365" class="form-control" value="' + (E.dias || '') + '"><small class="sx-muted">Total = valor da diária × quantidade de diárias. Diária extra é cobrada pelo mesmo valor.</small></div>' +
+                '<div class="form-group" id="cm-g-mensal"><label class="form-label">Período mínimo de locação (dias) <span class="req-star">*</span></label><input id="cm-periodo" type="number" min="1" max="3650" list="cm-dl-periodo" class="form-control" value="' + (E.periodoMin || '') + '"><datalist id="cm-dl-periodo"><option value="30"><option value="60"><option value="90"><option value="180"><option value="365"></datalist><small class="sx-muted">Ex.: 30, 60, 90, 365. Sai na proposta, no quadro de valores e na cláusula de vigência.</small></div>' +
                 '<div class="form-group"><label class="form-label">Local da entrega</label><input id="cm-local" class="form-control" value="' + esc(E.local) + '" placeholder="ex.: Rio das Ostras RJ"></div>' +
                 '<div class="form-group"><label class="form-label">Vencimento: quantos dias após a entrega</label><input id="cm-diaspagto" type="number" min="0" max="365" class="form-control" value="' + E.diasPagto + '"></div>' +
               '</div>';
@@ -10434,7 +10455,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 return '<div class="sx-sec">' + esc(b.t) + '</div><textarea class="form-control cm-tx" data-id="' + b.id + '" rows="' + Math.min(16, Math.max(4, Math.ceil(String(E.textos[b.id] || '').length / 110) + 2)) + '">' + esc(E.textos[b.id] || '') + '</textarea>';
               }).join('') + '</div></details>';
           $('cm-editor').innerHTML = h;
-          aplicarAuto(); resumoValores(); renderCom(); window.scrollTo(0, 0);
+          aplicarModalidade(); aplicarAuto(); resumoValores(); renderCom(); window.scrollTo(0, 0);
         }
         function salvarEditor(depoisPdf) {
           coletar();
@@ -10444,8 +10465,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (E.tipo === 'locacao') {
             if (!d.itens.length) { alert('Escolha pelo menos um equipamento disponível.'); return; }
             if (!d.entrega) { alert('Informe o prazo de entrega / início da locação.'); return; }
-            if (!(Number(d.periodoMin) > 0)) { alert('Informe o período mínimo de locação (em dias).'); return; }
-            if (d.itens.some(function(i) { return !(Number(i.valor) > 0); })) { alert('Informe o valor mensal de todos os equipamentos.'); return; }
+            if (d.modalidade === 'diaria') { if (!(Number(d.dias) > 0)) { alert('Informe a quantidade de diárias.'); return; } }
+            else if (!(Number(d.periodoMin) > 0)) { alert('Informe o período mínimo de locação (em dias).'); return; }
+            if (d.itens.some(function(i) { return !(Number(i.valor) > 0); })) { alert(d.modalidade === 'diaria' ? 'Informe o valor da diária de todos os equipamentos.' : 'Informe o valor mensal de todos os equipamentos.'); return; }
           } else {
             if (!d.inicio || !d.termino) { alert('Informe o início e o término do contrato.'); return; }
             if (!(d.valorBase > 0)) { alert('Informe o valor mensal.'); return; }
@@ -10502,7 +10524,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (loc && d.entrega) diaSug = parseInt(addDias(d.entrega, Number(d.diasPagto || 0)).slice(8, 10), 10);
           else if (!loc) diaSug = d.diaVenc || 15;
           var corpo = '<div class="sx-dica">Ao aprovar, ' + (loc ? 'os equipamentos abaixo passam para <b>LOCADA</b> em nome de <b>' + esc(p.cliente_nome) + '</b>' : 'é criado em Locações um <b>contrato de serviço</b> para <b>' + esc(p.cliente_nome) + '</b>') + ' e a fatura entra no controle de envios.</div>' +
-            (loc ? '<table class="table-pls"><thead><tr><th>Equipamento</th><th style="text-align:right">Valor mensal</th></tr></thead><tbody>' + (d.itens || []).map(function(i, k) { return '<tr><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(liq[k]) + '</td></tr>'; }).join('') + '</tbody></table>'
+            (loc ? '<table class="table-pls"><thead><tr><th>Equipamento</th><th style="text-align:right">' + (d.modalidade === 'diaria' ? 'Total da diária (' + d.dias + ' dias)' : 'Valor mensal') + '</th></tr></thead><tbody>' + (d.itens || []).map(function(i, k) { return '<tr><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(liq[k]) + '</td></tr>'; }).join('') + '</tbody></table>'
               : '<div style="margin:0.4rem 0"><b>Valor mensal: ' + brl(p.valor_mensal) + '</b> · ' + fd(d.inicio) + ' a ' + fd(d.termino) + '</div>') +
             '<div class="form-grid" style="margin-top:0.6rem"><div class="form-group"><label class="form-label">Dia do vencimento da fatura (1–31)</label><input id="cm-ap-venc" type="number" min="1" max="31" class="form-control" value="' + diaSug + '"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="cm-ap-antes" type="number" min="0" max="180" class="form-control" value="30"></div>' +
@@ -10632,6 +10654,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (t.id === 'cm-md-tipo') { C.mdTipo = t.value; renderModelos(); return; }
           if (t.id === 'cm-md-capa') { trocarCapa(t.files[0]); return; }
           if (!E) return;
+          if (t.id === 'cm-modalidade') {
+            coletar(); aplicarModalidade();
+            if (E.modalidade === 'diaria' && !(E.dias > 0)) { E.dias = 5; $('cm-dias').value = 5; }
+            $('cm-itens').innerHTML = linhasItens(); aplicarAuto(); resumoValores(); return;
+          }
           if (t.id === 'cm-add-eq' && t.value) {
             coletar();
             var it = L.itens.filter(function(x) { return x.id === t.value; })[0];
