@@ -2583,7 +2583,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v66 — 18/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v67 — 20/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7697,6 +7697,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var V = X + '-' + String(diaEf(it.dia_vencimento, X)).padStart(2, '0');
           return { it: it, X: X, V: V, S: addDias(V, -Number(it.dias_antes || 0)) };
         }
+        // Fatura com vencimento até a data de início da locação não existe (o contrato ainda não tinha começado).
+        function antesDoInicio(o) { return !!(o.it.tipo === 'locacao' && o.it.data_inicio && o.V <= o.it.data_inicio); }
         function enviadaOcc(o) { var f = L.fat[o.it.id + '|' + o.X]; return !!(f && f.enviada); }
         function situacao(o) {
           var f = L.fat[o.it.id + '|' + o.X];
@@ -7714,29 +7716,35 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           L.itens.filter(cobravel).forEach(function(it) {
             for (var k = -2; k <= 8; k++) {
               var o = mkOcc(it, addMes(M, k));
-              if (o.S.slice(0, 7) === M && o.S >= PRIMEIRO_ENVIO) out.push(o);
+              if (o.S.slice(0, 7) === M && o.S >= PRIMEIRO_ENVIO && !antesDoInicio(o)) out.push(o);
             }
           });
           return out;
         }
         // Alertas: envio hoje ou já passado (a partir de out/2026) e sem marcação de enviada — igual à lista de faturas.
         function alertas() {
-          var out = { hoje: [], atraso: [] }, cur = compAtual(), t = hoje();
+          var out = { hoje: [], atraso: [], fim: [] }, cur = compAtual(), t = hoje();
+          L.itens.forEach(function(it) {
+            if (it.tipo !== 'locacao' || !it.ativo || it.status !== 'LOCADA' || it.prazo_indeterminado || !it.data_fim) return;
+            var n = difDias(t, it.data_fim);
+            if (n <= Number(it.aviso_fim_dias == null ? 10 : it.aviso_fim_dias)) out.fim.push({ it: it, n: n });
+          });
+          out.fim.sort(function(a, b) { return a.n - b.n; });
           L.itens.filter(cobravel).forEach(function(it) {
             for (var k = -2; k <= 8; k++) {
               var o = mkOcc(it, addMes(cur, k));
-              if (o.S > t || o.S < PRIMEIRO_ENVIO || enviadaOcc(o)) continue;
+              if (o.S > t || o.S < PRIMEIRO_ENVIO || antesDoInicio(o) || enviadaOcc(o)) continue;
               (o.S === t ? out.hoje : out.atraso).push(o);
             }
           });
           return out;
         }
-        function contarAlertas() { if (!permitido('locacoes') || !carregado.locacoes) return 0; var a = alertas(); return a.hoje.length + a.atraso.length; }
+        function contarAlertas() { if (!permitido('locacoes') || !carregado.locacoes) return 0; var a = alertas(); return a.hoje.length + a.atraso.length + a.fim.length; }
 
         function avisoDoDia() {
           if (!permitido('locacoes')) return;
           var a = alertas();
-          if (!a.hoje.length && !a.atraso.length) return;
+          if (!a.hoje.length && !a.atraso.length && !a.fim.length) return;
           var chave = 'pls-aviso-loc-' + hoje();
           try { if (sessionStorage.getItem(chave)) return; sessionStorage.setItem(chave, '1'); } catch (e) {}
           var dd = hoje().slice(8, 10) + '/' + hoje().slice(5, 7);
@@ -7750,7 +7758,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var h = '';
           if (a.hoje.length) h += '<h4 class="sx-aviso-h hoje">📣 Hoje (' + dd + ') é dia de enviar a fatura para:</h4>' + lista(a.hoje);
           if (a.atraso.length) h += '<h4 class="sx-aviso-h atraso">⚠ Já passou do dia de envio e não foram marcadas como enviadas:</h4>' + lista(a.atraso);
-          abrirModal('Faturas para enviar', h, 'Abrir faturas do mês', function() { L.comp = compAtual(); setSetor('locacoes', 'faturas'); });
+          if (a.fim.length) h += '<h4 class="sx-aviso-h atraso">⏰ Locações chegando ao fim — organizar a coleta do equipamento ou renovar o contrato:</h4><ul class="sx-aviso-lista">' + a.fim.map(function(x) {
+            var q = x.n < 0 ? 'venceu há ' + (-x.n) + (x.n === -1 ? ' dia' : ' dias') : x.n === 0 ? 'vence HOJE' : 'vence em ' + x.n + (x.n === 1 ? ' dia' : ' dias');
+            return '<li><b>' + esc(x.it.cliente) + '</b> — ' + esc(x.it.equipamento) + ' <span class="sx-muted">· ' + q + ' (' + fd(x.it.data_fim) + ')</span></li>';
+          }).join('') + '</ul>';
+          abrirModal(a.hoje.length || a.atraso.length ? 'Faturas para enviar' : 'Avisos de locação', h, a.hoje.length || a.atraso.length ? 'Abrir faturas do mês' : 'Abrir locações', function() { L.comp = compAtual(); setSetor('locacoes', 'faturas'); });
         }
 
         function montarLoc() {
@@ -8099,6 +8111,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var pr = i.proposta_id && L.props[i.proposta_id]; if (!pr) return '—';
           return '<button type="button" class="btn-pls-secondary" data-sx="lo-contrato" data-id="' + pr.id + '" title="' + (pr.assinado_path ? 'Abrir contrato assinado' : 'Contrato ainda sem arquivo assinado') + '">📄 ' + esc(pr.codigo) + (pr.assinado_path ? ' ✔' : '') + '</button>';
         }
+        function celPrazo(i) {
+          if (i.prazo_indeterminado) return (i.data_inicio ? 'desde ' + fd(i.data_inicio).slice(0, 5) + '<br>' : '') + '<span class="sx-muted">prazo indeterminado</span>';
+          if (!i.data_fim) return '<span class="sx-muted" title="Edite a locação e informe o fim ou prazo indeterminado">⚠ definir prazo</span>';
+          var n = difDias(hoje(), i.data_fim), av = Number(i.aviso_fim_dias == null ? 10 : i.aviso_fim_dias);
+          var tag = n < 0 ? '<span class="sx-pill" style="background:#fee2e2;color:#b91c1c">venceu há ' + (-n) + 'd</span>' : n <= av ? '<span class="sx-pill" style="background:#ffedd5;color:#c2410c">faltam ' + n + 'd</span>' : '<span class="sx-muted">faltam ' + n + 'd</span>';
+          return (i.data_inicio ? fd(i.data_inicio).slice(0, 5) + ' → ' : 'até ') + fd(i.data_fim).slice(0, 5) + '<br>' + tag;
+        }
         function renderContratos() {
           var todos = rowsContratos('locacao'), q = norm(L.cBusca);
           var n = { LOCADA: 0, 'EM MANUTENÇÃO': 0, 'DISPONÍVEL': 0 }, rec = 0;
@@ -8110,10 +8129,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           }).sort(function(a, b) {
             return STATUS_LOC.indexOf(a.status) - STATUS_LOC.indexOf(b.status) || String(a.cliente || 'zzz').localeCompare(String(b.cliente || 'zzz'));
           });
-          $('lo-c-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Cliente</th><th>Equipamento</th><th>Dono</th><th style="text-align:right">Valor</th><th>Enviar</th><th>Vence</th><th>Contrato</th><th>Anotações</th><th></th></tr></thead><tbody>' +
+          $('lo-c-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Cliente</th><th>Equipamento</th><th>Dono</th><th style="text-align:right">Valor</th><th>Enviar</th><th>Vence</th><th>Período</th><th>Contrato</th><th>Anotações</th><th></th></tr></thead><tbody>' +
             lista.map(function(i) {
               return '<tr><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + (i.contrato_modelo === 'PARCEIRO' ? ' <span class="sx-pill sx-st-disp" title="Contrato do grupo PLS + parceiro">GRUPO</span>' : '') + '</td><td>' + esc(i.dono || '—') + '</td>' +
-                '<td style="text-align:right;font-weight:700">' + brl(i.valor) + '</td><td>' + (i.cliente && i.dias_antes != null ? i.dias_antes + ' dias antes' : '—') + '</td><td>' + (i.dia_vencimento ? 'dia ' + i.dia_vencimento : '—') + '</td><td>' + cellContrato(i) + '</td><td>' + esc(i.anotacoes || '') + '</td>' +
+                '<td style="text-align:right;font-weight:700">' + brl(i.valor) + '</td><td>' + (i.cliente && i.dias_antes != null ? i.dias_antes + ' dias antes' : '—') + '</td><td>' + (i.dia_vencimento ? 'dia ' + i.dia_vencimento : '—') + '</td><td>' + celPrazo(i) + '</td><td>' + cellContrato(i) + '</td><td>' + esc(i.anotacoes || '') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="lo-editar" data-id="' + i.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="lo-excluir" data-id="' + i.id + '">Excluir</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma locação ativa. Use “Nova locação” (o equipamento precisa estar DISPONÍVEL na Frota).</div>';
         }
@@ -8151,6 +8170,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (!i || i.contrato_modelo !== 'PARCEIRO') return 0;
           return i.comissao_tipo === 'fixo' ? Number(i.comissao_valor || 0) : Number(i.valor || 0) * Number(i.comissao_valor || 0) / 100;
         }
+        function htmlPrazo(p, it) {
+          it = it || {};
+          return '<div class="form-group"><label class="form-label">Início da locação</label><input id="' + p + '-ini" type="date" class="form-control" value="' + esc(it.data_inicio || '') + '"></div>' +
+            '<div class="form-group"><label class="form-label">Fim da locação</label><input id="' + p + '-fim" type="date" class="form-control" value="' + esc(it.data_fim || '') + '"' + (it.prazo_indeterminado ? ' disabled' : '') + '></div>' +
+            '<div class="form-group"><label class="sx-chkl" style="margin-top:1.6rem"><input type="checkbox" id="' + p + '-ind"' + (it.prazo_indeterminado ? ' checked' : '') + ' onchange="document.getElementById(\'' + p + '-fim\').disabled=this.checked"> Prazo indeterminado</label></div>' +
+            '<div class="form-group"><label class="form-label">Avisar quantos dias antes do fim?</label><input id="' + p + '-av" type="number" min="0" max="180" class="form-control" value="' + (it.aviso_fim_dias != null ? it.aviso_fim_dias : 10) + '"></div>';
+        }
+        function lerPrazo(p) {
+          var ind = $(p + '-ind').checked, ini = $(p + '-ini').value || null, fim = ind ? null : ($(p + '-fim').value || null), av = parseInt($(p + '-av').value, 10);
+          if (!ind && !fim) throw new Error('Informe o fim da locação ou marque “Prazo indeterminado”.');
+          if (ini && fim && fim < ini) throw new Error('O fim da locação é antes do início.');
+          return { data_inicio: ini, data_fim: fim, prazo_indeterminado: ind, aviso_fim_dias: isNaN(av) ? 10 : av };
+        }
         function formItem(it, tipo) {
           it = it || { tipo: tipo, status: tipo === 'servico' ? 'ATIVO' : 'LOCADA', valor: 0 };
           var serv = it.tipo === 'servico';
@@ -8163,6 +8195,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Valor mensal (R$)</label><input id="lo-m-valor" class="form-control" inputmode="decimal" value="' + numStr(it.valor) + '"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-m-envio" type="number" min="0" max="180" class="form-control" value="' + (it.dias_antes != null ? it.dias_antes : 30) + '"></div>' +
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31)</label><input id="lo-m-venc" type="number" min="1" max="31" class="form-control" value="' + (it.dia_vencimento || '') + '"></div>' +
+            (serv ? '' : htmlPrazo('lo-m', it)) +
             (serv ? '' : htmlComissao('lo-m', it)) +
             '<div class="form-group full-width sx-dica" id="lo-m-ex" style="margin:0"></div>' +
             (serv ? '' : '<details class="form-group full-width" style="margin:0.2rem 0"' + (it.ficha || it.foto_path ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">📄 Ficha técnica e foto (usadas nas propostas do Comercial)</summary>' +
@@ -8183,12 +8216,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Valor mensal (R$)</label><input id="lo-n-valor" class="form-control" inputmode="decimal" value="0,00"></div>' +
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31) <span class="req-star">*</span></label><input id="lo-n-venc" type="number" min="1" max="31" class="form-control"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-n-antes" type="number" min="0" max="180" class="form-control" value="30"></div>' +
+            htmlPrazo('lo-n', { data_inicio: hoje() }) +
             htmlComissao('lo-n', null) +
             '<div class="form-group full-width"><label class="form-label">Anotações</label><input id="lo-n-obs" class="form-control"></div></div>', 'Criar locação', function() {
             var eq = $('lo-n-eq').value, cli = $('lo-n-cli').value.trim(), venc = parseInt($('lo-n-venc').value, 10), antes = parseInt($('lo-n-antes').value, 10);
             if (!eq) throw new Error('Escolha o equipamento.'); if (!cli) throw new Error('Informe o cliente.');
             if (!(venc >= 1 && venc <= 31)) throw new Error('Dia do vencimento de 1 a 31.'); if (isNaN(antes) || antes < 0 || antes > 180) throw new Error('Dias antes: de 0 a 180.');
-            var d = { status: 'LOCADA', cliente: cli, valor: r2(parseValor($('lo-n-valor').value)), dia_vencimento: venc, dias_antes: antes }; Object.assign(d, lerComissao('lo-n')); var ob = $('lo-n-obs').value.trim(); if (ob) d.anotacoes = ob;
+            var d = { status: 'LOCADA', cliente: cli, valor: r2(parseValor($('lo-n-valor').value)), dia_vencimento: venc, dias_antes: antes }; Object.assign(d, lerComissao('lo-n')); Object.assign(d, lerPrazo('lo-n')); var ob = $('lo-n-obs').value.trim(); if (ob) d.anotacoes = ob;
             return chk(sb.from('loc_itens').update(d).eq('id', eq).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregarLoc(); })
               .then(function() { renderLoc(); desenharRail(); showToast('Locação criada ✔'); });
           });
@@ -8211,6 +8245,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               anotacoes: $('lo-m-obs').value.trim() || null
             };
             if (!serv) Object.assign(d, lerComissao('lo-m'));
+            if (!serv) { if (d.status === 'LOCADA' && d.cliente) Object.assign(d, lerPrazo('lo-m')); else Object.assign(d, { data_inicio: null, data_fim: null, prazo_indeterminado: false }); }
             if (serv && !d.cliente) throw new Error('Informe o cliente.');
             if (!serv && !d.equipamento) throw new Error('Informe o equipamento.');
             if (!serv && d.status === 'LOCADA' && !d.cliente) throw new Error('Equipamento LOCADO precisa de cliente.');
@@ -8606,7 +8641,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           $('rh-l-kpis').innerHTML = kpi('Lançamentos no mês', lista.length, '', '#334155') + kpi('Total de descontos', brl(d), '', 'var(--pls-red)') + kpi('Total de adicionais', brl(p), '', '#16a34a');
           $('rh-l-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Colaborador / prestador</th><th>Tipo</th><th>Descrição</th><th>Data</th><th style="text-align:right">Valor</th><th>Obs.</th><th></th></tr></thead><tbody>' +
             lista.sort(function(a, b) { return lancNome(a).localeCompare(lancNome(b)); }).map(function(l) {
-              return '<tr><td><b>' + esc(lancNome(l)) + '</b>' + (l.prestador_id ? ' <span class="sx-pill sx-espera">PJ</span>' : '') + '</td><td><span class="sx-pill ' + (l.natureza === 'desconto' ? 'sx-atraso' : 'sx-ok') + '">' + (l.natureza === 'desconto' ? 'Desconto' : 'Adicional') + '</span></td><td>' + esc(l.descricao) + '</td><td>' + fd(l.data) + '</td>' +
+              return '<tr><td><b>' + esc(lancNome(l)) + '</b>' + (l.prestador_id ? ' <span class="sx-pill sx-espera">PJ</span>' : '') + '</td><td><span class="sx-pill ' + (l.natureza === 'desconto' ? 'sx-atraso' : 'sx-ok') + '">' + (l.natureza === 'desconto' ? 'Desconto' : 'Adicional') + '</span></td><td>' + esc(l.descricao) + (l.desc_destino ? '<br><span class="sx-muted">→ descontado no ' + (String(l.desc_destino).indexOf('13-') === 0 ? '13º ' + String(l.desc_destino).split('-')[1] : 'recibo de rescisão') + ' <button type="button" class="btn-pls-secondary" data-sx="rh-lanc-volta" data-id="' + l.id + '" style="padding:0 6px">↩ voltar p/ o mês</button></span>' : '') + '</td><td>' + fd(l.data) + '</td>' +
                 '<td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + esc(l.obs || '') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="rh-lanc-editar" data-id="' + l.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-lanc-excluir" data-id="' + l.id + '">Excluir</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum lançamento neste mês.</div>';
@@ -8691,7 +8726,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             it.push({ cod: b.cod || codBen(b.desc), desc: b.desc, ref: ref, venc: b.natureza === 'desconto' ? 0 : v, dsc: b.natureza === 'desconto' ? v : 0 });
           });
           R.lanc.forEach(function(l) {
-            if (l.colaborador_id === c.id && l.competencia === comp) {
+            if (l.colaborador_id === c.id && l.competencia === comp && !l.desc_destino) {
               it.push({ cod: l.codigo || 199, desc: l.descricao, ref: null, venc: l.natureza === 'provento' ? l.valor : 0, dsc: l.natureza === 'desconto' ? l.valor : 0 });
               if (l.natureza === 'provento') trib += l.valor;
             }
@@ -8745,7 +8780,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             it.push({ cod: b.cod || codBen(b.desc), desc: b.desc, ref: ref, venc: b.natureza === 'desconto' ? 0 : v, dsc: b.natureza === 'desconto' ? v : 0 });
           });
           R.lanc.forEach(function(l) {
-            if (l.colaborador_id === c.id && l.competencia === comp) it.push({ cod: l.codigo || 199, desc: l.descricao, ref: null, venc: l.natureza === 'provento' ? l.valor : 0, dsc: l.natureza === 'desconto' ? l.valor : 0 });
+            if (l.colaborador_id === c.id && l.competencia === comp && !l.desc_destino) it.push({ cod: l.codigo || 199, desc: l.descricao, ref: null, venc: l.natureza === 'provento' ? l.valor : 0, dsc: l.natureza === 'desconto' ? l.valor : 0 });
           });
           return it.sort(function(a, b) { return a.cod - b.cod; });
         }
@@ -8910,7 +8945,41 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (modo === 'integral') return { modo: modo, bruto: b, U: b };
           var p1 = r2(b / 2); return { modo: modo, bruto: b, '1': p1, '2': r2(b - p1) };
         }
+        function ehVale(l) { return l.natureza === 'desconto' && (l.codigo === 115 || l.codigo === 118); }
+        function valesPend(c) {
+          return R.lanc.filter(function(l) { return l.colaborador_id === c.id && ehVale(l) && !l.desc_destino && l.competencia >= R.decAno + '-01' && !recSalvo(c.id, l.competencia); })
+            .sort(function(a, b) { return String(a.competencia + (a.data || '')).localeCompare(b.competencia + (b.data || '')); });
+        }
         function decItens(c, p) {
+          var it = decItensBase(c, p), tag = '13-' + R.decAno + '-' + p;
+          R.lanc.forEach(function(l) {
+            if (l.colaborador_id === c.id && l.desc_destino === tag) it.push({ cod: l.codigo || 115, desc: 'Vale – ' + l.descricao + ' (' + l.competencia.slice(5) + '/' + l.competencia.slice(0, 4) + ')', ref: null, venc: 0, dsc: l.valor });
+          });
+          return it;
+        }
+        function pedirValesDec(pares, seguir) {
+          var grupos = [], vistos = {};
+          pares.forEach(function(x) { var c = colabPorId(x.id); if (!c || vistos[c.id]) return; vistos[c.id] = 1; var v = valesPend(c); if (v.length) grupos.push({ c: c, p: x.p, v: v }); });
+          if (!grupos.length) { seguir(); return; }
+          var corpo = '<div class="sx-dica">Existem vales/adiantamentos ainda não descontados. Marque os que devem ser descontados <b>neste recibo de 13º</b>; os desmarcados continuam sendo descontados no mês deles.</div>' +
+            grupos.map(function(g) {
+              return '<h4 style="margin:0.8rem 0 0.3rem">' + esc(g.c.nome) + ' <span class="sx-muted">— ' + esc(DEC_TIT[g.p]) + '</span></h4>' + g.v.map(function(l) {
+                return '<label class="sx-chkl" style="display:flex;gap:0.5rem;margin:0.25rem 0"><input type="checkbox" class="rh-vd" data-id="' + l.id + '" data-p="' + g.p + '" checked> <span>' + esc(l.descricao) + ' — comp. ' + l.competencia.slice(5) + '/' + l.competencia.slice(0, 4) + (l.data ? ' (' + fd(l.data).slice(0, 5) + ')' : '') + ' — <b>' + brl(l.valor) + '</b></span></label>';
+              }).join('');
+            }).join('');
+          abrirModal('Vales a descontar no 13º', corpo, 'Continuar e gerar o recibo', function() {
+            var marcados = [].slice.call(document.querySelectorAll('.rh-vd:checked')).map(function(e) { return { id: e.getAttribute('data-id'), p: e.getAttribute('data-p') }; });
+            var passo = Promise.resolve();
+            ['1', '2', 'U'].forEach(function(p) {
+              var ids = marcados.filter(function(m) { return m.p === p; }).map(function(m) { return m.id; });
+              if (!ids.length) return;
+              passo = passo.then(function() { return chk(sb.from('rh_lancamentos').update({ desc_destino: '13-' + R.decAno + '-' + p }).in('id', ids).select()); })
+                .then(function(r) { if (!r.data || r.data.length !== ids.length) throw new Error('Sem permissão para atualizar os vales.'); ids.forEach(function(id) { var l = R.lanc.filter(function(x) { return x.id === id; })[0]; if (l) l.desc_destino = '13-' + R.decAno + '-' + p; }); });
+            });
+            return passo.then(function() { setTimeout(seguir, 250); });
+          });
+        }
+        function decItensBase(c, p) {
           var ano = R.decAno, pt = decPartes(c), ref = decAvos(c, ano) + '/12', valor = p === '2' ? pt.bruto : (p === '1' ? pt['1'] : pt.U), it = [];
           if (c.carteira_assinada) {
             it.push({ cod: 1, desc: p === '1' ? '13º Salário – 1ª parcela' : p === '2' ? '13º Salário – 2ª parcela' : '13º Salário (integral)', ref: ref, venc: r2(valor), dsc: 0 });
@@ -8996,7 +9065,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             if (qual === 'nov') pares.push({ id: id, p: pt.modo === 'integral' ? 'U' : '1' }); else if (pt.modo !== 'integral') pares.push({ id: id, p: '2' });
           });
           if (!pares.length) { showToast(qual === 'dez' ? 'Marque colaboradores que pagam em 2 parcelas.' : 'Marque pelo menos um colaborador.', 4000); return; }
-          gerarDecimo(pares);
+          pedirValesDec(pares, function() { gerarDecimo(pares); });
         }
         function marcarPagoDec(id, p, pago) {
           var c = colabPorId(id), it = decItensRec(c, p), t = totais(it), s = decRow(id, R.decAno, p);
@@ -9100,10 +9169,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var inss13 = calcInss(base13); if (inss13 > 0) add('INSS sobre 13º', null, 0, inss13);
           }
           // lançamentos pendentes
+          var valesN = 0, valesT = 0;
           R.lanc.forEach(function(l) {
-            if (l.colaborador_id !== c.id || !l.competencia || l.competencia < iniMes) return;
+            if (l.colaborador_id !== c.id || !l.competencia || l.competencia < iniMes || l.desc_destino) return;
+            if (ehVale(l)) { valesN++; valesT += l.valor; }
             add((l.natureza === 'provento' ? '' : 'Desconto: ') + l.descricao + ' (' + l.competencia.slice(5) + '/' + l.competencia.slice(0, 4) + ')', null, l.natureza === 'provento' ? l.valor : 0, l.natureza === 'provento' ? 0 : l.valor);
           });
+          if (valesN) info.alertas.push('Há ' + brl(valesT) + ' em vales/adiantamentos (' + valesN + ' lançamento' + (valesN > 1 ? 's' : '') + ') já incluídos nesta rescisão como “Desconto: …”. Se algum não deve ser descontado agora, apague a linha.');
           info.meses = meses; info.diasAviso = diasAviso; info.proj = proj;
           return { itens: it, info: info };
         }
@@ -10528,15 +10600,26 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               : '<div style="margin:0.4rem 0"><b>Valor mensal: ' + brl(p.valor_mensal) + '</b> · ' + fd(d.inicio) + ' a ' + fd(d.termino) + '</div>') +
             '<div class="form-grid" style="margin-top:0.6rem"><div class="form-group"><label class="form-label">Dia do vencimento da fatura (1–31)</label><input id="cm-ap-venc" type="number" min="1" max="31" class="form-control" value="' + diaSug + '"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="cm-ap-antes" type="number" min="0" max="180" class="form-control" value="30"></div>' +
-            '<div class="form-group"><label class="form-label">Data da aprovação</label><input id="cm-ap-data" type="date" class="form-control" value="' + hoje() + '"></div></div>';
+            '<div class="form-group"><label class="form-label">Data da aprovação</label><input id="cm-ap-data" type="date" class="form-control" value="' + hoje() + '"></div>' +
+            (loc ? '<div class="form-group"><label class="form-label">Início da locação</label><input id="cm-ap-ini" type="date" class="form-control" value="' + esc(d.entrega || hoje()) + '"></div>' +
+              '<div class="form-group"><label class="form-label">Duração (dias)</label><input id="cm-ap-dur" type="number" min="1" class="form-control" value="' + (d.modalidade === 'diaria' ? (Number(d.dias) || 1) : (Number(d.periodoMin) || 30)) + '"' + '></div>' +
+              '<div class="form-group"><label class="sx-chkl" style="margin-top:1.6rem"><input type="checkbox" id="cm-ap-ind" onchange="document.getElementById(\'cm-ap-dur\').disabled=this.checked"> Prazo indeterminado</label></div>' +
+              '<div class="form-group"><label class="form-label">Avisar quantos dias antes do fim?</label><input id="cm-ap-av" type="number" min="0" max="180" class="form-control" value="10"></div>' : '') + '</div>';
           abrirModal('Aprovar proposta ' + p.codigo + ' → contrato', corpo, 'Aprovar e criar contrato', function() {
             var venc = parseInt($('cm-ap-venc').value, 10), antes = parseInt($('cm-ap-antes').value, 10), dataAp = $('cm-ap-data').value || hoje();
             if (!(venc >= 1 && venc <= 31)) throw new Error('Dia do vencimento de 1 a 31.');
             if (isNaN(antes) || antes < 0 || antes > 180) throw new Error('Dias antes: de 0 a 180.');
-            return aprovar(p, venc, antes, dataAp, liq);
+            var prazo = null;
+            if (loc) {
+              var ini = $('cm-ap-ini').value, ind = $('cm-ap-ind').checked, dur = parseInt($('cm-ap-dur').value, 10), av = parseInt($('cm-ap-av').value, 10);
+              if (!ini) throw new Error('Informe o início da locação.');
+              if (!ind && !(dur > 0)) throw new Error('Informe a duração em dias ou marque prazo indeterminado.');
+              prazo = { data_inicio: ini, data_fim: ind ? null : addDias(ini, dur), prazo_indeterminado: ind, aviso_fim_dias: isNaN(av) ? 10 : av };
+            }
+            return aprovar(p, venc, antes, dataAp, liq, prazo);
           });
         }
-        function aprovar(p, venc, antes, dataAp, liq) {
+        function aprovar(p, venc, antes, dataAp, liq, prazo) {
           var d = JSON.parse(JSON.stringify(p.dados || {})), aprov = { itens: [], novo: null };
           var passo;
           if (p.tipo === 'locacao') {
@@ -10554,7 +10637,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var a = atuais.filter(function(x) { return x.id === i.item_id; })[0];
                 aprov.itens.push({ item_id: a.id, valor_ant: a.valor, dono: a.dono });
                 seq = seq.then(function() {
-                  return chk(sb.from('loc_itens').update({ status: 'LOCADA', cliente: p.cliente_nome, valor: liq[k], dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, contrato_modelo: d.modelo === 'PARCEIRO' ? 'PARCEIRO' : 'PLS', comissao_tipo: d.modelo === 'PARCEIRO' ? (d.comTipo || 'pct') : null, comissao_valor: d.modelo === 'PARCEIRO' ? (Number(d.comValor) || 0) : null }).eq('id', a.id).select());
+                  return chk(sb.from('loc_itens').update({ status: 'LOCADA', cliente: p.cliente_nome, valor: liq[k], dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, data_inicio: prazo ? prazo.data_inicio : null, data_fim: prazo ? prazo.data_fim : null, prazo_indeterminado: prazo ? prazo.prazo_indeterminado : false, aviso_fim_dias: prazo ? prazo.aviso_fim_dias : 10, contrato_modelo: d.modelo === 'PARCEIRO' ? 'PARCEIRO' : 'PLS', comissao_tipo: d.modelo === 'PARCEIRO' ? (d.comTipo || 'pct') : null, comissao_valor: d.modelo === 'PARCEIRO' ? (Number(d.comValor) || 0) : null }).eq('id', a.id).select());
                 }).then(function(u) { if (!u.data || !u.data.length) throw new Error('Sem permissão para atualizar a frota.'); });
               });
               return seq;
@@ -10579,7 +10662,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var passo = Promise.resolve();
           if (p.tipo === 'locacao') {
             (ap.itens || []).forEach(function(i) {
-              passo = passo.then(function() { return chk(sb.from('loc_itens').update({ status: 'DISPONÍVEL', cliente: null, valor: i.valor_ant, dia_vencimento: null, dias_antes: null, proposta_id: null, contrato_modelo: 'PLS', comissao_tipo: null, comissao_valor: null }).eq('id', i.item_id).select()); });
+              passo = passo.then(function() { return chk(sb.from('loc_itens').update({ status: 'DISPONÍVEL', cliente: null, valor: i.valor_ant, dia_vencimento: null, dias_antes: null, proposta_id: null, data_inicio: null, data_fim: null, prazo_indeterminado: false, contrato_modelo: 'PLS', comissao_tipo: null, comissao_valor: null }).eq('id', i.item_id).select()); });
             });
           } else {
             var alvo = ap.novo || (L.itens.filter(function(x) { return x.proposta_id === p.id; })[0] || {}).id;
@@ -12653,6 +12736,11 @@ var PLSOS = (function() {
             case 'rh-lanc-novo': abrirLanc(null); break;
             case 'rh-lanc-editar': abrirLanc(id); break;
             case 'rh-lanc-excluir': excluirLanc(id); break;
+            case 'rh-lanc-volta': (function() {
+              var l = R.lanc.filter(function(x) { return x.id === id; })[0]; if (!l) return;
+              if (String(l.desc_destino).indexOf('13-') === 0 && R.dec.some(function(r) { return r.colaborador_id === l.colaborador_id && ('13-' + r.ano + '-' + r.parcela) === l.desc_destino; }) && !confirm('Esse vale já saiu em um recibo de 13º gerado. Se voltar para o mês, o recibo do 13º será recalculado sem ele ao reimprimir. Continuar?')) return;
+              chk(sb.from('rh_lancamentos').update({ desc_destino: null }).eq('id', id).select()).then(function() { return carregarRh(); }).then(function() { renderRh(); showToast('Vale voltou para o mês ✔'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+            })(); break;
             case 'rh-mes': R.comp = addMes(R.comp, parseInt(a.getAttribute('data-d'), 10)); R.sel = {}; renderRecibos(); break;
             case 'rh-r-todos': { var ids = R.colab.filter(function(c) { return rhElegivel(c, R.comp) && (!R.rEmpresa || c.empresa_id === R.rEmpresa); }).map(function(c) { return c.id; }).concat(pjElegiveis().map(function(p) { return 'pj:' + p.id; })); var todos = ids.every(function(i) { return R.sel[i]; }); R.sel = {}; if (!todos) ids.forEach(function(i) { R.sel[i] = true; }); renderRecibos(); break; }
             case 'rh-r-imprimir': gerarRecibos(Object.keys(R.sel).filter(function(i) { return R.sel[i]; })); break;
