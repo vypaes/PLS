@@ -2583,7 +2583,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v69 — 20/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v70 — 20/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10857,7 +10857,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         // MANUTENÇÃO (v39): planos preventivos dos clientes, revisões e vencimentos
         // =================================================================
-        var M = { os: null, ck: null, kBusca: '', kTipo: '', planos: [], equip: [], rev: [], sub: 'vencimentos', fBusca: '', fSit: '', eBusca: '', pBusca: '', cBusca: '' };
+        var M = { os: null, ent: null, ck: null, kBusca: '', kTipo: '', planos: [], equip: [], rev: [], sub: 'vencimentos', fBusca: '', fSit: '', eBusca: '', pBusca: '', cBusca: '' };
         var SEED_PLANO_OK = false;
 
         function carregarMan() {
@@ -11005,6 +11005,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção</button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="checklists">✅ Checklists entrada/saída</button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="os">🧾 Ordens de serviço</button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="entregas">📦 Entregas de material</button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="pecas">🔩 Peças dos clientes</button>' +
             '</div>' +
             '<div id="mn-p-vencimentos" class="sx-pane">' +
@@ -11037,6 +11038,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<input id="mn-o-busca" class="form-control sx-w2" placeholder="Buscar nº da OS, cliente, equipamento, série ou técnico…"></div>' +
               '<div class="table-container" id="mn-os"></div>' +
             '</div>' +
+            '<div id="mn-p-entregas" class="sx-pane">' +
+              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="ent-novo">➕ Nova entrega de material</button>' +
+              '<select id="mn-en-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
+              '<select id="mn-en-mes" class="form-control sx-w" title="Período"></select>' +
+              '<label class="sx-muted" style="font-size:.75rem">De <input id="mn-en-de" type="date" class="form-control" style="display:inline-block;width:auto"></label><label class="sx-muted" style="font-size:.75rem">Até <input id="mn-en-ate" type="date" class="form-control" style="display:inline-block;width:auto"></label>' +
+              '<input id="mn-en-busca" class="form-control sx-w2" placeholder="Buscar nº, cliente, material, quem recebeu ou entregou…"></div>' +
+              '<div class="table-container" id="mn-entregas"></div>' +
+            '</div>' +
             '<div id="mn-p-pecas" class="sx-pane">' +
               '<div class="sx-toolbar"><select id="mn-pc-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
               '<input id="mn-pc-busca" class="form-control sx-w2" placeholder="Buscar peça (ex.: motor), código, fornecedor, equipamento…"></div>' +
@@ -11055,9 +11064,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderMan() {
           montarMan();
-          ['vencimentos', 'equip', 'planos', 'checklists', 'os', 'pecas'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
+          ['vencimentos', 'equip', 'planos', 'checklists', 'os', 'entregas', 'pecas'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
           document.querySelectorAll('#setor-manutencao .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === M.sub); });
-          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
+          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'entregas') carregarEnt(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
         }
         function pillSev(s) { return s === 2 ? '<span class="sx-pill sx-atraso">VENCIDA</span>' : s === 1 ? '<span class="sx-pill sx-hoje">PERTO DE VENCER</span>' : '<span class="sx-pill sx-st-ok">EM DIA</span>'; }
         function renderVenc() {
@@ -11203,7 +11212,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         // troca o nome do cliente nas tabelas que guardam o nome (demandas acompanham sozinhas pelo banco)
         function trocarNomeCliente(de, para, soRename) {
-          var tabs = [['loc_itens', 'cliente'], ['man_equip', 'cliente'], ['man_checklists', 'cliente'], ['man_os', 'cliente'], ['com_propostas', 'cliente_nome']];
+          var tabs = [['loc_itens', 'cliente'], ['man_equip', 'cliente'], ['man_checklists', 'cliente'], ['man_os', 'cliente'], ['man_entregas', 'cliente'], ['com_propostas', 'cliente_nome']];
           var pre = soRename ? Promise.resolve() : chk(sb.from('demandas').update({ cliente: para }).eq('cliente', de).select('id'));
           return pre.then(function() {
             return Promise.all(tabs.map(function(t) { var o = {}; o[t[1]] = para; return chk(sb.from(t[0]).update(o).eq(t[1], de).select('id')); }));
@@ -12682,9 +12691,339 @@ var PLSOS = (function() {
   };
 })();
 
+/* ===== PLSENT: Entrega de Material (módulo compartilhado desktop/app) — registro em nome do cliente, com fotos, quem recebeu e assinatura ===== */
+var PLSENT = (function() {
+  var U = PLSU, esc = U.esc, br = U.br, $ = function(id) { return document.getElementById(id); };
+  var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, nome: function() { return ''; }, tecnicos: function() { return []; }, clientes: function() { return []; }, logo: '', toast: function(m) { alert(m); }, onSaved: null, onClose: null, admin: function() { return false; } };
+  var EMP = { cnpj: '27.133.431/0001-82', l1: 'Avenida Lacerda Agostinho, 110 (KM 03 Linha Azul)', l2: 'Macaé/RJ', tel: '(22)2006-0763 - (22)99979-7662' };
+  var UNS = ['un', 'pç', 'cx', 'kg', 'L', 'm', 'jogo', 'par', 'galão', 'balde', 'botija'];
+  var S = null, ROOT = null, REG = null, PDFB = null, PDFN = '', PODE_EXC = false;
+  var BUCKET = 'man-fotos';
+  function stor() { return C.sb.storage.from(BUCKET); }
+  function novoId() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'f' + Date.now() + Math.random().toString(16).slice(2); }
+  function subirDataUrl(d) {
+    var p = 'ent/' + novoId() + '.jpg';
+    return fetch(d).then(function(r) { return r.blob(); }).then(function(b) { return stor().upload(p, b, { contentType: 'image/jpeg', upsert: false }); }).then(function(r) { if (r.error) throw r.error; return p; });
+  }
+  function resolverFotos(fotos) {
+    var ps = (fotos || []).filter(function(f) { return f.path && !f.src; }).map(function(f) { return f.path; });
+    if (!ps.length) return Promise.resolve();
+    return stor().createSignedUrls(ps, 3600).then(function(r) { (r.data || []).forEach(function(x) { (fotos || []).forEach(function(f) { if (f.path === x.path && x.signedUrl) f.src = x.signedUrl; }); }); }).catch(function() {});
+  }
+  function pathsDe(fotos) { return (fotos || []).filter(function(f) { return f.path; }).map(function(f) { return f.path; }); }
+  function cliObj(nome) { var l = C.clientes(); for (var i = 0; i < l.length; i++) { var c = l[i]; if ((typeof c === 'string' ? c : c.nome) === nome) return typeof c === 'string' ? { nome: c } : c; } return null; }
+  function nomesCli() { return C.clientes().map(function(c) { return typeof c === 'string' ? c : c.nome; }).filter(Boolean).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); }
+  function num(q) { var n = Number(String(q || '').replace(/\./g, '').replace(',', '.')); return isNaN(n) ? 0 : n; }
+  function fmtQ(it) { return [String(it.q || '').trim(), String(it.un || '').trim()].filter(Boolean).join(' '); }
+  function novoEstado(cli) {
+    return { cliente: cli || '', cd: { razao: '', fantasia: '', cnpj: '', end: '', cep: '', cidade: '', tel: '', mail: '' }, data: U.hojeISO(), hora: U.agora(), local: '', doc: '',
+      itens: [{ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }], fotos: [], obs: '', entregue: (C.tecnicos().indexOf(C.nome()) >= 0 ? C.nome() : ''), extras: [], tecOrig: [],
+      rec: '', recDoc: '', recCargo: '', ac: '', ae: '' };
+  }
+  function abrirRoot() { U.css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; ROOT.className = 'pos-ent'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; PDFB = null; REG = null; if (C.onClose) C.onClose(); }
+  function shell(titulo, corpo, rodape, fechaTxt, fechaFn) {
+    ROOT.innerHTML = '<div class="pk-top"><b>' + esc(titulo) + '</b><button type="button" id="pk-x">' + (fechaTxt || 'Fechar') + '</button></div><div class="pk-main" id="pk-main"><div class="pk-c">' + corpo + '</div></div>' + (rodape ? '<div class="pk-foot">' + rodape + '</div>' : '');
+    $('pk-x').onclick = fechaFn || fechar;
+  }
+  // ---------- formulário ----------
+  function colher() {
+    if (!$('e-cli')) return;
+    var g = function(id) { var x = $(id); return x ? x.value.trim() : ''; };
+    S.data = g('e-d'); S.hora = g('e-h'); S.local = g('e-local'); S.doc = g('e-doc'); S.obs = $('e-obs').value.trim();
+    S.entregue = g('e-tec'); S.rec = g('e-rec'); S.recDoc = g('e-recdoc'); S.recCargo = g('e-reccargo');
+    S.extras = [].map.call(ROOT.querySelectorAll('#e-tecs .xt'), function(i) { return i.value.trim(); });
+    var c = S.cd; c.razao = g('e-razao'); c.fantasia = g('e-fant'); c.cnpj = g('e-cnpj'); c.end = g('e-end'); c.cep = g('e-cep'); c.cidade = g('e-cid'); c.tel = g('e-tel'); c.mail = g('e-mail');
+    S.itens = [].map.call(ROOT.querySelectorAll('#e-itens .irow'), function(r) { var on = r.querySelector('.mv button.on'); return { n: r.querySelector('.in').value.trim(), q: r.querySelector('.iq').value.trim(), un: r.querySelector('.iu').value.trim(), mov: on ? on.getAttribute('data-mv') : 'entregue', obs: r.querySelector('.io').value.trim() }; });
+    [].forEach.call(ROOT.querySelectorAll('#e-fotos .th'), function(t, i) { if (S.fotos[i]) S.fotos[i].leg = t.querySelector('input').value.trim(); });
+  }
+  function linhaItem(it, i) {
+    var mv = it.mov === 'recolhido' ? 'recolhido' : 'entregue';
+    return '<div class="srow irow"><button type="button" class="x" data-a="idel">✕</button><div class="hd" style="margin:0 0 8px;border:0;padding:0">MATERIAL ' + (i + 1) + '</div>' +
+      '<div class="seg mv" style="margin-bottom:10px"><button type="button" data-mv="entregue" class="' + (mv === 'entregue' ? 'on' : '') + '">📦 Entregue</button><button type="button" data-mv="recolhido" class="' + (mv === 'recolhido' ? 'on' : '') + '">↩ Recolhido</button></div>' +
+      '<div class="fld"><label>Material / produto *</label><textarea class="in" rows="2" placeholder="Ex.: Botija de gás P20 GLP cheia">' + esc(it.n || '') + '</textarea></div>' +
+      '<div class="row2"><div class="fld"><label>Quantidade</label><input type="text" class="iq" inputmode="decimal" value="' + esc(it.q || '') + '"></div><div class="fld"><label>Unidade</label><input type="text" class="iu" list="e-dl-un" value="' + esc(it.un || '') + '" placeholder="un"></div></div>' +
+      '<div class="fld" style="margin-bottom:0"><label>Detalhe (opcional)</label><input type="text" class="io" value="' + esc(it.obs || '') + '" placeholder="Ex.: lote, código, nº de série, estado"></div></div>';
+  }
+  function pintaItens() { $('e-itens').innerHTML = S.itens.map(linhaItem).join(''); }
+  function selTec(cls, id, v) {
+    var l = C.tecnicos().slice(), o = '<option value="">— Escolha quem entregou —</option>';
+    if (v && l.indexOf(v) < 0) l.unshift(v);
+    return '<select' + (id ? ' id="' + id + '"' : '') + ' class="' + cls + '">' + o + l.map(function(n) { return '<option value="' + esc(n) + '"' + (n === v ? ' selected' : '') + '>' + esc(n) + (C.tecnicos().indexOf(n) < 0 ? ' (não cadastrado)' : '') + '</option>'; }).join('') + '</select>';
+  }
+  function linhaTec(n, i) { return '<div class="fld" style="display:flex;gap:6px;align-items:flex-end"><div style="flex:1;min-width:0"><label>Também entregou (' + (i + 2) + ')</label>' + selTec('xt', '', n) + '</div><button type="button" data-a="tdel" style="border:0;background:#fee2e2;color:#991b1b;border-radius:8px;padding:12px 14px">✕</button></div>'; }
+  function pintaTecs() { var b = $('e-tecs'); if (b) b.innerHTML = (S.extras || []).map(linhaTec).join(''); }
+  function pintaFotos() {
+    $('e-fotos').innerHTML = S.fotos.length ? '<div class="thumbs">' + S.fotos.map(function(f, i) { return '<div class="th"><button type="button" class="x" data-a="fdel" data-i="' + i + '">✕</button><img loading="lazy" src="' + f.src + '" alt=""><input type="text" placeholder="Legenda (opcional)" value="' + esc(f.leg || '') + '"></div>'; }).join('') + '</div>' : '<div class="sub">Tire foto do material entregue no local (e, se puder, de quem recebeu com o material).</div>';
+  }
+  function selCliente(nome) {
+    colher(); S.cliente = nome; var c = cliObj(nome) || {};
+    var cd = S.cd; cd.razao = c.razao || nome; cd.fantasia = c.fantasia || nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
+    ['razao:e-razao', 'fantasia:e-fant', 'cnpj:e-cnpj', 'cep:e-cep', 'cidade:e-cid', 'end:e-end', 'tel:e-tel', 'mail:e-mail'].forEach(function(p) { p = p.split(':'); $(p[1]).value = cd[p[0]] || ''; });
+    if (!S.local && cd.end) { S.local = cd.end; $('e-local').value = cd.end; }
+  }
+  function assinatura(id, chave) {
+    var cv = $(id), g = cv.getContext('2d'), tem = !!S[chave], des = false;
+    g.lineWidth = 3; g.lineCap = 'round'; g.strokeStyle = '#0f172a';
+    if (S[chave]) U.carregarImg(S[chave]).then(function(im) { if (im) g.drawImage(im, 0, 0, cv.width, cv.height); });
+    function pt(e) { var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+    cv.onpointerdown = function(e) { des = true; try { cv.setPointerCapture(e.pointerId); } catch (x) {} var p = pt(e); g.beginPath(); g.moveTo(p[0], p[1]); e.preventDefault(); };
+    cv.onpointermove = function(e) { if (!des) return; var p = pt(e); g.lineTo(p[0], p[1]); g.stroke(); tem = true; e.preventDefault(); };
+    cv.onpointerup = cv.onpointercancel = function() { if (des) { des = false; if (tem) S[chave] = cv.toDataURL('image/png'); } };
+    var b = ROOT.querySelector('[data-clr="' + id + '"]'); if (b) b.onclick = function() { g.clearRect(0, 0, cv.width, cv.height); tem = false; S[chave] = ''; };
+  }
+  function telaForm() {
+    abrirRoot(); var c = S.cd;
+    var f = function(id, rot, v, ph, extra) { return '<div class="fld"><label>' + rot + '</label><input type="text" id="' + id + '" value="' + esc(v || '') + '"' + (ph ? ' placeholder="' + ph + '"' : '') + (extra || '') + '></div>'; };
+    var corpo =
+      '<div class="hd">CLIENTE</div><div class="fld"><label>Cliente cadastrado *</label><input type="text" id="e-cli" value="' + esc(S.cliente) + '" placeholder="Toque para ver os clientes ou digite para buscar" autocomplete="off"><div id="e-clilist"></div><div id="e-cliaviso"></div></div><div id="e-resto">' +
+      '<details><summary style="font-weight:700;font-size:13px;color:#64748b;margin-bottom:8px">Dados do cliente (conferir / completar)</summary>' +
+      '<div class="row2">' + f('e-razao', 'Razão social', c.razao) + f('e-fant', 'Nome fantasia', c.fantasia) + '</div><div class="row2">' + f('e-cnpj', 'CNPJ/CPF', c.cnpj) + f('e-tel', 'Telefone', c.tel) + '</div>' + f('e-end', 'Endereço', c.end) + '<div class="row2">' + f('e-cep', 'CEP', c.cep) + f('e-cid', 'Cidade/UF', c.cidade) + '</div>' + f('e-mail', 'E-mail', c.mail) + '</details>' +
+      '<div class="hd">ENTREGA</div><div class="row2"><div class="fld"><label>Data da entrega *</label><input type="date" id="e-d" value="' + esc(S.data) + '"></div><div class="fld"><label>Horário *</label><input type="time" id="e-h" value="' + esc(S.hora) + '"></div></div>' +
+      f('e-local', 'Local da entrega', S.local, 'Endereço / setor onde o material foi deixado') + f('e-doc', 'Nota fiscal / pedido (opcional)', S.doc, 'Ex.: NF 1234 ou Pedido 567') +
+      '<div class="hd">MATERIAIS</div><div class="sub">Um item por material. Marque <b>Entregue</b> para o que foi deixado no cliente e <b>Recolhido</b> para o que voltou com a PLS (ex.: botija vazia).</div>' +
+      '<datalist id="e-dl-un">' + UNS.map(function(u) { return '<option value="' + u + '">'; }).join('') + '</datalist><div id="e-itens"></div><button type="button" class="btn2" id="e-iadd">➕ Adicionar material</button>' +
+      '<div class="hd">FOTOS</div><div id="e-fotos"></div><label class="btn2" style="display:block;text-align:center">📷 Adicionar fotos<input type="file" accept="image/*" multiple id="e-fi" style="display:none"></label>' +
+      '<div class="hd">OBSERVAÇÕES</div><div class="fld"><textarea id="e-obs" rows="3" placeholder="Ex.: Entrega concluída, pendente apenas o faturamento.">' + esc(S.obs) + '</textarea></div>' +
+      '<div class="hd">QUEM RECEBEU</div>' + f('e-rec', 'Nome de quem recebeu *', S.rec, 'Nome completo') + '<div class="row2">' + f('e-recdoc', 'Documento (RG/CPF/matrícula)', S.recDoc) + f('e-reccargo', 'Cargo / setor', S.recCargo) + '</div>' +
+      '<div class="fld"><label>Assinatura de quem recebeu</label><canvas class="sig" id="e-ac" width="700" height="200"></canvas><button type="button" class="pk-btn g" data-clr="e-ac" style="margin-top:6px;padding:8px">Limpar</button></div>' +
+      '<div class="hd">QUEM ENTREGOU (PLS)</div><div class="fld"><label>Entregue por *</label>' + selTec('', 'e-tec', S.entregue) + '</div>' + (C.tecnicos().length ? '' : '<div class="avcli">⚠ Nenhum técnico cadastrado. Cadastre em <b>Gerencial → Cadastro de Técnicos</b>.</div>') +
+      '<div id="e-tecs">' + (S.extras || []).map(linhaTec).join('') + '</div><button type="button" id="e-tadd" style="width:100%;margin:0 0 10px;border:1px dashed #ea580c;color:#ea580c;background:#fff7ed;border-radius:10px;padding:10px;font-weight:800;font-size:14px">➕ Outra pessoa nesta entrega</button>' +
+      '<div class="fld"><label>Assinatura de quem entregou (opcional)</label><canvas class="sig" id="e-ae" width="700" height="200"></canvas><button type="button" class="pk-btn g" data-clr="e-ae" style="margin-top:6px;padding:8px">Limpar</button></div></div>';
+    shell(S.id ? 'Editar entrega nº ' + S.numero : 'Nova entrega de material', corpo, '<button type="button" class="pk-btn v" id="e-save">' + (S.id ? 'Salvar alterações' : 'Salvar entrega') + '</button>', '✕ Cancelar', function() { if (confirm('Cancelar? O que foi preenchido nesta entrega será perdido.')) { if (S.id && REG) telaPronto(REG, false); else fechar(); } });
+    pintaItens(); pintaFotos(); assinatura('e-ac', 'ac'); assinatura('e-ae', 'ae');
+    var ci = $('e-cli'), cl = $('e-clilist');
+    function avisoCli() {
+      var v = ci.value.trim(), ok = !!S.cliente && (nomesCli().indexOf(S.cliente) >= 0 || !!S.id), av = $('e-cliaviso'), rs = $('e-resto');
+      if (rs) rs.style.display = ok ? '' : 'none';
+      if (av) av.innerHTML = ok ? '' : (v ? '<div class="avcli">⚠ <b>Cliente não cadastrado.</b> Faça o cadastro do cliente antes (ou escolha um da lista).</div>' : '<div class="sub" style="margin-top:6px">Escolha o cliente na lista para continuar.</div>');
+    }
+    function mostrar() {
+      var q = U.norm(ci.value), ls = nomesCli().filter(function(n) { return !q || U.norm(n).indexOf(q) >= 0; });
+      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
+      [].forEach.call(cl.querySelectorAll('.opt[data-n]'), function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { ci.value = o.getAttribute('data-n'); cl.innerHTML = ''; ci.classList.add('sel'); selCliente(ci.value); avisoCli(); }; });
+    }
+    if (S.cliente) ci.classList.add('sel');
+    ci.oninput = function() { S.cliente = ''; ci.classList.remove('sel'); mostrar(); avisoCli(); }; ci.onfocus = function() { if (!S.cliente) mostrar(); }; ci.onblur = function() { setTimeout(function() { cl.innerHTML = ''; avisoCli(); }, 250); };
+    avisoCli();
+    if (S.cliente && !S.id && !S.cd.razao) selCliente(S.cliente);
+    $('e-iadd').onclick = function() { colher(); S.itens.push({ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }); pintaItens(); var rs = ROOT.querySelectorAll('#e-itens .irow'); var u = rs[rs.length - 1]; u.scrollIntoView({ block: 'center' }); u.querySelector('textarea').focus(); };
+    $('e-itens').onclick = function(ev) {
+      var m = ev.target.closest('.mv button'); if (m) { [].forEach.call(m.parentNode.children, function(x) { x.classList.toggle('on', x === m); }); return; }
+      var b = ev.target.closest('[data-a="idel"]'); if (!b) return; colher(); S.itens.splice([].indexOf.call(ROOT.querySelectorAll('#e-itens .irow'), b.closest('.irow')), 1); if (!S.itens.length) S.itens.push({ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }); pintaItens();
+    };
+    $('e-fotos').onclick = function(ev) { var b = ev.target.closest('[data-a="fdel"]'); if (!b) return; colher(); S.fotos.splice(+b.getAttribute('data-i'), 1); pintaFotos(); };
+    $('e-fi').onchange = function() {
+      C.toast('Enviando fotos…');
+      var fs = [].slice.call(this.files), inp = this; colher();
+      fs.reduce(function(p, f) { return p.then(function() { if (S.fotos.length >= 14) return; return U.comprimir(f, 1280, 0.6).then(function(d) { return subirDataUrl(d).then(function(p) { S.fotos.push({ src: d, path: p, leg: '' }); }); }).catch(function() { C.toast('Uma foto não pôde ser enviada. Confira a internet e tente de novo.'); }); }); }, Promise.resolve()).then(function() { pintaFotos(); inp.value = ''; });
+    };
+    $('e-tadd').onclick = function() { colher(); S.extras.push(''); pintaTecs(); var t = ROOT.querySelectorAll('#e-tecs .xt'); t[t.length - 1].focus(); };
+    $('e-tecs').onclick = function(ev) { var b = ev.target.closest('[data-a="tdel"]'); if (!b) return; colher(); S.extras.splice([].indexOf.call(ROOT.querySelectorAll('#e-tecs [data-a="tdel"]'), b), 1); pintaTecs(); };
+    $('e-save').onclick = salvarForm;
+  }
+  function linha() {
+    return { cliente: S.cliente, cliente_dados: S.cd, data: S.data || U.hojeISO(), hora: S.hora || null, local_entrega: S.local || null, documento: S.doc || null,
+      itens: S.itens.filter(function(i) { return i.n; }), entregue_por: S.entregue, entregadores_extra: (S.extras || []).filter(Boolean),
+      recebido_por: S.rec || null, recebido_doc: S.recDoc || null, recebido_cargo: S.recCargo || null, fotos: S.fotos.map(function(f) { return { path: f.path, leg: f.leg || '' }; }),
+      observacoes: S.obs || null, assinatura_cliente: S.ac || null, assinatura_entregador: S.ae || null, updated_at: new Date().toISOString() };
+  }
+  function salvarForm() {
+    colher();
+    if (!S.cliente) { C.toast('Escolha o cliente na lista (busque e toque no nome).'); return; }
+    if (nomesCli().indexOf(S.cliente) < 0 && !S.id) { C.toast('Escolha um cliente da lista cadastrada.'); return; }
+    if (!S.data || !S.hora) { C.toast('Informe a data e o horário da entrega.'); return; }
+    if (!S.itens.some(function(i) { return i.n; })) { C.toast('Informe pelo menos um material.'); return; }
+    if (S.itens.some(function(i) { return !i.n && (i.obs || (i.q && i.q !== '1')); })) { C.toast('Há material sem descrição. Preencha ou remova.'); return; }
+    if (!S.rec) { C.toast('Informe o nome de quem recebeu.'); return; }
+    if (!S.entregue) { C.toast('Escolha quem entregou (técnico cadastrado).'); return; }
+    var okT = C.tecnicos(), invT = [S.entregue].concat(S.extras || []).filter(function(n) { return n && okT.indexOf(n) < 0 && (S.tecOrig || []).indexOf(n) < 0; })[0];
+    if (invT) { C.toast('“' + invT + '” não está cadastrado. Cadastre em Gerencial → Cadastro de Técnicos.'); return; }
+    S.extras = (S.extras || []).filter(function(n, i, a) { return n && n !== S.entregue && a.indexOf(n) === i; });
+    var eraNovo = !S.id, b = $('e-save'); b.disabled = true; b.textContent = 'Salvando…';
+    Promise.all(S.fotos.map(function(f) { if (f.path || !f.src) return 0; return U.recomprimir(f.src, 1280, 0.6).then(subirDataUrl).then(function(p) { f.path = p; }); })).then(function() {
+      var q = S.id ? C.sb.from('man_entregas').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_entregas').insert(linha()).select('*');
+      return C.chk(q);
+    }).then(function(r) {
+      if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
+      var reg = r.data[0], atuais = pathsDe(S.fotos), sobra = (S.origPaths || []).filter(function(p) { return atuais.indexOf(p) < 0; }); if (sobra.length) stor().remove(sobra).then(function() {}, function() {});
+      reg.fotos = S.fotos.map(function(f) { return { path: f.path, src: f.src, leg: f.leg || '' }; });
+      if (C.onSaved) C.onSaved(reg); REG = reg; telaPronto(reg, eraNovo);
+    }).catch(function(e) { b.disabled = false; b.textContent = S.id ? 'Salvar alterações' : 'Salvar entrega'; C.toast('Erro ao salvar: ' + (e.message || e)); });
+  }
+  // ---------- pronto / visualização ----------
+  function separa(r) { var it = r.itens || []; return { ent: it.filter(function(i) { return i.mov !== 'recolhido'; }), rec: it.filter(function(i) { return i.mov === 'recolhido'; }) }; }
+  function nomeArq(r) { return ('Entrega ' + r.numero + ' - ' + r.cliente + ' - ' + String(r.data || '').slice(0, 10)).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() + '.pdf'; }
+  function resumoTxt(r) {
+    var s = separa(r), l = function(i) { return '\n• ' + i.n + (fmtQ(i) ? ' — ' + fmtQ(i) : ''); };
+    return 'PLS Empilhadeiras — Entrega de Material nº ' + r.numero + '\nCliente: ' + r.cliente + '\nData: ' + br(r.data) + (r.hora ? ' às ' + r.hora : '') + (s.ent.length ? '\nEntregue:' + s.ent.map(l).join('') : '') + (s.rec.length ? '\nRecolhido:' + s.rec.map(l).join('') : '') + '\nRecebido por: ' + (r.recebido_por || '—');
+  }
+  function telaPronto(r, novo) {
+    PDFB = null; REG = r; var s = separa(r), fotos = r.fotos || [];
+    var acoes = '<div style="margin:0 0 14px;display:grid;gap:8px"><button type="button" class="pk-btn w" id="pk-wpdf" disabled>Gerando PDF…</button><button type="button" class="pk-btn g" id="pk-ver" disabled>👁 Ver PDF</button><button type="button" class="pk-btn g" id="pk-dl" disabled>⬇ Baixar PDF</button>' + (PODE_EXC ? '<button type="button" class="pk-btn r" id="pk-del">🗑 Excluir esta entrega</button>' : '') + '</div>';
+    var kvI = function(i) { return '<div class="kv"><span>' + esc(i.n) + (i.obs ? '<br><small>' + esc(i.obs) + '</small>' : '') + '</span><span>' + esc(fmtQ(i) || '—') + '</span></div>'; };
+    var corpo = (novo ? '<div class="ok">✔ Entrega nº ' + r.numero + ' salva em nome de ' + esc(r.cliente) + '!</div>' : '') + acoes +
+      '<div class="kv"><span>Entrega nº</span><span>' + r.numero + '</span></div><div class="kv"><span>Cliente</span><span>' + esc(r.cliente) + '</span></div>' +
+      '<div class="kv"><span>Data / horário</span><span>' + br(r.data) + ' ' + esc(r.hora || '') + '</span></div>' + (r.local_entrega ? '<div class="kv"><span>Local</span><span>' + esc(r.local_entrega) + '</span></div>' : '') + (r.documento ? '<div class="kv"><span>NF / pedido</span><span>' + esc(r.documento) + '</span></div>' : '') +
+      '<div class="kv"><span>Recebido por</span><span>' + esc([r.recebido_por, r.recebido_cargo].filter(Boolean).join(' · ') || '—') + '</span></div><div class="kv"><span>Entregue por</span><span>' + esc([r.entregue_por].concat(r.entregadores_extra || []).filter(Boolean).join(', ')) + '</span></div>' +
+      (s.ent.length ? '<div class="gh">MATERIAIS ENTREGUES</div>' + s.ent.map(kvI).join('') : '') + (s.rec.length ? '<div class="gh">MATERIAIS RECOLHIDOS</div>' + s.rec.map(kvI).join('') : '') +
+      (fotos.length ? '<div class="gh">FOTOS</div><div class="thumbs" style="margin-top:6px">' + fotos.map(function(f) { return '<div class="th"><img loading="lazy" src="' + (f.src || '') + '" alt="">' + (f.leg ? '<div style="font-size:12px;margin-top:4px">' + esc(f.leg) + '</div>' : '') + '</div>'; }).join('') + '</div>' : '') +
+      (r.observacoes ? '<div class="kv"><span>Observações</span><span>' + esc(r.observacoes) + '</span></div>' : '');
+    shell('Entrega nº ' + r.numero + ' · ' + r.cliente, corpo, '<button type="button" class="pk-btn" id="pk-ok2">' + (novo ? 'Concluído' : 'Fechar') + '</button><button type="button" class="pk-btn g" id="pk-edt">✏ Editar</button>');
+    $('pk-ok2').onclick = fechar; $('pk-edt').onclick = function() { editar(r); };
+    var del = $('pk-del'); if (del) del.onclick = function() { if (!confirm('Excluir a entrega nº ' + r.numero + ' de ' + r.cliente + '?')) return; C.chk(C.sb.from('man_entregas').delete().eq('id', r.id).select('id')).then(function(x) { if (!x.data || !x.data.length) throw new Error('Sem permissão para excluir.'); var ps = pathsDe(r.fotos); if (ps.length) stor().remove(ps).then(function() {}, function() {}); if (C.onSaved) C.onSaved(null); fechar(); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); };
+    gerarPdf(r).then(function(blob) {
+      PDFB = blob; PDFN = nomeArq(r); var w = $('pk-wpdf'); if (!w) return; w.disabled = false; w.textContent = '📲 Enviar PDF no WhatsApp'; $('pk-ver').disabled = false; $('pk-dl').disabled = false;
+      var url = URL.createObjectURL(blob);
+      w.onclick = function() {
+        var fl = new File([blob], PDFN, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [fl] })) navigator.share({ files: [fl], title: PDFN, text: resumoTxt(r) }).catch(function() {});
+        else { U.baixar(url, PDFN); window.open('https://wa.me/?text=' + encodeURIComponent(resumoTxt(r) + '\n\n(PDF baixado no aparelho: anexe aqui)'), '_blank'); }
+      };
+      $('pk-ver').onclick = function() { window.open(url, '_blank'); }; $('pk-dl').onclick = function() { U.baixar(url, PDFN); };
+    }).catch(function(e) { var w = $('pk-wpdf'); if (w) w.textContent = 'Erro ao gerar PDF'; console.error(e); });
+  }
+  function editar(r) {
+    S = novoEstado(); S.id = r.id; S.numero = r.numero; S.cliente = r.cliente; var d = r.cliente_dados || {}; for (var k in S.cd) S.cd[k] = d[k] || '';
+    S.data = String(r.data || '').slice(0, 10); S.hora = r.hora || ''; S.local = r.local_entrega || ''; S.doc = r.documento || '';
+    S.itens = (r.itens || []).length ? r.itens.map(function(i) { return { n: i.n || '', q: i.q || '', un: i.un || '', mov: i.mov === 'recolhido' ? 'recolhido' : 'entregue', obs: i.obs || '' }; }) : [{ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }];
+    S.fotos = (r.fotos || []).map(function(f) { return { src: f.src, path: f.path, leg: f.leg || '' }; }); S.origPaths = pathsDe(r.fotos);
+    S.obs = r.observacoes || ''; S.entregue = r.entregue_por || ''; S.extras = (r.entregadores_extra || []).slice(); S.tecOrig = [r.entregue_por].concat(r.entregadores_extra || []).filter(Boolean);
+    S.rec = r.recebido_por || ''; S.recDoc = r.recebido_doc || ''; S.recCargo = r.recebido_cargo || ''; S.ac = r.assinatura_cliente || ''; S.ae = r.assinatura_entregador || '';
+    resolverFotos(S.fotos).then(telaForm);
+  }
+  // ---------- PDF (mesmo padrão visual da OS: laranja, preto e logo PLS) ----------
+  function fotoBlobUrl(f) {
+    if (f.path) return stor().download(f.path).then(function(x) { return x.data ? URL.createObjectURL(x.data) : f.src; }).catch(function() { return f.src; });
+    return Promise.resolve(f.src);
+  }
+  function gerarPdf(r) {
+    var fotos = r.fotos || [];
+    return Promise.all(fotos.map(fotoBlobUrl)).then(function(urls) {
+      return Promise.all([U.carregarImg(C.logo), U.carregarImg(r.assinatura_cliente), U.carregarImg(r.assinatura_entregador)].concat(urls.map(U.carregarImg)));
+    }).then(function(imgs) {
+      var logo = imgs[0], asc = imgs[1], ase = imgs[2], fim = imgs.slice(3), cd = r.cliente_dados || {}, s = separa(r);
+      var W = 1240, H = 1754, M = 56, IW = W - 2 * M, pages = [], cv, g, y, F = 'Arial, Helvetica, sans-serif', OR = '#ea580c', DK = '#111827', GR = '#cbd5e1', TX = '#111';
+      var cliTxt = String(r.cliente || '').toUpperCase();
+      function rr(x, yy, w, h, rad) { g.beginPath(); g.moveTo(x + rad, yy); g.arcTo(x + w, yy, x + w, yy + h, rad); g.arcTo(x + w, yy + h, x, yy + h, rad); g.arcTo(x, yy + h, x, yy, rad); g.arcTo(x, yy, x + w, yy, rad); g.closePath(); g.fill(); }
+      function pill(txt, xr, yy, sz) { g.font = 'italic 800 ' + sz + 'px ' + F; var w = Math.min(g.measureText(txt).width + sz * 1.6, IW * 0.62), h = sz * 1.9; g.fillStyle = DK; rr(xr - w, yy, w, h, 8); g.fillStyle = '#fff'; g.textAlign = 'center'; var t = txt; while (g.measureText(t).width > w - sz && t.length > 4) t = t.slice(0, -2); g.fillText(t === txt ? t : t + '…', xr - w / 2, yy + h * 0.68); g.textAlign = 'left'; return h; }
+      function nova(cont) {
+        cv = document.createElement('canvas'); cv.width = W; cv.height = H; g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); pages.push(cv); g.textBaseline = 'alphabetic'; y = 44;
+        var lh = cont ? 62 : 108;
+        if (logo) g.drawImage(logo, M, y, logo.width * lh / logo.height, lh);
+        g.textAlign = 'right'; g.fillStyle = TX;
+        if (!cont) {
+          g.font = '900 50px ' + F; g.fillText('ENTREGA DE MATERIAL', W - M, y + 44);
+          g.fillStyle = OR; g.font = '800 29px ' + F; g.fillText('Nº ' + r.numero + '  ·  ' + br(r.data), W - M, y + 82);
+          g.textAlign = 'left'; pill(cliTxt, W - M, y + 96, 22); y += 150;
+        } else {
+          g.font = '900 30px ' + F; g.fillText('ENTREGA DE MATERIAL Nº ' + r.numero + ' (cont.)', W - M, y + 30);
+          g.fillStyle = OR; g.font = '800 20px ' + F; g.fillText(cliTxt.slice(0, 50), W - M, y + 56); g.textAlign = 'left'; y += 80;
+        }
+        g.fillStyle = OR; g.fillRect(M, y, IW, 3); y += 22;
+      }
+      function wrap(txt, maxw, font) { g.font = font; var out = []; String(txt || '').split('\n').forEach(function(par) { var lin = ''; par.split(' ').forEach(function(w) { var t = lin ? lin + ' ' + w : w; if (g.measureText(t).width > maxw && lin) { out.push(lin); lin = w; } else lin = t; }); out.push(lin); }); return out; }
+      function need(h) { if (y + h > H - 80) nova(true); }
+      function sec(n, txt) { need(80); g.fillStyle = DK; g.fillRect(M, y, IW, 42); g.fillStyle = '#fff'; g.font = '800 22px ' + F; g.fillText(n + '. ' + txt, M + 16, y + 29); y += 42; }
+      var x0 = M, colW = IW;
+      function bl(tit, linhas) {
+        g.fillStyle = OR; g.fillRect(x0, y + 4, 16, 16); g.fillStyle = TX; g.font = '800 23px ' + F; g.fillText(tit, x0 + 28, y + 21); var yy = y + 36;
+        linhas.forEach(function(l) { if (!l) return; g.fillStyle = TX; g.font = (l.b ? '800 ' : '') + '19px ' + F; wrap(l.t || l, colW - 28, g.font).forEach(function(t) { g.fillText(t, x0 + 28, yy + 14); yy += 25; }); });
+        return yy + 12;
+      }
+      nova(false);
+      // identificação: cliente (largura toda), depois entrega | recebimento lado a lado
+      y = bl('CLIENTE', [{ t: r.cliente, b: 1 }, cd.fantasia && cd.razao && cd.fantasia !== cd.razao ? 'Nome fantasia: ' + cd.fantasia : '', cd.cnpj ? 'CNPJ/CPF: ' + cd.cnpj : '', cd.end ? 'Endereço: ' + cd.end : '', [cd.cidade, cd.cep ? 'CEP ' + cd.cep : ''].filter(Boolean).join(' · '), [cd.tel ? 'Tel.: ' + cd.tel : '', cd.mail ? 'E-mail: ' + cd.mail : ''].filter(Boolean).join('   ')]);
+      var yI = y; colW = IW / 2 - 12;
+      var y1 = bl('ENTREGA', ['Data: ' + br(r.data) + (r.hora ? ' às ' + r.hora : ''), r.local_entrega ? 'Local: ' + r.local_entrega : '', r.documento ? 'NF / pedido: ' + r.documento : '', 'Entregue por: ' + [r.entregue_por].concat(r.entregadores_extra || []).filter(Boolean).join(', ')]);
+      y = yI; x0 = M + IW / 2 + 12;
+      var y2 = bl('RECEBIMENTO', [{ t: r.recebido_por || '—', b: 1 }, r.recebido_cargo ? 'Cargo / setor: ' + r.recebido_cargo : '', r.recebido_doc ? 'Documento: ' + r.recebido_doc : '', 'Recebido em: ' + br(r.data) + (r.hora ? ' às ' + r.hora : '')]);
+      x0 = M; colW = IW; y = Math.max(y1, y2) + 4;
+      // tabelas de materiais
+      var xi = M + 90, xq = W - M - 190, n = 1;
+      function tabela(tit, lista) {
+        sec(n++, tit); need(100);
+        g.fillStyle = OR; g.fillRect(M, y, IW, 38); g.fillStyle = '#fff'; g.font = '800 17px ' + F; g.fillText('ITEM', M + 16, y + 26); g.fillText('MATERIAL', xi + 16, y + 26); g.textAlign = 'right'; g.fillText('QTD.', W - M - 16, y + 26); g.textAlign = 'left'; y += 38;
+        var tot = 0, soNum = true;
+        lista.forEach(function(it, k) {
+          var ls = wrap(it.n, xq - xi - 32, '19px ' + F), os = it.obs ? wrap(it.obs, xq - xi - 32, '16px ' + F) : [], h = Math.max(44, ls.length * 25 + os.length * 21 + 18); need(h);
+          g.strokeStyle = GR; g.lineWidth = 1; g.strokeRect(M, y, IW, h); g.beginPath(); g.moveTo(xi, y); g.lineTo(xi, y + h); g.moveTo(xq, y); g.lineTo(xq, y + h); g.stroke();
+          g.fillStyle = TX; g.font = '19px ' + F; g.fillText(String(k + 1), M + 16, y + 29); ls.forEach(function(l, j) { g.fillText(l, xi + 16, y + 29 + j * 25); });
+          g.fillStyle = '#64748b'; g.font = '16px ' + F; os.forEach(function(l, j) { g.fillText(l, xi + 16, y + 27 + ls.length * 25 + j * 21); });
+          g.fillStyle = TX; g.textAlign = 'right'; g.font = '700 19px ' + F; g.fillText(fmtQ(it) || '—', W - M - 16, y + 29); g.textAlign = 'left'; y += h;
+          if (!/^[\d.,\s]*$/.test(String(it.q || ''))) soNum = false; tot += num(it.q);
+        });
+        if (lista.length > 1 && soNum) { need(46); g.fillStyle = '#fff7ed'; g.fillRect(M, y, IW, 40); g.strokeStyle = GR; g.strokeRect(M, y, IW, 40); g.fillStyle = OR; g.font = '800 19px ' + F; g.fillText('TOTAL DE ITENS', M + 16, y + 27); g.textAlign = 'right'; g.fillText(String(tot).replace('.', ','), W - M - 16, y + 27); g.textAlign = 'left'; y += 40; }
+        y += 22;
+      }
+      if (s.ent.length || !s.rec.length) tabela('MATERIAIS ENTREGUES', s.ent);
+      if (s.rec.length) tabela('MATERIAIS RECOLHIDOS', s.rec);
+      // fotos
+      var com = []; fotos.forEach(function(f, i) { if (fim[i]) com.push({ f: f, im: fim[i] }); });
+      if (com.length) {
+        var cw = (IW - 24) / 2, chh = 360; need(80 + chh + 60); sec(n++, 'FOTOS DA ENTREGA'); y += 16;
+        for (var k = 0; k < com.length; k += 2) {
+          need(chh + 60); [0, 1].forEach(function(col) {
+            var c2 = com[k + col]; if (!c2) return; var x = M + col * (cw + 24), k2 = Math.min(cw / c2.im.width, chh / c2.im.height), dw = c2.im.width * k2, dh = c2.im.height * k2;
+            g.strokeStyle = GR; g.lineWidth = 1; g.strokeRect(x, y, cw, chh + 38); g.drawImage(c2.im, x + (cw - dw) / 2, y + (chh - dh) / 2 + 4, dw, dh); g.fillStyle = TX; g.font = '17px ' + F; g.textAlign = 'center'; g.fillText(String(c2.f.leg || ('Foto ' + (k + col + 1))).slice(0, 60), x + cw / 2, y + chh + 27); g.textAlign = 'left';
+          }); y += chh + 54;
+        }
+        y += 10;
+      }
+      sec(n, 'OBSERVAÇÕES'); var ol = wrap(r.observacoes || '', IW - 36, '19px ' + F), oh = Math.max(64, ol.length * 26 + 26); need(oh); g.strokeStyle = GR; g.strokeRect(M, y, IW, oh); g.fillStyle = TX; g.font = '19px ' + F; ol.forEach(function(l, k) { g.fillText(l, M + 16, y + 34 + k * 26); }); y += oh + 24;
+      // declaração + assinaturas
+      need(340);
+      var dec = 'Declaro que recebi da PLS Empilhadeiras os materiais relacionados acima' + (s.rec.length ? ' e que entreguei os materiais recolhidos' : '') + ', na data e horário informados.';
+      g.fillStyle = TX; g.font = 'italic 18px ' + F; wrap(dec, IW, g.font).forEach(function(l) { g.fillText(l, M, y + 18); y += 25; }); y += 10;
+      var sw = (IW - 60) / 2;
+      [[M, asc, 'Recebido por — ' + (r.cliente || 'cliente'), r.recebido_por, [r.recebido_cargo, r.recebido_doc ? 'Doc.: ' + r.recebido_doc : ''].filter(Boolean).join(' · ')], [M + sw + 60, ase, 'Entregue por — PLS Empilhadeiras', r.entregue_por, (r.entregadores_extra || []).length ? 'Também entregaram: ' + r.entregadores_extra.join(', ') : '']].forEach(function(z) {
+        g.textAlign = 'center';
+        if (z[1]) { var aw = Math.min(sw, 360), ah = z[1].height * aw / z[1].width; if (ah > 110) { ah = 110; aw = z[1].width * ah / z[1].height; } g.drawImage(z[1], z[0] + (sw - aw) / 2, y + 110 - ah, aw, ah); }
+        else if (z[3]) { var fs = 38; g.fillStyle = '#1f2a44'; do { g.font = 'italic ' + fs + 'px "Brush Script MT","Segoe Script","Lucida Handwriting",cursive,serif'; fs -= 2; } while (g.measureText(z[3]).width > sw - 20 && fs > 18); g.fillText(z[3], z[0] + sw / 2, y + 104); }
+        g.strokeStyle = TX; g.lineWidth = 1.5; g.beginPath(); g.moveTo(z[0], y + 120); g.lineTo(z[0] + sw, y + 120); g.stroke(); g.fillStyle = TX; g.font = '18px ' + F;
+        var lab = z[2]; while (g.measureText(lab).width > sw && lab.length > 10) lab = lab.slice(0, -2); g.fillText(lab === z[2] ? lab : lab + '…', z[0] + sw / 2, y + 148);
+        var yy = y + 174; if (z[3] && z[1]) { g.font = '800 18px ' + F; g.fillText(z[3], z[0] + sw / 2, yy); yy += 24; }
+        if (z[4]) { g.font = '15px ' + F; g.fillStyle = '#6b7280'; wrap(z[4], sw, g.font).forEach(function(l, k) { g.fillText(l, z[0] + sw / 2, yy + k * 20); }); }
+        g.textAlign = 'left';
+      });
+      pages.forEach(function(p, i) { var q = p.getContext('2d'); q.fillStyle = OR; q.fillRect(M, H - 62, IW, 2); q.fillStyle = '#6b7280'; q.font = '15px ' + F; q.textAlign = 'center'; q.fillText('PLS EMPILHADEIRAS · CNPJ ' + EMP.cnpj + ' · ' + EMP.l1 + ' · ' + EMP.l2 + ' · ' + EMP.tel, W / 2, H - 36); q.fillText('Entrega de material nº ' + r.numero + ' · página ' + (i + 1) + ' de ' + pages.length, W / 2, H - 16); });
+      return U.montarPdf(pages);
+    });
+  }
+  return {
+    init: function(c) { for (var k in c) C[k] = c[k]; },
+    novo: function(cli) { S = novoEstado(cli && nomesCli().indexOf(cli) >= 0 ? cli : ''); REG = null; PODE_EXC = !!C.admin(); telaForm(); },
+    abrir: function(id, podeExcluir) {
+      PODE_EXC = !!podeExcluir; abrirRoot(); shell('Entrega de material', '<div class="ok" style="background:#fff;border-color:#e2e8f0;color:#64748b">Carregando…</div>');
+      C.chk(C.sb.from('man_entregas').select('*').eq('id', id).maybeSingle()).then(function(r) { if (!r.data) throw new Error('Entrega não encontrada.'); REG = r.data; return resolverFotos(r.data.fotos).then(function() { telaPronto(r.data, false); }); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); fechar(); });
+    },
+    listar: function() { return C.chk(C.sb.from('man_entregas').select('id,numero,cliente,data,hora,itens,entregue_por,recebido_por,documento,created_at').order('numero', { ascending: false }).limit(500)).then(function(r) { return r.data || []; }); },
+    resumoItens: function(e) { var it = e.itens || [], en = it.filter(function(i) { return i.mov !== 'recolhido'; }), rc = it.filter(function(i) { return i.mov === 'recolhido'; }); var f = function(l) { return l.map(function(i) { return (fmtQ(i) ? fmtQ(i) + ' ' : '') + i.n; }).join('; '); }; return { ent: f(en), rec: f(rc) }; }
+  };
+})();
+
         PLSCK.init({ sb: sb, chk: chk, nome: nomeUsuario, clientes: function() { return ((appData && appData.clientes) || []).map(function(c) { return c.nome; }).filter(Boolean).sort(function(x, y) { return x.localeCompare(y, 'pt-BR'); }); }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'checklists') carregarCk(); }, onClose: function() { if (M.sub === 'checklists') carregarCk(); } });
         PLSEQ.init({ sb: sb, chk: chk, clientes: function() { return ((appData && appData.clientes) || []).map(function(c) { return c.nome; }).filter(Boolean); }, toast: function(m) { showToast(m, 5000); }, onSaved: function() {}, admin: ehAdmin });
         PLSOS.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'os') carregarOs(); }, onClose: function() { if (M.sub === 'os') carregarOs(); }, admin: ehAdmin });
+        PLSENT.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'entregas') carregarEnt(); }, onClose: function() { if (M.sub === 'entregas') carregarEnt(); }, admin: ehAdmin });
+        // ---------- Entregas de material ----------
+        function carregarEnt() {
+          renderEnt();
+          PLSENT.listar().then(function(l) { M.ent = l; renderEnt(); }).catch(function(e) { M.ent = M.ent || []; renderEnt(); showToast('Erro ao carregar entregas: ' + (e.message || e), 5000); });
+        }
+        function renderEnt() {
+          var el = $('mn-entregas'); if (!el) return;
+          if (M.ent === undefined || M.ent === null) { el.innerHTML = '<div class="sx-vazio">Carregando…</div>'; return; }
+          var sc = $('mn-en-cli'); if (sc) { var m = {}; M.ent.forEach(function(o) { m[o.cliente] = 1; }); var cs = Object.keys(m).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); if (sc.options.length !== cs.length + 1) sc.innerHTML = '<option value="">Todos os clientes</option>' + cs.map(function(n) { return '<option>' + esc(n) + '</option>'; }).join(''); sc.value = M.enCli || ''; }
+          var q = norm(M.enBusca), mesE = M.enMes === undefined ? PLSU.mesAtual() : M.enMes; var sm = $('mn-en-mes'); if (sm) sm.innerHTML = PLSU.mesesOpts(mesE);
+          var lista = M.ent.filter(function(o) { var d = String(o.data || '').slice(0, 10); return PLSU.noMes(d, mesE) && (!M.enCli || o.cliente === M.enCli) && (!M.enDe || d >= M.enDe) && (!M.enAte || d <= M.enAte) && (!q || norm([o.numero, o.cliente, o.recebido_por, o.entregue_por, o.documento, (o.itens || []).map(function(i) { return i.n; }).join(' ')].join(' ')).indexOf(q) >= 0); });
+          el.innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Nº</th><th>Data</th><th>Cliente</th><th>Material entregue</th><th>Recolhido</th><th>Recebido por</th><th>Entregue por</th><th></th></tr></thead><tbody>' +
+            lista.map(function(o) {
+              var r = PLSENT.resumoItens(o);
+              return '<tr><td><b>' + o.numero + '</b></td><td>' + fd(o.data) + '<br><span class="sx-muted">' + esc(o.hora || '') + '</span></td><td><b>' + esc(o.cliente) + '</b></td><td>' + esc(r.ent || '—') + '</td><td>' + (r.rec ? esc(r.rec) : '<span class="sx-muted">—</span>') + '</td><td>' + esc(o.recebido_por || '—') + '</td><td>' + esc(o.entregue_por || '') + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="ent-abrir" data-id="' + o.id + '">Abrir / PDF</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">' + (M.ent.length ? 'Nenhuma entrega com esse filtro.' : 'Nenhuma entrega de material ainda. As feitas no aplicativo do celular aparecem aqui, em nome do cliente.') + '</div>';
+        }
         function carregarCk() {
           renderCk();
           PLSCK.listar().then(function(l) { M.ck = l; renderCk(); }).catch(function(e) { M.ck = M.ck || []; renderCk(); showToast('Erro ao carregar checklists: ' + (e.message || e), 5000); });
@@ -12714,6 +13053,8 @@ var PLSOS = (function() {
             case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
             case 'os-novo': PLSOS.novo(); break;
             case 'os-abrir': PLSOS.abrir(id, ehAdmin()); break;
+            case 'ent-novo': PLSENT.novo(M.enCli || ''); break;
+            case 'ent-abrir': PLSENT.abrir(id, ehAdmin()); break;
             case 'eq-novo': abrirEquip(null); break;
             case 'eq-ed': abrirEquip(id); break;
             case 'eq-clone': abrirEquip(null, '', id); break;
@@ -12744,6 +13085,9 @@ var PLSOS = (function() {
           if (t.id === 'mn-f-busca') { M.fBusca = t.value; renderVenc(); }
           else if (t.id === 'mn-e-busca') { M.eBusca = t.value; renderEquipMan(); }
           else if (t.id === 'mn-o-busca') { M.oBusca = t.value; renderOs(); }
+          else if (t.id === 'mn-en-busca') { M.enBusca = t.value; renderEnt(); }
+          else if (t.id === 'mn-en-de') { M.enDe = t.value; renderEnt(); }
+          else if (t.id === 'mn-en-ate') { M.enAte = t.value; renderEnt(); }
           else if (t.id === 'mn-pc-busca') { M.pcBusca = t.value; renderPecasMan(); }
           else if (t.id === 'mn-o-de') { M.oDe = t.value; renderOs(); }
           else if (t.id === 'mn-o-ate') { M.oAte = t.value; renderOs(); }
@@ -12766,6 +13110,8 @@ var PLSOS = (function() {
           else if (t.id === 'mn-e-cli') { M.eCli = t.value; renderEquipMan(); }
           else if (t.id === 'mn-o-cli') { M.oCli = t.value; renderOs(); }
           else if (t.id === 'mn-o-mes') { M.oMes = t.value; renderOs(); }
+          else if (t.id === 'mn-en-cli') { M.enCli = t.value; renderEnt(); }
+          else if (t.id === 'mn-en-mes') { M.enMes = t.value; renderEnt(); }
           else if (t.id === 'mn-k-mes') { M.kMes = t.value; renderCk(); }
           else if (t.id === 'mn-pc-cli') { M.pcCli = t.value; renderPecasMan(); }
           else if (t.id === 'mn-k-tipo') { M.kTipo = t.value; renderCk(); }
