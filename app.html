@@ -830,7 +830,7 @@ function telaLancar(){
 var CKL=null;
 function ckItem(c){
   var ok=c.condicao==='apto',bad=c.condicao==='inapto';
-  return '<div class="card'+(bad?' late':ok?' done':'')+'" data-ckabrir="'+c.id+'"><div class="t1"><div class="cli">'+esc(c.cliente)+'</div><span class="badge '+(c.tipo==='saida'?'blu':'org')+'">'+(c.tipo==='saida'?'Saída':'Entrada')+'</span></div>'
+  return '<div class="card'+(bad?' late':ok?' done':'')+'" data-ckabrir="'+c.id+'"><div class="t1"><div class="cli">'+esc(c.cliente)+'</div><span class="badge grn">✅ Checklist '+(c.tipo==='saida'?'saída':'entrada')+'</span></div>'
    +'<div class="sub">'+esc([c.equipamento,c.fabricante_modelo].filter(Boolean).join(' · ')||'—')+'</div>'
    +'<div class="sub">'+br(c.data)+' '+esc(c.hora||'')+' · '+esc(c.inspecionado_por||'')+'</div>'
    +'<div class="task">'+(c.n_ruim?'<span class="badge red">'+c.n_ruim+' item(ns) com problema</span> ':'<span class="badge grn">sem problemas</span> ')+(bad?'<span class="badge red">não pode operar</span>':'')+'</div></div>';
@@ -862,12 +862,12 @@ function telaCk(){
 }
 
 /* ---------- Manutenção: OS, equipamentos e peças ---------- */
-var mnSub='ck',OSL=null,ENL=null,mnF={cli:'',q:'',mes:mesAtual()};
-function mnChips(){return '<div class="chips">'+[['ck','✅ Checklists'],['os','🧾 Ordens de serviço'],['en','📦 Entregas'],['eq','🚜 Equipamentos'],['pc','🔩 Peças']].map(function(x){return '<button type="button" class="chip'+(mnSub===x[0]?' on':'')+'" data-mns="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';}
-function osItem(o){var c=o.condicao||'';return '<div class="card" data-osabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge org">OS '+o.numero+'</span></div>'
+var mnSub='docs',OSL=null,ENL=null,DCF={cli:'',tipo:'',q:'',mes:mesAtual(),mexeu:false},mnF={cli:'',q:'',mes:mesAtual()};
+function mnChips(){return '<div class="chips">'+[['docs','🗂️ Histórico'],['eq','🚜 Equipamentos'],['pc','🔩 Peças']].map(function(x){return '<button type="button" class="chip'+(mnSub===x[0]?' on':'')+'" data-mns="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';}
+function osItem(o){var c=o.condicao||'';return '<div class="card" data-osabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge org">🧾 OS '+o.numero+'</span></div>'
   +'<div class="sub">'+esc([o.equipamento,o.marca,o.modelo].filter(Boolean).join(' · ')||'—')+(o.serie?' · série '+esc(o.serie):'')+'</div><div class="sub">'+br(o.entrada_data)+' · '+esc(o.tecnico||'')+'</div>'
   +(c?'<div class="task"><span class="badge '+(/pend/i.test(c)?'org':/fora/i.test(c)?'red':'grn')+'">'+esc(c.replace(/\.$/,''))+'</span></div>':'')+'</div>';}
-function enItem(o){var r=PLSENT.resumoItens(o);return '<div class="card" data-enabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge org">Nº '+o.numero+'</span></div>'
+function enItem(o){var r=PLSENT.resumoItens(o);return '<div class="card" data-enabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge blu">📦 Entrega '+o.numero+'</span></div>'
   +'<div class="sub">📦 '+esc(r.ent||'—')+'</div>'+(r.rec?'<div class="sub">↩ '+esc(r.rec)+'</div>':'')+'<div class="sub">'+br(o.data)+(o.hora?' '+esc(o.hora):'')+' · recebido por '+esc(o.recebido_por||'—')+'</div><div class="sub">Entregue por '+esc(o.entregue_por||'')+'</div></div>';}
 function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto?'<img class="mnimg" src="'+e.foto+'" alt="">':'<div class="mnimg">🚜</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div><div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
 function pcItem(x){var p=x.p,e=x.e;var l1=[p.p?'Cód. PLS '+esc(p.p):'',p.m?'Modelo '+esc(p.m):'',p.q?'Qtd '+esc(p.q):'',p.t?'Revisão '+esc(p.t):''].filter(Boolean).join(' · ');
@@ -896,8 +896,40 @@ function mnPintar(){
 function osCarregar(){PLSOS.listar().then(function(l){OSL=l;mnPintar();}).catch(function(e){OSL=[];mnPintar();toast('⚠ '+erro(e),4000);});}
 function enCarregar(){PLSENT.listar().then(function(l){ENL=l;mnPintar();}).catch(function(e){ENL=[];mnPintar();toast('⚠ '+erro(e),4000);});}
 function eqCarregar(){PLSEQ.carregar().then(function(){mnPintar();}).catch(function(e){toast('⚠ '+erro(e),4000);mnPintar();});}
+function dcLista(){
+  var q=DCF.q.trim().toLowerCase(),l=[];
+  if(OSL)OSL.forEach(function(o){l.push({t:'os',d:String(o.entrada_data||'').slice(0,10),ca:o.created_at,cli:o.cliente,s:[o.cliente,o.numero,o.equipamento,o.marca,o.modelo,o.serie,o.tecnico].join(' '),o:o});});
+  if(ENL)ENL.forEach(function(o){l.push({t:'en',d:String(o.data||'').slice(0,10),ca:o.created_at,cli:o.cliente,s:[o.cliente,o.numero,o.recebido_por,o.entregue_por,o.documento,(o.itens||[]).map(function(i){return i.n;}).join(' ')].join(' '),o:o});});
+  if(CKL)CKL.forEach(function(c){l.push({t:'ck',d:String(c.data||'').slice(0,10),ca:c.created_at,cli:c.cliente,s:[c.cliente,c.equipamento,c.fabricante_modelo,c.inspecionado_por].join(' '),o:c});});
+  l=l.filter(function(x){return(!DCF.cli||x.cli===DCF.cli)&&PLSU.noMes(x.d,DCF.mes)&&(!q||x.s.toLowerCase().indexOf(q)>=0);});
+  l.sort(function(a,b){return(b.d+(b.ca||'')).localeCompare(a.d+(a.ca||''));});
+  return l;
+}
+function dcPintar(){
+  var el=$('dc-lista');if(!el)return;
+  if(OSL===null||ENL===null||CKL===null){el.innerHTML='<div class="empty">Carregando…</div>';return;}
+  var l=dcLista(),n={os:0,en:0,ck:0};l.forEach(function(x){n[x.t]++;});
+  var ch=$('dc-tipos');if(ch)ch.innerHTML=[['','Todos',l.length],['os','🧾 OS',n.os],['en','📦 Entregas',n.en],['ck','✅ Checklists',n.ck]].map(function(x){return '<button type="button" class="chip'+(DCF.tipo===x[0]?' on':'')+'" data-dct="'+x[0]+'">'+x[1]+' ('+x[2]+')</button>';}).join('');
+  l=l.filter(function(x){return !DCF.tipo||x.t===DCF.tipo;});
+  el.innerHTML=l.length?l.map(function(x){return x.t==='os'?osItem(x.o):x.t==='en'?enItem(x.o):ckItem(x.o);}).join(''):'<div class="empty">Nada encontrado'+(DCF.mes!=='todos'?' neste mês. Em <b>Mês</b>, escolha “Todos os meses” para ver o histórico completo.':'.')+'</div>';
+}
+function dcCarregar(){
+  var f=function(p,set){return p.then(set).catch(function(e){set([]);toast('⚠ '+erro(e),4000);});};
+  f(PLSOS.listar(),function(l){OSL=l;dcPintar();});f(PLSENT.listar(),function(l){ENL=l;dcPintar();});f(PLSCK.listar(),function(l){CKL=l;dcPintar();});
+}
+function telaDocs(){
+  setTimeout(function(){dcPintar();dcCarregar();},0);
+  var nb=function(a,ic,t,d){return '<button type="button" class="btn" '+a+' style="margin:0 0 8px;text-align:left;display:flex;gap:10px;align-items:center"><span style="font-size:22px">'+ic+'</span><span>'+t+'<br><small style="font-weight:500;opacity:.85">'+d+'</small></span></button>';};
+  return '<div class="sec" style="margin-top:4px">Novo documento</div>'+nb('data-osnovo="1"','🧾','Ordem de serviço','Manutenção / serviço no equipamento')+nb('data-ennovo="1"','📦','Entrega de material','Material entregue ou recolhido no cliente')+nb('data-ck="novo"','✅','Checklist de entrada / saída','Vistoria do equipamento')
+   +'<div class="sec">Histórico dos clientes</div><div class="fld"><label>Cliente</label><select id="dc-cli"><option value="">Todos os clientes</option>'+D.clientes.map(function(n){return '<option'+(n===DCF.cli?' selected':'')+'>'+esc(n)+'</option>';}).join('')+'</select></div>'
+   +'<div class="fld"><label>Mês</label><select id="dc-mes">'+PLSU.mesesOpts(DCF.mes)+'</select></div>'
+   +'<input class="q" id="dc-q" placeholder="Buscar nº, equipamento, material, técnico" value="'+esc(DCF.q)+'"><div class="chips" id="dc-tipos"></div><div id="dc-lista"></div>';
+}
+document.addEventListener('input',function(e){var id=e.target.id;if(id==='dc-q'){DCF.q=e.target.value;dcPintar();}else if(id==='dc-cli'){DCF.cli=e.target.value;if(DCF.cli&&!DCF.mexeu){DCF.mes='todos';var m=$('dc-mes');if(m)m.innerHTML=PLSU.mesesOpts('todos');}dcPintar();}else if(id==='dc-mes'){DCF.mes=e.target.value;DCF.mexeu=true;dcPintar();}});
+document.addEventListener('click',function(e){var t=e.target.closest('[data-dct]');if(t){DCF.tipo=t.getAttribute('data-dct');dcPintar();}});
 function telaChecklist(){
   var h=mnChips();
+  if(mnSub==='docs')return h+telaDocs();
   if(mnSub==='ck')return h+telaCk();
   setTimeout(function(){mnPintar();if(mnSub==='os')osCarregar();else if(mnSub==='en')enCarregar();else eqCarregar();},0);
   var ph=mnSub==='en'?'Buscar cliente, material ou quem recebeu':mnSub==='pc'?'Buscar peça (ex.: motor), código ou fornecedor':mnSub==='eq'?'Buscar marca, modelo, série ou peça':'Buscar OS, equipamento ou série';
@@ -3078,10 +3110,10 @@ var PLSENT = (function() {
   };
 })();
 
-PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')ckCarregar();},onClose:function(){if(tab==='checklist')ckCarregar();}});
+PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}},onClose:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}}});
 PLSEQ.init({sb:sb,chk:chk,clientes:function(){return D.clientes;},toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')mnPintar();},admin:ehAdmin});
-PLSOS.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='os')osCarregar();},admin:ehAdmin});
-PLSENT.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='en')enCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='en')enCarregar();},admin:ehAdmin});
+PLSOS.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},admin:ehAdmin});
+PLSENT.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},admin:ehAdmin});
 PLSCOM.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientesFull||D.clientes;},toast:function(m){toast(m,4500);},repaint:function(){if(tab==='comercial')render();},admin:ehAdmin});
 /* vira o dia com o app aberto */
 var diaAtual=hoje();setInterval(function(){if(hoje()!==diaAtual){diaAtual=hoje();render();}},60000);

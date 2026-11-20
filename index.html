@@ -2206,6 +2206,20 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     #setor-tip::before { content: ''; position: absolute; left: -6px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-right-color: var(--accent); border-left: 0; }
     .setor-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
     .setor-ic { font-size: 1.35rem; line-height: 1; }
+    .setor-nm { display: block; max-width: 100%; font-size: 0.64rem; letter-spacing: -0.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+    .mn-novo-wrap { position: relative; display: inline-block; }
+    .mn-novo-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 70; background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 10px 28px rgba(15,23,42,.18); padding: 6px; min-width: 250px; display: none; }
+    .mn-novo-menu.open { display: block; }
+    .mn-novo-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 10px 12px; border-radius: 8px; font-weight: 700; font-size: .9rem; color: #0f172a; cursor: pointer; }
+    .mn-novo-menu button small { display: block; font-weight: 500; color: #64748b; font-size: .75rem; }
+    .mn-novo-menu button:hover { background: #fff7ed; }
+    .mn-resumo { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 10px; }
+    .mn-resumo .mn-rc { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 14px; font-size: .85rem; color: #334155; cursor: pointer; }
+    .mn-resumo .mn-rc b { font-size: 1.05rem; color: #0f172a; margin-right: 4px; }
+    .mn-resumo .mn-rc.on { border-color: var(--accent); background: #fff7ed; }
+    .mn-modo { display: inline-flex; background: #e2e8f0; border-radius: 10px; padding: 3px; gap: 3px; }
+    .mn-modo button { border: 0; background: transparent; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: .85rem; color: #475569; cursor: pointer; }
+    .mn-modo button.on { background: #fff; color: #0f172a; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
     .setor-badge {
       position: absolute; top: -6px; right: -4px; background: var(--pls-red); color: #fff; font-size: 0.68rem;
       min-width: 20px; height: 20px; border-radius: 10px; display: grid; place-items: center; padding: 0 5px; border: 2px solid var(--pls-header);
@@ -2583,7 +2597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v70 — 20/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v71 — 20/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10857,7 +10871,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         // MANUTENÇÃO (v39): planos preventivos dos clientes, revisões e vencimentos
         // =================================================================
-        var M = { os: null, ent: null, ck: null, kBusca: '', kTipo: '', planos: [], equip: [], rev: [], sub: 'vencimentos', fBusca: '', fSit: '', eBusca: '', pBusca: '', cBusca: '' };
+        var M = { os: null, ent: null, ck: null, kBusca: '', kTipo: '', planos: [], equip: [], rev: [], sub: 'docs', eqModo: 'equip', docs: null, fBusca: '', fSit: '', eBusca: '', pBusca: '', cBusca: '' };
         var SEED_PLANO_OK = false;
 
         function carregarMan() {
@@ -11000,13 +11014,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           el.setAttribute('data-ok', '1');
           el.innerHTML =
             '<div class="sx-subnav no-print" id="mn-subnav">' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="vencimentos">🔔 Vencimentos</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="equip">🚜 Equipamentos dos clientes</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="checklists">✅ Checklists entrada/saída</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="os">🧾 Ordens de serviço</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="entregas">📦 Entregas de material</button>' +
-              '<button type="button" class="sx-subbtn" data-man="sub" data-v="pecas">🔩 Peças dos clientes</button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="docs">🗂️ Histórico dos clientes<br><small style="font-weight:500;opacity:.8">OS · entregas · checklists</small></button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="vencimentos">🔔 Vencimentos das manutenções<br><small style="font-weight:500;opacity:.8">revisões vencidas e a vencer</small></button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="equip">🚜 Equipamentos e peças<br><small style="font-weight:500;opacity:.8">dos clientes</small></button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção<br><small style="font-weight:500;opacity:.8">modelos de revisão</small></button>' +
+            '</div>' +
+            '<div id="mn-p-docs" class="sx-pane">' +
+              '<div class="sx-toolbar"><div class="mn-novo-wrap"><button type="button" class="btn-pls-primary" data-man="d-novo">➕ Novo ▾</button>' +
+                '<div class="mn-novo-menu" id="mn-novo-menu">' +
+                  '<button type="button" data-man="os-novo">🧾 Ordem de serviço<small>Manutenção / serviço em equipamento</small></button>' +
+                  '<button type="button" data-man="ent-novo">📦 Entrega de material<small>Material entregue ou recolhido no cliente</small></button>' +
+                  '<button type="button" data-man="ck-novo">✅ Checklist de entrada / saída<small>Vistoria do equipamento</small></button>' +
+                '</div></div>' +
+              '<select id="mn-d-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
+              '<select id="mn-d-tipo" class="form-control sx-w"><option value="">Todos os documentos</option><option value="os">Só ordens de serviço</option><option value="ent">Só entregas de material</option><option value="ck">Só checklists</option></select>' +
+              '<select id="mn-d-mes" class="form-control sx-w" title="Período"></select>' +
+              '<label class="sx-muted" style="font-size:.75rem">De <input id="mn-d-de" type="date" class="form-control" style="display:inline-block;width:auto"></label><label class="sx-muted" style="font-size:.75rem">Até <input id="mn-d-ate" type="date" class="form-control" style="display:inline-block;width:auto"></label>' +
+              '<input id="mn-d-busca" class="form-control sx-w2" placeholder="Buscar nº, cliente, equipamento, série, material, técnico…"></div>' +
+              '<div class="mn-resumo" id="mn-d-resumo"></div>' +
+              '<div class="table-container" id="mn-docs"></div>' +
             '</div>' +
             '<div id="mn-p-vencimentos" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -11015,39 +11041,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '</div><div id="mn-kpis" class="kpi-grid"></div><div class="table-container" id="mn-venc"></div>' +
             '</div>' +
             '<div id="mn-p-equip" class="sx-pane">' +
-              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="eq-novo">➕ Novo equipamento de cliente</button>' +
+              '<div class="sx-toolbar">' + '<div class="mn-modo"><button type="button" data-man="eqmodo" data-v="equip" class="mn-m-equip">🚜 Equipamentos</button><button type="button" data-man="eqmodo" data-v="pecas" class="mn-m-pecas">🔩 Buscar peças</button></div>' + '<button type="button" class="btn-pls-primary" data-man="eq-novo">➕ Novo equipamento de cliente</button>' +
               '<select id="mn-e-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
               '<input id="mn-e-busca" class="form-control sx-w2" placeholder="Buscar cliente, modelo, série ou peça…"></div>' +
               '<div class="table-container" id="mn-equip"></div>' +
             '</div>' +
-            '<div id="mn-p-checklists" class="sx-pane">' +
-              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="ck-novo">➕ Novo checklist</button>' +
-              '<select id="mn-k-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
-              '<select id="mn-k-mes" class="form-control sx-w" title="Período"></select>' +
-              '<select id="mn-k-tipo" class="form-control sx-w"><option value="">Entrada e saída</option><option value="entrada">Só entrada</option><option value="saida">Só saída</option></select>' +
-              '<select id="mn-k-prob" class="form-control sx-w"><option value="">Com ou sem problema</option><option value="1">Só com problema</option></select>' +
-              '<label class="sx-muted" style="font-size:.75rem">De <input id="mn-k-de" type="date" class="form-control" style="display:inline-block;width:auto"></label><label class="sx-muted" style="font-size:.75rem">Até <input id="mn-k-ate" type="date" class="form-control" style="display:inline-block;width:auto"></label>' +
-              '<input id="mn-k-busca" class="form-control sx-w2" placeholder="Buscar cliente, equipamento ou inspetor…"></div>' +
-              '<div class="table-container" id="mn-checklists"></div>' +
-            '</div>' +
-            '<div id="mn-p-os" class="sx-pane">' +
-              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="os-novo">➕ Nova ordem de serviço</button>' +
-              '<select id="mn-o-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
-              '<select id="mn-o-mes" class="form-control sx-w" title="Período"></select>' +
-              '<label class="sx-muted" style="font-size:.75rem">De <input id="mn-o-de" type="date" class="form-control" style="display:inline-block;width:auto"></label><label class="sx-muted" style="font-size:.75rem">Até <input id="mn-o-ate" type="date" class="form-control" style="display:inline-block;width:auto"></label>' +
-              '<input id="mn-o-busca" class="form-control sx-w2" placeholder="Buscar nº da OS, cliente, equipamento, série ou técnico…"></div>' +
-              '<div class="table-container" id="mn-os"></div>' +
-            '</div>' +
-            '<div id="mn-p-entregas" class="sx-pane">' +
-              '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-man="ent-novo">➕ Nova entrega de material</button>' +
-              '<select id="mn-en-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
-              '<select id="mn-en-mes" class="form-control sx-w" title="Período"></select>' +
-              '<label class="sx-muted" style="font-size:.75rem">De <input id="mn-en-de" type="date" class="form-control" style="display:inline-block;width:auto"></label><label class="sx-muted" style="font-size:.75rem">Até <input id="mn-en-ate" type="date" class="form-control" style="display:inline-block;width:auto"></label>' +
-              '<input id="mn-en-busca" class="form-control sx-w2" placeholder="Buscar nº, cliente, material, quem recebeu ou entregou…"></div>' +
-              '<div class="table-container" id="mn-entregas"></div>' +
-            '</div>' +
             '<div id="mn-p-pecas" class="sx-pane">' +
-              '<div class="sx-toolbar"><select id="mn-pc-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
+              '<div class="sx-toolbar">' + '<div class="mn-modo"><button type="button" data-man="eqmodo" data-v="equip" class="mn-m-equip">🚜 Equipamentos</button><button type="button" data-man="eqmodo" data-v="pecas" class="mn-m-pecas">🔩 Buscar peças</button></div>' + '<select id="mn-pc-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
               '<input id="mn-pc-busca" class="form-control sx-w2" placeholder="Buscar peça (ex.: motor), código, fornecedor, equipamento…"></div>' +
               '<div class="sx-muted" id="mn-pc-n" style="margin:4px 2px;font-size:.78rem"></div><div class="table-container" id="mn-pecas"></div>' +
             '</div>' +
@@ -11064,9 +11064,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderMan() {
           montarMan();
-          ['vencimentos', 'equip', 'planos', 'checklists', 'os', 'entregas', 'pecas'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === M.sub ? 'block' : 'none'; });
+          if (['docs', 'vencimentos', 'equip', 'planos'].indexOf(M.sub) < 0) M.sub = M.sub === 'pecas' ? (M.eqModo = 'pecas', 'equip') : 'docs';
+          var vis = M.sub === 'equip' ? (M.eqModo === 'pecas' ? 'pecas' : 'equip') : M.sub;
+          ['docs', 'vencimentos', 'equip', 'planos', 'pecas'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === vis ? 'block' : 'none'; });
+          document.querySelectorAll('#setor-manutencao .mn-modo button').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-v') === vis); });
           document.querySelectorAll('#setor-manutencao .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === M.sub); });
-          if (M.sub === 'vencimentos') renderVenc(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'entregas') carregarEnt(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
+          if (M.sub === 'docs') carregarDocs(); else if (M.sub === 'vencimentos') renderVenc(); else if (vis === 'pecas') renderPecasMan(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'entregas') carregarEnt(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
         }
         function pillSev(s) { return s === 2 ? '<span class="sx-pill sx-atraso">VENCIDA</span>' : s === 1 ? '<span class="sx-pill sx-hoje">PERTO DE VENCER</span>' : '<span class="sx-pill sx-st-ok">EM DIA</span>'; }
         function renderVenc() {
@@ -13002,10 +13005,51 @@ var PLSENT = (function() {
   };
 })();
 
-        PLSCK.init({ sb: sb, chk: chk, nome: nomeUsuario, clientes: function() { return ((appData && appData.clientes) || []).map(function(c) { return c.nome; }).filter(Boolean).sort(function(x, y) { return x.localeCompare(y, 'pt-BR'); }); }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'checklists') carregarCk(); }, onClose: function() { if (M.sub === 'checklists') carregarCk(); } });
+        PLSCK.init({ sb: sb, chk: chk, nome: nomeUsuario, clientes: function() { return ((appData && appData.clientes) || []).map(function(c) { return c.nome; }).filter(Boolean).sort(function(x, y) { return x.localeCompare(y, 'pt-BR'); }); }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'docs') carregarDocs(); }, onClose: function() { if (M.sub === 'docs') carregarDocs(); if (M.sub === 'checklists') carregarCk(); } });
         PLSEQ.init({ sb: sb, chk: chk, clientes: function() { return ((appData && appData.clientes) || []).map(function(c) { return c.nome; }).filter(Boolean); }, toast: function(m) { showToast(m, 5000); }, onSaved: function() {}, admin: ehAdmin });
-        PLSOS.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'os') carregarOs(); }, onClose: function() { if (M.sub === 'os') carregarOs(); }, admin: ehAdmin });
-        PLSENT.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'entregas') carregarEnt(); }, onClose: function() { if (M.sub === 'entregas') carregarEnt(); }, admin: ehAdmin });
+        PLSOS.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'docs') carregarDocs(); }, onClose: function() { if (M.sub === 'docs') carregarDocs(); }, admin: ehAdmin });
+        PLSENT.init({ sb: sb, chk: chk, nome: nomeUsuario, tecnicos: function() { return (appData.tecnicos || []).slice(); }, clientes: function() { return (appData && appData.clientes) || []; }, logo: COM_IMG.logo, toast: function(m) { showToast(m, 5000); }, onSaved: function() { if (M.sub === 'docs') carregarDocs(); }, onClose: function() { if (M.sub === 'docs') carregarDocs(); }, admin: ehAdmin });
+        // ---------- Histórico dos clientes: OS + entregas + checklists juntos ----------
+        var docsCarregando = false;
+        function carregarDocs() {
+          renderDocs(); if (docsCarregando) return; docsCarregando = true;
+          var pega = function(p) { return p.catch(function(e) { showToast('Erro ao carregar: ' + (e.message || e), 5000); return []; }); };
+          Promise.all([pega(PLSOS.listar()), pega(PLSENT.listar()), pega(PLSCK.listar())]).then(function(r) {
+            docsCarregando = false;
+            var l = [];
+            r[0].forEach(function(o) { l.push({ t: 'os', id: o.id, n: o.numero, d: String(o.entrada_data || o.created_at || '').slice(0, 10), h: o.entrada_hora || '', cli: o.cliente, desc: [o.equipamento, o.marca, o.modelo].filter(Boolean).join(' · ') + (o.serie ? ' — série ' + o.serie : ''), resp: o.tecnico || '', sit: o.condicao || '', ca: o.created_at }); });
+            r[1].forEach(function(o) { var x = PLSENT.resumoItens(o); l.push({ t: 'ent', id: o.id, n: o.numero, d: String(o.data || '').slice(0, 10), h: o.hora || '', cli: o.cliente, desc: (x.ent ? '📦 ' + x.ent : '') + (x.rec ? (x.ent ? '  ·  ' : '') + '↩ Recolhido: ' + x.rec : ''), resp: o.entregue_por || '', rec: o.recebido_por || '', doc: o.documento || '', ca: o.created_at }); });
+            r[2].forEach(function(c) { l.push({ t: 'ck', id: c.id, n: null, d: String(c.data || '').slice(0, 10), h: c.hora || '', cli: c.cliente, desc: [c.equipamento, c.fabricante_modelo].filter(Boolean).join(' · '), tipo: c.tipo, resp: c.inspecionado_por || '', sit: c.condicao || '', nr: c.n_ruim || 0, ca: c.created_at }); });
+            l.sort(function(a, b) { return (b.d + (b.h || '') + (b.ca || '')).localeCompare(a.d + (a.h || '') + (a.ca || '')); });
+            M.docs = l; renderDocs();
+          });
+        }
+        function renderDocs() {
+          var el = $('mn-docs'); if (!el) return;
+          var sc = $('mn-d-cli');
+          if (sc) { var m = {}; ((appData && appData.clientes) || []).forEach(function(c) { if (c.nome) m[c.nome] = 1; }); (M.docs || []).forEach(function(o) { if (o.cli) m[o.cli] = 1; }); var cs = Object.keys(m).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); if (sc.options.length !== cs.length + 1) sc.innerHTML = '<option value="">Todos os clientes</option>' + cs.map(function(n) { return '<option>' + esc(n) + '</option>'; }).join(''); sc.value = M.dCli || ''; }
+          var st = $('mn-d-tipo'); if (st) st.value = M.dTipo || '';
+          var mesD = M.dMes === undefined ? PLSU.mesAtual() : M.dMes; var sm = $('mn-d-mes'); if (sm) sm.innerHTML = PLSU.mesesOpts(mesD);
+          if (M.docs === null || M.docs === undefined) { el.innerHTML = '<div class="sx-vazio">Carregando…</div>'; $('mn-d-resumo').innerHTML = ''; return; }
+          var q = norm(M.dBusca);
+          var base = M.docs.filter(function(o) { return PLSU.noMes(o.d, mesD) && (!M.dCli || o.cli === M.dCli) && (!M.dDe || o.d >= M.dDe) && (!M.dAte || o.d <= M.dAte) && (!q || norm([o.n, o.cli, o.desc, o.resp, o.rec, o.doc].join(' ')).indexOf(q) >= 0); });
+          var cnt = { os: 0, ent: 0, ck: 0 }; base.forEach(function(o) { cnt[o.t]++; });
+          var rc = function(k, ic, sg, pl) { return '<span class="mn-rc' + (M.dTipo === k ? ' on' : '') + '" data-man="d-tipo" data-v="' + k + '">' + ic + ' <b>' + cnt[k] + '</b>' + (cnt[k] === 1 ? sg : pl) + '</span>'; };
+          $('mn-d-resumo').innerHTML = (M.dCli ? '<span class="mn-rc" style="cursor:default;border-color:#0f172a"><b>' + esc(M.dCli) + '</b></span>' : '') + rc('os', '🧾', 'ordem de serviço', 'ordens de serviço') + rc('ent', '📦', 'entrega de material', 'entregas de material') + rc('ck', '✅', 'checklist', 'checklists') + (M.dTipo ? '<span class="mn-rc" data-man="d-tipo" data-v="">✕ mostrar todos</span>' : '');
+          var lista = base.filter(function(o) { return !M.dTipo || o.t === M.dTipo; });
+          var TP = { os: '<span class="sx-pill" style="background:#ffedd5;color:#9a3412">🧾 OS</span>', ent: '<span class="sx-pill" style="background:#dbeafe;color:#1e40af">📦 Entrega</span>', ck: '<span class="sx-pill" style="background:#dcfce7;color:#166534">✅ Checklist</span>' };
+          el.innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Data</th><th>Documento</th><th>Nº</th><th>Cliente</th><th>Equipamento / material</th><th>Responsável</th><th>Situação</th><th></th></tr></thead><tbody>' +
+            lista.map(function(o) {
+              var sit = '—';
+              if (o.t === 'os') { var c = o.sit, cl = /pend/i.test(c) ? 'sx-hoje' : /fora/i.test(c) ? 'sx-atraso' : 'sx-ok'; sit = c ? '<span class="sx-pill ' + cl + '">' + esc(c.replace(/\.$/, '')) + '</span>' : '—'; }
+              else if (o.t === 'ent') sit = o.rec ? '<span class="sx-muted">Recebido por</span><br><b>' + esc(o.rec) + '</b>' : '—';
+              else sit = (o.sit === 'apto' ? '<span class="sx-pill sx-ok">Pode operar</span>' : o.sit === 'inapto' ? '<span class="sx-pill sx-atraso">Não pode operar</span>' : '') + (o.nr ? ' <span class="sx-pill sx-atraso">' + o.nr + ' problema(s)</span>' : '') || '—';
+              var desc = o.t === 'ck' ? '<span class="sx-pill ' + (o.tipo === 'saida' ? 'sx-ok' : 'sx-hoje') + '">' + (o.tipo === 'saida' ? 'Saída' : 'Entrada') + '</span> ' + esc(o.desc || '—') : esc(o.desc || '—') + (o.doc ? '<br><span class="sx-muted">' + esc(o.doc) + '</span>' : '');
+              var ac = o.t === 'os' ? 'os-abrir' : o.t === 'ent' ? 'ent-abrir' : 'ck-abrir';
+              return '<tr><td>' + fd(o.d) + (o.h ? '<br><span class="sx-muted">' + esc(o.h) + '</span>' : '') + '</td><td>' + TP[o.t] + '</td><td><b>' + (o.n || '—') + '</b></td><td><b>' + esc(o.cli) + '</b></td><td>' + desc + '</td><td>' + esc(o.resp) + '</td><td>' + sit + '</td>' +
+                '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="' + ac + '" data-id="' + o.id + '">Abrir / PDF</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-vazio">' + (M.docs.length ? 'Nenhum documento com esse filtro.' + (mesD !== 'todos' ? ' Dica: em “Período”, escolha <b>Todos os meses</b> para ver o histórico completo.' : '') : 'Nenhum documento ainda. Use <b>➕ Novo</b> para criar uma OS, uma entrega de material ou um checklist.') + '</div>';
+        }
         // ---------- Entregas de material ----------
         function carregarEnt() {
           renderEnt();
@@ -13051,9 +13095,12 @@ var PLSENT = (function() {
           var k = a.getAttribute('data-man'), id = a.getAttribute('data-id');
           switch (k) {
             case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
+            case 'd-novo': { var mm = $('mn-novo-menu'); if (mm) mm.classList.toggle('open'); break; }
+            case 'd-tipo': M.dTipo = a.getAttribute('data-v') || ''; renderDocs(); break;
+            case 'eqmodo': M.eqModo = a.getAttribute('data-v'); renderMan(); break;
             case 'os-novo': PLSOS.novo(); break;
             case 'os-abrir': PLSOS.abrir(id, ehAdmin()); break;
-            case 'ent-novo': PLSENT.novo(M.enCli || ''); break;
+            case 'ent-novo': PLSENT.novo(M.dCli || ''); break;
             case 'ent-abrir': PLSENT.abrir(id, ehAdmin()); break;
             case 'eq-novo': abrirEquip(null); break;
             case 'eq-ed': abrirEquip(id); break;
@@ -13080,12 +13127,21 @@ var PLSENT = (function() {
             case 'cli-jun': abrirJuntar(id); break;
           }
         });
+        document.addEventListener('click', function(evt) {
+          var mm = $('mn-novo-menu'); if (!mm || !mm.classList.contains('open')) return;
+          var a = evt.target.closest ? evt.target.closest('[data-man]') : null;
+          if (a && a.getAttribute('data-man') === 'd-novo') return;
+          mm.classList.remove('open');
+        }, true);
         document.addEventListener('input', function(evt) {
           var t = evt.target; if (!t || !t.id) return;
           if (t.id === 'mn-f-busca') { M.fBusca = t.value; renderVenc(); }
           else if (t.id === 'mn-e-busca') { M.eBusca = t.value; renderEquipMan(); }
           else if (t.id === 'mn-o-busca') { M.oBusca = t.value; renderOs(); }
           else if (t.id === 'mn-en-busca') { M.enBusca = t.value; renderEnt(); }
+          else if (t.id === 'mn-d-busca') { M.dBusca = t.value; renderDocs(); }
+          else if (t.id === 'mn-d-de') { M.dDe = t.value; renderDocs(); }
+          else if (t.id === 'mn-d-ate') { M.dAte = t.value; renderDocs(); }
           else if (t.id === 'mn-en-de') { M.enDe = t.value; renderEnt(); }
           else if (t.id === 'mn-en-ate') { M.enAte = t.value; renderEnt(); }
           else if (t.id === 'mn-pc-busca') { M.pcBusca = t.value; renderPecasMan(); }
@@ -13111,6 +13167,9 @@ var PLSENT = (function() {
           else if (t.id === 'mn-o-cli') { M.oCli = t.value; renderOs(); }
           else if (t.id === 'mn-o-mes') { M.oMes = t.value; renderOs(); }
           else if (t.id === 'mn-en-cli') { M.enCli = t.value; renderEnt(); }
+          else if (t.id === 'mn-d-cli') { M.dCli = t.value; if (t.value && !M.dMesMexeu) M.dMes = 'todos'; renderDocs(); }
+          else if (t.id === 'mn-d-tipo') { M.dTipo = t.value; renderDocs(); }
+          else if (t.id === 'mn-d-mes') { M.dMes = t.value; M.dMesMexeu = true; renderDocs(); }
           else if (t.id === 'mn-en-mes') { M.enMes = t.value; renderEnt(); }
           else if (t.id === 'mn-k-mes') { M.kMes = t.value; renderCk(); }
           else if (t.id === 'mn-pc-cli') { M.pcCli = t.value; renderPecasMan(); }
