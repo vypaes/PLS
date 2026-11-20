@@ -2583,7 +2583,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v68 — 20/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v69 — 20/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7702,7 +7702,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return { it: it, X: X, V: V, S: addDias(V, -Number(it.dias_antes || 0)) };
         }
         // Fatura com vencimento até a data de início da locação não existe (o contrato ainda não tinha começado).
-        function antesDoInicio(o) { return !!(o.it.tipo === 'locacao' && o.it.data_inicio && o.V <= o.it.data_inicio); }
+        function antesDoInicio(o) { return !!(o.it.data_inicio && o.V <= o.it.data_inicio); }
         function enviadaOcc(o) { var f = L.fat[o.it.id + '|' + o.X]; return !!(f && f.enviada); }
         function situacao(o) {
           var f = L.fat[o.it.id + '|' + o.X];
@@ -7729,7 +7729,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function alertas() {
           var out = { hoje: [], atraso: [], fim: [] }, cur = compAtual(), t = hoje();
           L.itens.forEach(function(it) {
-            if (it.tipo !== 'locacao' || !it.ativo || it.status !== 'LOCADA' || it.prazo_indeterminado || !it.data_fim) return;
+            if (!it.ativo || it.status !== (it.tipo === 'servico' ? 'ATIVO' : 'LOCADA') || it.prazo_indeterminado || !it.data_fim) return;
             var n = difDias(t, it.data_fim);
             if (n <= Number(it.aviso_fim_dias == null ? 10 : it.aviso_fim_dias)) out.fim.push({ it: it, n: n });
           });
@@ -7762,9 +7762,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var h = '';
           if (a.hoje.length) h += '<h4 class="sx-aviso-h hoje">📣 Hoje (' + dd + ') é dia de enviar a fatura para:</h4>' + lista(a.hoje);
           if (a.atraso.length) h += '<h4 class="sx-aviso-h atraso">⚠ Já passou do dia de envio e não foram marcadas como enviadas:</h4>' + lista(a.atraso);
-          if (a.fim.length) h += '<h4 class="sx-aviso-h atraso">⏰ Locações chegando ao fim — organizar a coleta do equipamento ou renovar o contrato:</h4><ul class="sx-aviso-lista">' + a.fim.map(function(x) {
+          if (a.fim.length) h += '<h4 class="sx-aviso-h atraso">⏰ Locações e contratos chegando ao fim — organizar a coleta do equipamento ou renovar:</h4><ul class="sx-aviso-lista">' + a.fim.map(function(x) {
             var q = x.n < 0 ? 'venceu há ' + (-x.n) + (x.n === -1 ? ' dia' : ' dias') : x.n === 0 ? 'vence HOJE' : 'vence em ' + x.n + (x.n === 1 ? ' dia' : ' dias');
-            return '<li><b>' + esc(x.it.cliente) + '</b> — ' + esc(x.it.equipamento) + ' <span class="sx-muted">· ' + q + ' (' + fd(x.it.data_fim) + ')</span></li>';
+            return '<li><b>' + esc(x.it.cliente) + '</b> — ' + esc(x.it.tipo === 'servico' ? 'Contrato de serviço' : x.it.equipamento) + ' <span class="sx-muted">· ' + q + ' (' + fd(x.it.data_fim) + ')</span></li>';
           }).join('') + '</ul>';
           abrirModal(a.hoje.length || a.atraso.length ? 'Faturas para enviar' : 'Avisos de locação', h, a.hoje.length || a.atraso.length ? 'Abrir faturas do mês' : 'Abrir locações', function() { L.comp = compAtual(); setSetor('locacoes', 'faturas'); });
         }
@@ -8130,7 +8130,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function celPrazo(i) {
           if (!i.data_inicio && !i.data_fim && !i.prazo_indeterminado) return '<span class="sx-muted" title="Edite a locação e informe o início e o fim (ou prazo indeterminado)">⚠ definir prazo</span>';
           var h = '';
-          if (i.data_inicio) h += '<b>' + fd(i.data_inicio) + '</b>' + (i.prazo_indeterminado ? ' → <span class="sx-muted">indeterminado</span>' : i.data_fim ? ' → ' + fd(i.data_fim) : '') + '<br><span class="sx-muted">' + esc(tempoTxt(i.data_inicio)) + ' de locação</span>';
+          if (i.data_inicio) h += '<b>' + fd(i.data_inicio) + '</b>' + (i.prazo_indeterminado ? ' → <span class="sx-muted">indeterminado</span>' : i.data_fim ? ' → ' + fd(i.data_fim) : '') + '<br><span class="sx-muted">' + esc(tempoTxt(i.data_inicio)) + (i.tipo === 'servico' ? ' de contrato' : ' de locação') + '</span>';
           else if (i.data_fim) h += 'até <b>' + fd(i.data_fim) + '</b>';
           else h += '<span class="sx-muted">prazo indeterminado</span>';
           if (!i.prazo_indeterminado && i.data_fim) {
@@ -8227,10 +8227,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           $('lo-s-kpis').innerHTML = kpi('Contratos ativos', ativos, '', '#16a34a') + kpi('Receita mensal de serviços', brl(rec), '', '#334155');
           var lista = todos.filter(function(i) { return !q || norm(i.cliente).indexOf(q) >= 0; })
             .sort(function(a, b) { return String(a.cliente).localeCompare(String(b.cliente)); });
-          $('lo-s-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Cliente</th><th style="text-align:right">Valor</th><th>Enviar</th><th>Vence</th><th>Contrato</th><th>Anotações</th><th></th></tr></thead><tbody>' +
+          $('lo-s-tabela').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Status</th><th>Cliente</th><th style="text-align:right">Valor</th><th>Enviar</th><th>Vence</th><th>Período</th><th>Contrato</th><th>Anotações</th><th></th></tr></thead><tbody>' +
             lista.map(function(i) {
               return '<tr><td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.cliente) + '</b></td><td style="text-align:right;font-weight:700">' + brl(i.valor) + '</td>' +
-                '<td>' + (i.cliente && i.dias_antes != null ? i.dias_antes + ' dias antes' : '—') + '</td><td>' + (i.dia_vencimento ? 'dia ' + i.dia_vencimento : '—') + '</td><td>' + cellContrato(i) + '</td><td>' + esc(i.anotacoes || '') + '</td>' +
+                '<td>' + (i.cliente && i.dias_antes != null ? i.dias_antes + ' dias antes' : '—') + '</td><td>' + (i.dia_vencimento ? 'dia ' + i.dia_vencimento : '—') + '</td><td>' + celPrazo(i) + '</td><td>' + cellContrato(i) + '</td><td>' + esc(i.anotacoes || '') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="lo-editar" data-id="' + i.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="lo-excluir" data-id="' + i.id + '">Excluir</button></td></tr>';
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato de serviço.</div>';
         }
@@ -8255,16 +8255,16 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (!i || i.contrato_modelo !== 'PARCEIRO') return 0;
           return i.comissao_tipo === 'fixo' ? Number(i.comissao_valor || 0) : Number(i.valor || 0) * Number(i.comissao_valor || 0) / 100;
         }
-        function htmlPrazo(p, it) {
+        function htmlPrazo(p, it, serv) {
           it = it || {};
-          return '<div class="form-group"><label class="form-label">Início da locação</label><input id="' + p + '-ini" type="date" class="form-control" value="' + esc(it.data_inicio || '') + '"></div>' +
-            '<div class="form-group"><label class="form-label">Fim da locação</label><input id="' + p + '-fim" type="date" class="form-control" value="' + esc(it.data_fim || '') + '"' + (it.prazo_indeterminado ? ' disabled' : '') + '></div>' +
+          return '<div class="form-group"><label class="form-label">' + (serv ? 'Início do contrato' : 'Início da locação') + '</label><input id="' + p + '-ini" type="date" class="form-control" value="' + esc(it.data_inicio || '') + '"></div>' +
+            '<div class="form-group"><label class="form-label">' + (serv ? 'Fim do contrato' : 'Fim da locação') + '</label><input id="' + p + '-fim" type="date" class="form-control" value="' + esc(it.data_fim || '') + '"' + (it.prazo_indeterminado ? ' disabled' : '') + '></div>' +
             '<div class="form-group"><label class="sx-chkl" style="margin-top:1.6rem"><input type="checkbox" id="' + p + '-ind"' + (it.prazo_indeterminado ? ' checked' : '') + ' onchange="document.getElementById(\'' + p + '-fim\').disabled=this.checked"> Prazo indeterminado</label></div>' +
             '<div class="form-group"><label class="form-label">Avisar quantos dias antes do fim?</label><input id="' + p + '-av" type="number" min="0" max="180" class="form-control" value="' + (it.aviso_fim_dias != null ? it.aviso_fim_dias : 10) + '"></div>';
         }
         function lerPrazo(p) {
           var ind = $(p + '-ind').checked, ini = $(p + '-ini').value || null, fim = ind ? null : ($(p + '-fim').value || null), av = parseInt($(p + '-av').value, 10);
-          if (!ind && !fim) throw new Error('Informe o fim da locação ou marque “Prazo indeterminado”.');
+          if (!ind && !fim) throw new Error('Informe o fim do prazo ou marque “Prazo indeterminado”.');
           if (ini && fim && fim < ini) throw new Error('O fim da locação é antes do início.');
           return { data_inicio: ini, data_fim: fim, prazo_indeterminado: ind, aviso_fim_dias: isNaN(av) ? 10 : av };
         }
@@ -8280,7 +8280,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Valor mensal (R$)</label><input id="lo-m-valor" class="form-control" inputmode="decimal" value="' + numStr(it.valor) + '"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-m-envio" type="number" min="0" max="180" class="form-control" value="' + (it.dias_antes != null ? it.dias_antes : 30) + '"></div>' +
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31)</label><input id="lo-m-venc" type="number" min="1" max="31" class="form-control" value="' + (it.dia_vencimento || '') + '"></div>' +
-            (serv ? '' : htmlPrazo('lo-m', it)) +
+            htmlPrazo('lo-m', it, serv) +
             (serv ? '' : htmlComissao('lo-m', it)) +
             '<div class="form-group full-width sx-dica" id="lo-m-ex" style="margin:0"></div>' +
             (serv ? '' : '<details class="form-group full-width" style="margin:0.2rem 0"' + (it.ficha || it.foto_path ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">📄 Ficha técnica e foto (usadas nas propostas do Comercial)</summary>' +
@@ -8330,7 +8330,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               anotacoes: $('lo-m-obs').value.trim() || null
             };
             if (!serv) Object.assign(d, lerComissao('lo-m'));
-            if (!serv) { if (d.status === 'LOCADA' && d.cliente) Object.assign(d, lerPrazo('lo-m')); else Object.assign(d, { data_inicio: null, data_fim: null, prazo_indeterminado: false }); }
+            if ((serv ? d.status === 'ATIVO' : d.status === 'LOCADA') && d.cliente) Object.assign(d, lerPrazo('lo-m')); else Object.assign(d, { data_inicio: null, data_fim: null, prazo_indeterminado: false });
             if (serv && !d.cliente) throw new Error('Informe o cliente.');
             if (!serv && !d.equipamento) throw new Error('Informe o equipamento.');
             if (!serv && d.status === 'LOCADA' && !d.cliente) throw new Error('Equipamento LOCADO precisa de cliente.');
@@ -10729,7 +10729,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               return seq;
             });
           } else {
-            passo = chk(sb.from('loc_itens').insert({ tipo: 'servico', cliente: p.cliente_nome, status: 'ATIVO', valor: p.valor_mensal, dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, ativo: true,
+            passo = chk(sb.from('loc_itens').insert({ tipo: 'servico', cliente: p.cliente_nome, status: 'ATIVO', valor: p.valor_mensal, dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, ativo: true, data_inicio: d.inicio || null, data_fim: d.termino || null, prazo_indeterminado: false, aviso_fim_dias: 30,
               anotacoes: 'Contrato ' + p.codigo + (d.inicio ? ' · ' + fd(d.inicio) + ' a ' + fd(d.termino) : '') }).select()).then(function(r) {
               if (!r.data || !r.data.length) throw new Error('Sem permissão para criar o contrato em Locações.'); aprov.novo = r.data[0].id;
             });
