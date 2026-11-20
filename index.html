@@ -2583,7 +2583,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v67 — 20/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v68 — 20/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7669,7 +7669,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         // LOCAÇÕES
         // =================================================================
-        var L = { itens: [], fat: {}, props: {}, comp: compAtual(), fTipo: '', fSit: '', fBusca: '', cStatus: '', cBusca: '', sBusca: '' };
+        var L = { itens: [], fat: {}, props: {}, anex: {}, ren: {}, comp: compAtual(), fTipo: '', fSit: '', fBusca: '', cStatus: '', cBusca: '', sBusca: '' };
         var STATUS_LOC = ['LOCADA', 'EM MANUTENÇÃO', 'DISPONÍVEL', 'BAIXADO'];
 
         function carregarLoc() {
@@ -7677,8 +7677,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return Promise.all([
             chk(sb.from('loc_itens').select('*').order('created_at')),
             chk(sb.from('loc_faturas').select('*').gte('competencia', de)),
-            chk(sb.from('com_propostas').select('id,codigo,tipo,status,assinado_path,assinado_nome')).catch(function() { return { data: [] }; })
+            chk(sb.from('com_propostas').select('id,codigo,tipo,status,assinado_path,assinado_nome')).catch(function() { return { data: [] }; }),
+            chk(sb.from('loc_anexos').select('*').order('created_at')).catch(function() { return { data: [] }; }),
+            chk(sb.from('loc_renovacoes').select('*').order('created_at')).catch(function() { return { data: [] }; })
           ]).then(function(res) {
+            L.anex = {}; (res[3].data || []).forEach(function(a) { (L.anex[a.item_id] = L.anex[a.item_id] || []).push(a); });
+            L.ren = {}; (res[4].data || []).forEach(function(a) { (L.ren[a.item_id] = L.ren[a.item_id] || []).push(a); });
             L.itens = res[0].data || [];
             if (ehAdmin()) sincronizarClientes(L.itens.map(function(i) { return i.cliente; }));
             L.props = {}; (res[2].data || []).forEach(function(p) { L.props[p.id] = p; });
@@ -8107,16 +8111,97 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var c = s === 'LOCADA' || s === 'ATIVO' ? 'ok' : s === 'DISPONÍVEL' ? 'disp' : s === 'ENCERRADO' || s === 'BAIXADO' ? 'enc' : 'manut';
           return '<span class="sx-pill sx-st-' + c + '">' + esc(s === 'BAIXADO' ? 'VENDIDO / BAIXADO' : s) + '</span>';
         }
+        function tempoTxt(ini, fim) {
+          fim = fim || hoje(); if (!ini || fim < ini) return '';
+          var a = ini.split('-').map(Number), b = fim.split('-').map(Number), anos = b[0] - a[0], meses = b[1] - a[1], dias = b[2] - a[2];
+          if (dias < 0) { meses--; var pm = new Date(b[0], b[1] - 1, 0).getDate(); dias += pm; if (dias < 0) dias = 0; }
+          if (meses < 0) { anos--; meses += 12; }
+          var p = [];
+          if (anos) p.push(anos + (anos === 1 ? ' ano' : ' anos'));
+          if (meses) p.push(meses + (meses === 1 ? ' mês' : ' meses'));
+          if (dias || !p.length) p.push(dias + (dias === 1 ? ' dia' : ' dias'));
+          return p.length > 1 ? p.slice(0, -1).join(', ') + ' e ' + p[p.length - 1] : p[0];
+        }
         function cellContrato(i) {
-          var pr = i.proposta_id && L.props[i.proposta_id]; if (!pr) return '—';
-          return '<button type="button" class="btn-pls-secondary" data-sx="lo-contrato" data-id="' + pr.id + '" title="' + (pr.assinado_path ? 'Abrir contrato assinado' : 'Contrato ainda sem arquivo assinado') + '">📄 ' + esc(pr.codigo) + (pr.assinado_path ? ' ✔' : '') + '</button>';
+          var pr = i.proposta_id && L.props[i.proposta_id], na = (L.anex[i.id] || []).length, nr = (L.ren[i.id] || []).length;
+          var b1 = pr ? '<button type="button" class="btn-pls-secondary" data-sx="lo-contrato" data-id="' + pr.id + '" title="' + (pr.assinado_path ? 'Abrir contrato assinado' : 'Contrato ainda sem arquivo assinado') + '">📄 ' + esc(pr.codigo) + (pr.assinado_path ? ' ✔' : '') + '</button> ' : '';
+          return b1 + '<button type="button" class="btn-pls-secondary" data-sx="lo-docs" data-id="' + i.id + '" title="Anexar contrato / ordem de compra e registrar renovações">📎 ' + na + ' · 🔁 ' + nr + '</button>';
         }
         function celPrazo(i) {
-          if (i.prazo_indeterminado) return (i.data_inicio ? 'desde ' + fd(i.data_inicio).slice(0, 5) + '<br>' : '') + '<span class="sx-muted">prazo indeterminado</span>';
-          if (!i.data_fim) return '<span class="sx-muted" title="Edite a locação e informe o fim ou prazo indeterminado">⚠ definir prazo</span>';
-          var n = difDias(hoje(), i.data_fim), av = Number(i.aviso_fim_dias == null ? 10 : i.aviso_fim_dias);
-          var tag = n < 0 ? '<span class="sx-pill" style="background:#fee2e2;color:#b91c1c">venceu há ' + (-n) + 'd</span>' : n <= av ? '<span class="sx-pill" style="background:#ffedd5;color:#c2410c">faltam ' + n + 'd</span>' : '<span class="sx-muted">faltam ' + n + 'd</span>';
-          return (i.data_inicio ? fd(i.data_inicio).slice(0, 5) + ' → ' : 'até ') + fd(i.data_fim).slice(0, 5) + '<br>' + tag;
+          if (!i.data_inicio && !i.data_fim && !i.prazo_indeterminado) return '<span class="sx-muted" title="Edite a locação e informe o início e o fim (ou prazo indeterminado)">⚠ definir prazo</span>';
+          var h = '';
+          if (i.data_inicio) h += '<b>' + fd(i.data_inicio) + '</b>' + (i.prazo_indeterminado ? ' → <span class="sx-muted">indeterminado</span>' : i.data_fim ? ' → ' + fd(i.data_fim) : '') + '<br><span class="sx-muted">' + esc(tempoTxt(i.data_inicio)) + ' de locação</span>';
+          else if (i.data_fim) h += 'até <b>' + fd(i.data_fim) + '</b>';
+          else h += '<span class="sx-muted">prazo indeterminado</span>';
+          if (!i.prazo_indeterminado && i.data_fim) {
+            var n = difDias(hoje(), i.data_fim), av = Number(i.aviso_fim_dias == null ? 10 : i.aviso_fim_dias);
+            h += '<br>' + (n < 0 ? '<span class="sx-pill" style="background:#fee2e2;color:#b91c1c">venceu há ' + (-n) + 'd</span>' : n <= av ? '<span class="sx-pill" style="background:#ffedd5;color:#c2410c">faltam ' + n + 'd</span>' : '<span class="sx-muted">faltam ' + n + 'd</span>');
+          }
+          return h;
+        }
+        // ---------- documentos e renovações da locação ----------
+        var DOC_TIPOS = ['Contrato assinado', 'Ordem de compra', 'Aditivo / renovação', 'Outro'];
+        function docsCorpo(id) {
+          var it = L.itens.filter(function(x) { return x.id === id; })[0]; if (!it) return '';
+          var pr = it.proposta_id && L.props[it.proposta_id], an = L.anex[id] || [], rn = (L.ren[id] || []).slice().sort(function(a, b) { return String(b.created_at).localeCompare(String(a.created_at)); });
+          var linhasDoc = [];
+          if (pr && pr.assinado_path) linhasDoc.push('<tr><td>Contrato assinado</td><td>' + esc(pr.assinado_nome || 'arquivo') + ' <span class="sx-muted">(anexado na proposta ' + esc(pr.codigo) + ')</span></td><td></td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="lo-contrato" data-id="' + pr.id + '">Abrir</button></td></tr>');
+          an.forEach(function(a) { linhasDoc.push('<tr><td>' + esc(a.tipo) + '</td><td>' + esc(a.nome) + '</td><td>' + fd(String(a.created_at).slice(0, 10)) + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="lo-doc-open" data-id="' + a.id + '">Abrir</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="lo-doc-del" data-id="' + a.id + '">Remover</button></td></tr>'); });
+          var h = '<div class="sx-muted" style="margin-bottom:0.6rem">' + (it.data_inicio ? 'Início: <b>' + fd(it.data_inicio) + '</b> · ' + esc(tempoTxt(it.data_inicio)) + ' de locação · ' : '') + (it.prazo_indeterminado ? 'prazo indeterminado' : it.data_fim ? 'fim atual: <b>' + fd(it.data_fim) + '</b>' : 'sem prazo definido') + '</div>' +
+            '<h4 style="margin:0.4rem 0">📎 Documentos</h4>' +
+            (linhasDoc.length ? '<table class="table-pls"><thead><tr><th>Tipo</th><th>Arquivo</th><th>Em</th><th></th></tr></thead><tbody>' + linhasDoc.join('') + '</tbody></table>' : '<div class="sx-muted">Nenhum documento anexado ainda.</div>') +
+            '<div class="form-grid" style="margin-top:0.6rem"><div class="form-group"><label class="form-label">Tipo</label><select id="lo-doc-tipo" class="form-control">' + DOC_TIPOS.map(function(t) { return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Arquivo (PDF, JPG ou PNG, até 15 MB)</label><input id="lo-doc-file" type="file" class="form-control" accept="image/*,application/pdf"></div></div>' +
+            '<button type="button" class="btn-pls-primary" data-sx="lo-doc-add" data-id="' + id + '">📎 Anexar</button>' +
+            '<h4 style="margin:1.2rem 0 0.4rem">🔁 Renovações</h4>' +
+            (it.data_inicio ? '<div class="sx-muted">' + fd(it.data_inicio) + ' — início da locação</div>' : '') +
+            (rn.length ? '<table class="table-pls"><thead><tr><th>Registrada em</th><th>Fim anterior</th><th>Novo fim</th><th>Observação</th><th></th></tr></thead><tbody>' + rn.map(function(r) {
+              return '<tr><td>' + fd(String(r.created_at).slice(0, 10)) + '<br><span class="sx-muted">' + esc(r.criado_por || '') + '</span></td><td>' + fd(r.data_fim_ant) + '</td><td><b>' + fd(r.data_fim_nova) + '</b></td><td>' + esc(r.obs || '') + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary sx-del" data-sx="lo-ren-del" data-id="' + r.id + '">✕</button></td></tr>';
+            }).join('') + '</tbody></table>' : '<div class="sx-muted">Nenhuma renovação registrada.</div>');
+          if (it.prazo_indeterminado) h += '<div class="sx-dica" style="margin-top:0.6rem">Locação com prazo indeterminado: não precisa renovar. Para voltar a ter prazo, edite a locação.</div>';
+          else h += '<div class="form-grid" style="margin-top:0.6rem"><div class="form-group"><label class="form-label">Novo fim da locação</label><input id="lo-ren-fim" type="date" class="form-control" value="' + esc(it.data_fim ? addDias(it.data_fim, 30) : '') + '"></div>' +
+            '<div class="form-group"><label class="form-label">Observação (quem pediu, ordem de compra…)</label><input id="lo-ren-obs" class="form-control" placeholder="ex.: Alex solicitou +30 dias, OC 1234"></div></div>' +
+            '<button type="button" class="btn-pls-primary" data-sx="lo-ren-add" data-id="' + id + '">🔁 Registrar renovação</button>';
+          return h;
+        }
+        function abrirDocs(id) {
+          var it = L.itens.filter(function(x) { return x.id === id; })[0]; if (!it) return;
+          abrirModal('Documentos e renovações — ' + (it.cliente || '') + ' · ' + (it.equipamento || 'contrato de serviço'), '<div id="lo-docs-corpo">' + docsCorpo(id) + '</div>', 'Fechar', function() {});
+        }
+        function repintarDocs(id) { var el = $('lo-docs-corpo'); if (el) el.innerHTML = docsCorpo(id); renderLoc(); }
+        function docAdd(id) {
+          var fi = $('lo-doc-file').files[0], tipo = $('lo-doc-tipo').value; if (!fi) { showToast('Escolha o arquivo.', 3500); return; }
+          comprimirImagem(fi).then(function(o) {
+            if (o.blob.size > 15 * 1048576) throw new Error('O arquivo passa de 15 MB.');
+            var caminho = 'loc/' + id + '/' + novoUUID() + '-' + nomeSeguro(o.nome);
+            return chk(sb.storage.from('com-arquivos').upload(caminho, o.blob, { contentType: o.mime || 'application/octet-stream', upsert: false })).then(function() {
+              return chk(sb.from('loc_anexos').insert({ item_id: id, tipo: tipo, nome: o.nome, caminho: caminho, criado_por: nomeUsuario() }).select());
+            });
+          }).then(carregarLoc).then(function() { repintarDocs(id); showToast('Documento anexado ✔'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 6000); });
+        }
+        function docAbrir(aid) {
+          var a = null; Object.keys(L.anex).forEach(function(k) { L.anex[k].forEach(function(x) { if (x.id === aid) a = x; }); }); if (!a) return;
+          var w = window.open('', '_blank');
+          urlStorage('com-arquivos', a.caminho).then(function(u) { if (!u) { if (w) w.close(); showToast('Não foi possível abrir o arquivo.', 4000); return; } if (w) w.location.href = u; else window.location.href = u; });
+        }
+        function docRemover(aid) {
+          var a = null; Object.keys(L.anex).forEach(function(k) { L.anex[k].forEach(function(x) { if (x.id === aid) a = x; }); }); if (!a || !confirm('Remover o documento “' + a.nome + '”?')) return;
+          chk(sb.from('loc_anexos').delete().eq('id', aid).select()).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão.'); sb.storage.from('com-arquivos').remove([a.caminho]); return carregarLoc(); })
+            .then(function() { repintarDocs(a.item_id); showToast('Documento removido.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function renAdd(id) {
+          var it = L.itens.filter(function(x) { return x.id === id; })[0], nf = $('lo-ren-fim').value, obs = $('lo-ren-obs').value.trim(); if (!it) return;
+          if (!nf) { showToast('Informe o novo fim da locação.', 3500); return; }
+          if (it.data_fim && nf <= it.data_fim && !confirm('O novo fim (' + fd(nf) + ') não é depois do fim atual (' + fd(it.data_fim) + '). Registrar mesmo assim?')) return;
+          chk(sb.from('loc_renovacoes').insert({ item_id: id, data_fim_ant: it.data_fim || null, data_fim_nova: nf, obs: obs || null, criado_por: nomeUsuario() }).select()).then(function(r) {
+            if (!r.data || !r.data.length) throw new Error('Sem permissão.');
+            return chk(sb.from('loc_itens').update({ data_fim: nf, prazo_indeterminado: false }).eq('id', id).select());
+          }).then(carregarLoc).then(function() { repintarDocs(id); desenharRail(); showToast('Renovação registrada ✔'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 6000); });
+        }
+        function renRemover(rid) {
+          var r0 = null, iid = null; Object.keys(L.ren).forEach(function(k) { L.ren[k].forEach(function(x) { if (x.id === rid) { r0 = x; iid = k; } }); }); if (!r0) return;
+          if (!confirm('Apagar este registro do histórico? (o fim atual da locação não muda)')) return;
+          chk(sb.from('loc_renovacoes').delete().eq('id', rid).select()).then(carregarLoc).then(function() { repintarDocs(iid); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
         }
         function renderContratos() {
           var todos = rowsContratos('locacao'), q = norm(L.cBusca);
@@ -8270,6 +8355,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             }).then(function(r) {
               if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.');
               if ((arq || tirar) && fotoAntiga) sb.storage.from('com-fotos').remove([fotoAntiga]);
+              if (it && it.data_fim && d.data_fim && it.data_fim !== d.data_fim) return chk(sb.from('loc_renovacoes').insert({ item_id: it.id, data_fim_ant: it.data_fim, data_fim_nova: d.data_fim, obs: 'Alterado na edição do cadastro', criado_por: nomeUsuario() })).then(carregarLoc);
               return carregarLoc();
             }).then(function() { renderLoc(); desenharRail(); showToast('Salvo ✔'); });
           });
@@ -12719,6 +12805,12 @@ var PLSOS = (function() {
             case 'lo-editar': abrirItem(id); break;
             case 'lo-excluir': excluirItem(id); break;
             case 'lo-contrato': abrirAssinado(L.props[id]); break;
+            case 'lo-docs': abrirDocs(id); break;
+            case 'lo-doc-add': docAdd(id); break;
+            case 'lo-doc-open': docAbrir(id); break;
+            case 'lo-doc-del': docRemover(id); break;
+            case 'lo-ren-add': renAdd(id); break;
+            case 'lo-ren-del': renRemover(id); break;
             case 'lo-imprimir': imprimirFaturas(); break;
             case 'rh-sub': subRh = a.getAttribute('data-v'); renderRh(); break;
             case 'rh-novo': abrirColab(null); break;
