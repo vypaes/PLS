@@ -3257,10 +3257,11 @@ var PLSDOC = (function() {
       .catch(function(e) { b.disabled = false; b.textContent = 'Enviar para a pasta'; C.toast('Erro ao enviar: ' + (e.message || e)); });
   }
   function ver(d) {
+    var img = /^image\//.test(d.mime || ''), w = img ? null : window.open('', '_blank'); // abre a janela já no toque (o celular bloqueia se abrir depois)
     C.chk(C.sb.storage.from(BUCKET).createSignedUrl(d.caminho, 600)).then(function(r) {
-      var u = r.data && r.data.signedUrl; if (!u) throw new Error('arquivo não encontrado');
-      if (/^image\//.test(d.mime || '')) foto(u, 0, d.descricao || d.nome_arquivo); else window.open(u, '_blank');
-    }).catch(function(e) { C.toast('Não foi possível abrir: ' + (e.message || e)); });
+      var u = r.data && (r.data.signedUrl || r.data.signedURL); if (!u) throw new Error('arquivo não encontrado');
+      if (img) foto(u, 0, d.descricao || d.nome_arquivo); else if (w && !w.closed) w.location.href = u; else window.location.href = u;
+    }).catch(function(e) { if (w) { try { w.close(); } catch (x) {} } C.toast('Não foi possível abrir: ' + (e.message || e)); });
   }
   function excluir(d) {
     if (!confirm('Excluir o documento “' + (d.descricao || d.nome_arquivo) + '” da pasta?')) return;
