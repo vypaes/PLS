@@ -2597,7 +2597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v73 — 21/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v74 — 21/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -11047,7 +11047,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '</div>' +
             '<div id="mn-p-equip" class="sx-pane">' +
               '<div class="sx-toolbar">' + '<div class="mn-modo"><button type="button" data-man="eqmodo" data-v="equip" class="mn-m-equip">🚜 Equipamentos</button><button type="button" data-man="eqmodo" data-v="pecas" class="mn-m-pecas">🔩 Buscar peças</button></div>' + '<button type="button" class="btn-pls-primary" data-man="eq-novo">➕ Novo equipamento de cliente</button>' +
-              '<select id="mn-e-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
+              '<select id="mn-e-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' + '<select id="mn-e-orig" class="form-control sx-w"><option value="">Frota PLS e equipamentos dos clientes</option><option value="frota">Só máquinas da frota PLS</option><option value="cliente">Só equipamentos dos clientes</option></select>' +
               '<input id="mn-e-busca" class="form-control sx-w2" placeholder="Buscar cliente, modelo, série ou peça…"></div>' +
               '<div class="table-container" id="mn-equip"></div>' +
             '</div>' +
@@ -11091,7 +11091,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var r = p.r, e = p.e, prox = [];
               if (r.proxima_horas != null) prox.push(fmtH(r.proxima_horas) + ' h <span class="sx-muted">(atual ' + (e.horimetro != null ? fmtH(e.horimetro) : '?') + ' h)</span>');
               if (r.proxima_data) prox.push(fd(r.proxima_data));
-              return '<tr><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(nomeEq(e)) + (e.serie ? '<br><span class="sx-muted">série ' + esc(e.serie) + '</span>' : '') + '</td><td>' + esc(r.servico) + '</td>' +
+              return '<tr><td><b>' + esc(e.cliente) + '</b>' + (e.loc_item_id ? '<br><span class="sx-pill" style="background:#ffedd5;color:#9a3412" title="Máquina da frota PLS. O cliente muda sozinho conforme a locação.">🏷 Frota PLS' + (e.cliente === 'PLS EMPILHADEIRAS' ? ' · na base' : ' · locada') + '</span>' : '') + '</td><td>' + esc(nomeEq(e)) + (e.serie ? '<br><span class="sx-muted">série ' + esc(e.serie) + '</span>' : '') + '</td><td>' + esc(r.servico) + '</td>' +
                 '<td>' + fd(r.data) + (r.horimetro != null ? '<br><span class="sx-muted">' + fmtH(r.horimetro) + ' h</span>' : '') + '</td><td>' + prox.join('<br>') + '</td>' +
                 '<td>' + pillSev(p.sev) + '<br><span class="sx-muted">' + esc(p.txt) + '</span>' + (r.avisado_em ? '<br><span class="sx-muted">cliente avisado em ' + fd(r.avisado_em).slice(0, 5) + '</span>' : '') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="msg" data-id="' + r.id + '">📲 Avisar</button> ' +
@@ -11102,12 +11102,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function renderEquipMan() {
           var q = norm(M.eBusca);
           var sce = $('mn-e-cli'); if (sce) { var ncl = {}; M.equip.forEach(function(e) { ncl[e.cliente] = 1; }); var cls = Object.keys(ncl).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); if (sce.options.length !== cls.length + 1) sce.innerHTML = '<option value="">Todos os clientes</option>' + cls.map(function(n) { return '<option>' + esc(n) + '</option>'; }).join(''); sce.value = M.eCli || ''; }
-          var lista = M.equip.filter(function(e) { return e.ativo !== false && (!M.eCli || e.cliente === M.eCli) && (!q || norm(e.cliente + ' ' + nomeEq(e) + ' ' + (e.serie || '') + ' ' + (e.tag || '') + ' ' + (e.pecas || []).map(function(x) { return [x.i, x.p, x.m, x.f, x.fc].join(' '); }).join(' ')).indexOf(q) >= 0); });
+          var lista = M.equip.filter(function(e) { return e.ativo !== false && (!M.eCli || e.cliente === M.eCli) && (!M.eOrig || (M.eOrig === 'frota' ? !!e.loc_item_id : !e.loc_item_id)) && (!q || norm(e.cliente + ' ' + nomeEq(e) + ' ' + (e.serie || '') + ' ' + (e.tag || '') + ' ' + (e.pecas || []).map(function(x) { return [x.i, x.p, x.m, x.f, x.fc].join(' '); }).join(' ')).indexOf(q) >= 0); });
           var ult = {}; ultimasRev().forEach(function(r) { if (!ult[r.equip_id] || r.data > ult[r.equip_id].data) ult[r.equip_id] = r; });
           $('mn-equip').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>Equipamento</th><th>Série</th><th>Horímetro</th><th>Plano</th><th>Última revisão</th><th></th></tr></thead><tbody>' +
             lista.map(function(e) {
               var pl = planoPorId(e.plano_id), u = ult[e.id];
-              return '<tr><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(nomeEq(e)) + (e.tag ? '<br><span class="sx-muted">' + esc(e.tag) + '</span>' : '') + '</td><td>' + esc(e.serie || '—') + '</td>' +
+              return '<tr><td><b>' + esc(e.cliente) + '</b>' + (e.loc_item_id ? '<br><span class="sx-pill" style="background:#ffedd5;color:#9a3412" title="Máquina da frota PLS. O cliente muda sozinho conforme a locação.">🏷 Frota PLS' + (e.cliente === 'PLS EMPILHADEIRAS' ? ' · na base' : ' · locada') + '</span>' : '') + '</td><td>' + esc(nomeEq(e)) + (e.tag ? '<br><span class="sx-muted">' + esc(e.tag) + '</span>' : '') + '</td><td>' + esc(e.serie || '—') + '</td>' +
                 '<td>' + (e.horimetro != null ? fmtH(e.horimetro) + ' h<br><span class="sx-muted">em ' + fd(e.horimetro_em) + '</span>' : '—') + '</td>' +
                 '<td>' + (pl ? esc(pl.modelos || pl.nome) : '<span class="sx-muted">sem plano</span>') + '</td><td>' + (u ? esc(u.servico) + '<br><span class="sx-muted">' + fd(u.data) + '</span>' : '—') + '</td>' +
                 '<td class="sx-acoes"><button type="button" class="btn-pls-primary" data-man="rev-nova" data-eq="' + e.id + '">🔧 Revisão</button> ' +
@@ -11347,7 +11347,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (!e) return;
           abrirModal(id ? 'Editar equipamento' : (cloneDe ? 'Clonar equipamento — escolha o novo cliente e o nº de série' : 'Novo equipamento de cliente'),
             '<div class="form-grid">' +
-              '<div class="form-group full-width"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="mn-e-cliente" class="form-control" list="mn-dl-cli" value="' + esc(e.cliente) + '" placeholder="Digite para buscar o cliente">' + dlClientes('mn-dl-cli') + '</div>' +
+              (e.loc_item_id ? '<div class="form-group full-width"><label class="form-label">Cliente</label><input id="mn-e-cliente" class="form-control" value="' + esc(e.cliente) + '" readonly style="background:#f1f5f9"><div class="sx-muted" style="font-size:0.75rem;margin-top:3px">🏷 Máquina da <b>frota PLS</b>. O cliente acompanha a locação automaticamente: enquanto estiver locada, fica no nome do cliente; quando volta, fica em PLS EMPILHADEIRAS. Para trocar, altere a locação no setor Locações.</div></div>' :
+              '<div class="form-group full-width"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="mn-e-cliente" class="form-control" list="mn-dl-cli" value="' + esc(e.cliente) + '" placeholder="Digite para buscar o cliente">' + dlClientes('mn-dl-cli') + '</div>') +
               '<div class="form-group full-width"><label class="form-label">Plano de manutenção</label><select id="mn-e-plano" class="form-control"><option value="">(sem plano — escolher depois)</option>' +
                 M.planos.map(function(p) { return '<option value="' + p.id + '"' + (p.id === e.plano_id ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
               '<div class="form-group"><label class="form-label">Marca</label><input id="mn-e-marca" class="form-control" value="' + esc(e.marca || '') + '"></div>' +
@@ -11370,13 +11371,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var cli = $('mn-e-cliente').value.trim(); if (!cli) throw new Error('Informe o cliente.');
               var ex = cliPorNome(cli); if (ex) cli = ex.nome;
               var pid = $('mn-e-plano').value || null, pl = pid ? planoPorId(pid) : null, hor = numOuNull($('mn-e-hor').value);
-              var d = { cliente: cli, plano_id: pid, marca: $('mn-e-marca').value.trim() || (pl && pl.marca) || null, modelo: $('mn-e-modelo').value.trim() || null,
+              var d = { plano_id: pid, marca: $('mn-e-marca').value.trim() || (pl && pl.marca) || null, modelo: $('mn-e-modelo').value.trim() || null,
                 motor: $('mn-e-motor').value.trim() || null, transmissao: $('mn-e-trans').value.trim() || null, serie: $('mn-e-serie').value.trim() || null, tag: $('mn-e-tag').value.trim() || null, obs: $('mn-e-obs').value.trim() || null, updated_at: new Date().toISOString() };
               if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : hoje(); }
               var arqE = $('mn-e-foto').files[0], tirarE = $('mn-e-fotodel') && $('mn-e-fotodel').checked;
               return (arqE ? lerFoto(arqE) : Promise.resolve(null)).then(function(fotoE) {
                 if (fotoE) d.foto = fotoE; else if (tirarE) d.foto = null; else if (cloneDe && e.foto) d.foto = e.foto;
-                d.pecas = lerPecas();
+                d.pecas = lerPecas(); if (!e.loc_item_id) d.cliente = cli;
                 var q = id ? sb.from('man_equip').update(d).eq('id', id).select() : sb.from('man_equip').insert(d).select();
                 return chk(q);
               }).then(function(r) {
@@ -11387,6 +11388,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function excluirEquip(id) {
           var e = eqPorId(id); if (!e) return;
+          if (e.loc_item_id) { showToast('Esta máquina é da frota PLS. Para tirar, dê baixa nela no setor Locações/Frota.', 6000); return; }
           if (!confirm('Excluir o equipamento ' + nomeEq(e) + ' de ' + e.cliente + ' e todo o histórico de revisões dele?')) return;
           chk(sb.from('man_equip').delete().eq('id', id).select('id')).then(function(r) {
             if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.');
@@ -12346,7 +12348,8 @@ var PLSEQ = (function() {
     S = { id: id || null, e: e, orig: (e.pecas || []).slice(), foto: e.foto || '', n: (e.pecas || []).length, pid: e.plano_id || '' };
     abrirRoot();
     var h = '<div class="pk-top"><b>' + (id ? 'Equipamento do cliente' : 'Novo equipamento do cliente') + '</b><button type="button" id="eq-x">✕ Fechar</button></div><div class="pk-main"><div class="pk-c">' +
-      '<div class="fld"><label>Cliente *</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="o-clilist"></div></div>' +
+      (e.loc_item_id ? '<div class="fld"><label>Cliente</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" readonly style="background:#f1f5f9"><div class="sub" style="margin-top:6px">🏷 Máquina da <b>frota PLS</b>. O cliente acompanha a locação automaticamente (locada: nome do cliente; na base: PLS EMPILHADEIRAS).</div><div id="o-clilist"></div></div>' :
+      '<div class="fld"><label>Cliente *</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="o-clilist"></div></div>') +
       '<div class="fld"><label>Identificação / TAG / frota</label><input type="text" id="eq-tag" value="' + esc(e.tag || '') + '" placeholder="Ex.: Empilhadeira elétrica retrátil"></div>' +
       '<div class="row2"><div class="fld"><label>Marca</label><input type="text" id="eq-marca" value="' + esc(e.marca || '') + '"></div><div class="fld"><label>Modelo</label><input type="text" id="eq-mod" value="' + esc(e.modelo || '') + '"></div></div>' +
       '<div class="row2"><div class="fld"><label>Nº de série</label><input type="text" id="eq-serie" value="' + esc(e.serie || '') + '"></div><div class="fld"><label>Horímetro atual</label><input type="text" inputmode="decimal" id="eq-hor" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div></div>' +
@@ -12357,7 +12360,7 @@ var PLSEQ = (function() {
       '<div class="hd">PEÇAS DESTE EQUIPAMENTO</div><div class="sub">Cada peça pode ter foto e fornecedor. Quando o fornecedor mudar, o anterior fica no histórico.</div>' +
       '<datalist id="eq-dl-forn">' + fornecedores().map(function(f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist><datalist id="eq-dl-int">' + colsPlano(e.plano_id).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
       '<div id="eq-pecas">' + (e.pecas || []).map(function(p, k) { return cardPeca(p, k); }).join('') + '</div><button type="button" class="btn2" id="eq-padd">➕ Adicionar peça</button>' +
-      '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="eq-ok">Salvar equipamento</button>' + (id && C.admin() ? '<button type="button" class="pk-btn r" id="eq-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
+      '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="eq-ok">Salvar equipamento</button>' + (id && C.admin() && !e.loc_item_id ? '<button type="button" class="pk-btn r" id="eq-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
     ROOT.innerHTML = h;
     $('eq-x').onclick = function() { if (confirm('Fechar sem salvar?')) fechar(); };
     var ci = $('o-cli'), cl = $('o-clilist');
@@ -12378,10 +12381,11 @@ var PLSEQ = (function() {
     };
     $('eq-ok').onclick = function() {
       var cli = ci.value.trim(); if (!cli) { C.toast('Informe o cliente.'); return; }
-      if (C.clientes().indexOf(cli) < 0) { C.toast('Escolha um cliente da lista cadastrada (busque e toque no nome).'); return; }
+      if (!e.loc_item_id && C.clientes().indexOf(cli) < 0) { C.toast('Escolha um cliente da lista cadastrada (busque e toque no nome).'); return; }
       var hor = String($('eq-hor').value || '').trim().replace(/\./g, '').replace(',', '.'); hor = hor === '' || isNaN(Number(hor)) ? null : Number(hor);
-      var d = { cliente: cli, tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: $('eq-motor').value.trim() || null, transmissao: $('eq-trans').value.trim() || null,
+      var d = { tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: $('eq-motor').value.trim() || null, transmissao: $('eq-trans').value.trim() || null,
         plano_id: $('eq-plano').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, pecas: lerPecasForm(), updated_at: new Date().toISOString() };
+      if (!e.loc_item_id) d.cliente = cli;
       if (!d.tag && !d.marca && !d.modelo) { C.toast('Informe ao menos a identificação, a marca ou o modelo.'); return; }
       if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : U.hojeISO(); }
       var b = $('eq-ok'); b.disabled = true; b.textContent = 'Salvando…';
@@ -12437,7 +12441,7 @@ var PLSOS = (function() {
     $('pk-x').onclick = fechaFn || fechar;
   }
   function carregarEquips() {
-    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
+    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
   }
   function eqDoCliente() { return EQS.filter(function(e) { return e.cliente === S.cliente && e.ativo !== false; }); }
   // ---------- formulário ----------
@@ -12480,7 +12484,7 @@ var PLSOS = (function() {
   }
   function pintaEqs() {
     var l = S.cliente ? eqDoCliente() : [], b = $('o-eqs'); if (!b) return;
-    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b><br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
+    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
     [].forEach.call(b.querySelectorAll('.eqc'), function(d) {
       d.onclick = function() {
         colher(); var e = EQS.filter(function(x) { return x.id === d.getAttribute('data-id'); })[0]; if (!e) return;
@@ -13221,6 +13225,7 @@ var PLSENT = (function() {
           if (t.id === 'mn-e-plano') { var dl = $('mn-dl-int'); if (dl) dl.innerHTML = colsPlano(t.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); }
           else if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
           else if (t.id === 'mn-e-cli') { M.eCli = t.value; renderEquipMan(); }
+          else if (t.id === 'mn-e-orig') { M.eOrig = t.value; renderEquipMan(); }
           else if (t.id === 'mn-o-cli') { M.oCli = t.value; renderOs(); }
           else if (t.id === 'mn-o-mes') { M.oMes = t.value; renderOs(); }
           else if (t.id === 'mn-en-cli') { M.enCli = t.value; renderEnt(); }

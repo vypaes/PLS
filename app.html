@@ -869,7 +869,7 @@ function osItem(o){var c=o.condicao||'';return '<div class="card" data-osabrir="
   +(c?'<div class="task"><span class="badge '+(/pend/i.test(c)?'org':/fora/i.test(c)?'red':'grn')+'">'+esc(c.replace(/\.$/,''))+'</span></div>':'')+'</div>';}
 function enItem(o){var r=PLSENT.resumoItens(o);return '<div class="card" data-enabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge blu">📦 Entrega '+o.numero+'</span></div>'
   +'<div class="sub">📦 '+esc(r.ent||'—')+'</div>'+(r.rec?'<div class="sub">↩ '+esc(r.rec)+'</div>':'')+'<div class="sub">'+br(o.data)+(o.hora?' '+esc(o.hora):'')+' · recebido por '+esc(o.recebido_por||'—')+'</div><div class="sub">Entregue por '+esc(o.entregue_por||'')+'</div></div>';}
-function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto?'<img class="mnimg" src="'+e.foto+'" alt="">':'<div class="mnimg">🚜</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div><div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
+function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto?'<img class="mnimg" src="'+e.foto+'" alt="">':'<div class="mnimg">🚜</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div>'+(e.loc_item_id?'<span class="badge org">🏷 Frota PLS'+(e.cliente==='PLS EMPILHADEIRAS'?' · na base':' · locada')+'</span>':'')+'<div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
 function pcItem(x){var p=x.p,e=x.e;var l1=[p.p?'Cód. PLS '+esc(p.p):'',p.m?'Modelo '+esc(p.m):'',p.q?'Qtd '+esc(p.q):'',p.t?'Revisão '+esc(p.t):''].filter(Boolean).join(' · ');
   return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(p.foto?'<img class="mnimg" src="'+p.foto+'" alt="">':'<div class="mnimg">🔩</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(p.i)+'</div>'+(l1?'<div class="sub">'+l1+'</div>':'')
   +(p.f||p.fc?'<div class="sub">🏭 <b>'+esc(p.f||'—')+'</b>'+(p.fc?' · cód. '+esc(p.fc):'')+'</div>':'')+'<div class="sub">'+esc(e.cliente)+' · '+esc(PLSEQ.nomeEquip(e))+'</div></div></div></div>';}
@@ -2394,7 +2394,8 @@ var PLSEQ = (function() {
     S = { id: id || null, e: e, orig: (e.pecas || []).slice(), foto: e.foto || '', n: (e.pecas || []).length, pid: e.plano_id || '' };
     abrirRoot();
     var h = '<div class="pk-top"><b>' + (id ? 'Equipamento do cliente' : 'Novo equipamento do cliente') + '</b><button type="button" id="eq-x">✕ Fechar</button></div><div class="pk-main"><div class="pk-c">' +
-      '<div class="fld"><label>Cliente *</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="o-clilist"></div></div>' +
+      (e.loc_item_id ? '<div class="fld"><label>Cliente</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" readonly style="background:#f1f5f9"><div class="sub" style="margin-top:6px">🏷 Máquina da <b>frota PLS</b>. O cliente acompanha a locação automaticamente (locada: nome do cliente; na base: PLS EMPILHADEIRAS).</div><div id="o-clilist"></div></div>' :
+      '<div class="fld"><label>Cliente *</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="o-clilist"></div></div>') +
       '<div class="fld"><label>Identificação / TAG / frota</label><input type="text" id="eq-tag" value="' + esc(e.tag || '') + '" placeholder="Ex.: Empilhadeira elétrica retrátil"></div>' +
       '<div class="row2"><div class="fld"><label>Marca</label><input type="text" id="eq-marca" value="' + esc(e.marca || '') + '"></div><div class="fld"><label>Modelo</label><input type="text" id="eq-mod" value="' + esc(e.modelo || '') + '"></div></div>' +
       '<div class="row2"><div class="fld"><label>Nº de série</label><input type="text" id="eq-serie" value="' + esc(e.serie || '') + '"></div><div class="fld"><label>Horímetro atual</label><input type="text" inputmode="decimal" id="eq-hor" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div></div>' +
@@ -2405,7 +2406,7 @@ var PLSEQ = (function() {
       '<div class="hd">PEÇAS DESTE EQUIPAMENTO</div><div class="sub">Cada peça pode ter foto e fornecedor. Quando o fornecedor mudar, o anterior fica no histórico.</div>' +
       '<datalist id="eq-dl-forn">' + fornecedores().map(function(f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist><datalist id="eq-dl-int">' + colsPlano(e.plano_id).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
       '<div id="eq-pecas">' + (e.pecas || []).map(function(p, k) { return cardPeca(p, k); }).join('') + '</div><button type="button" class="btn2" id="eq-padd">➕ Adicionar peça</button>' +
-      '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="eq-ok">Salvar equipamento</button>' + (id && C.admin() ? '<button type="button" class="pk-btn r" id="eq-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
+      '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="eq-ok">Salvar equipamento</button>' + (id && C.admin() && !e.loc_item_id ? '<button type="button" class="pk-btn r" id="eq-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
     ROOT.innerHTML = h;
     $('eq-x').onclick = function() { if (confirm('Fechar sem salvar?')) fechar(); };
     var ci = $('o-cli'), cl = $('o-clilist');
@@ -2426,10 +2427,11 @@ var PLSEQ = (function() {
     };
     $('eq-ok').onclick = function() {
       var cli = ci.value.trim(); if (!cli) { C.toast('Informe o cliente.'); return; }
-      if (C.clientes().indexOf(cli) < 0) { C.toast('Escolha um cliente da lista cadastrada (busque e toque no nome).'); return; }
+      if (!e.loc_item_id && C.clientes().indexOf(cli) < 0) { C.toast('Escolha um cliente da lista cadastrada (busque e toque no nome).'); return; }
       var hor = String($('eq-hor').value || '').trim().replace(/\./g, '').replace(',', '.'); hor = hor === '' || isNaN(Number(hor)) ? null : Number(hor);
-      var d = { cliente: cli, tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: $('eq-motor').value.trim() || null, transmissao: $('eq-trans').value.trim() || null,
+      var d = { tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: $('eq-motor').value.trim() || null, transmissao: $('eq-trans').value.trim() || null,
         plano_id: $('eq-plano').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, pecas: lerPecasForm(), updated_at: new Date().toISOString() };
+      if (!e.loc_item_id) d.cliente = cli;
       if (!d.tag && !d.marca && !d.modelo) { C.toast('Informe ao menos a identificação, a marca ou o modelo.'); return; }
       if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : U.hojeISO(); }
       var b = $('eq-ok'); b.disabled = true; b.textContent = 'Salvando…';
@@ -2485,7 +2487,7 @@ var PLSOS = (function() {
     $('pk-x').onclick = fechaFn || fechar;
   }
   function carregarEquips() {
-    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
+    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
   }
   function eqDoCliente() { return EQS.filter(function(e) { return e.cliente === S.cliente && e.ativo !== false; }); }
   // ---------- formulário ----------
@@ -2528,7 +2530,7 @@ var PLSOS = (function() {
   }
   function pintaEqs() {
     var l = S.cliente ? eqDoCliente() : [], b = $('o-eqs'); if (!b) return;
-    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b><br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
+    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
     [].forEach.call(b.querySelectorAll('.eqc'), function(d) {
       d.onclick = function() {
         colher(); var e = EQS.filter(function(x) { return x.id === d.getAttribute('data-id'); })[0]; if (!e) return;
