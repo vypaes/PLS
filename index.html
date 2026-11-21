@@ -2597,7 +2597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v75 — 21/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v76 — 21/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7894,8 +7894,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return carregarParc();
           }).then(renderParc).catch(function(e) { console.error(e); showToast('Não foi possível carregar: ' + (e.message || e), 5000); });
         }
+        var repassesGerados = 0;
         function carregarParc() {
           if (!PA.sel) { PA.d = null; return Promise.resolve(); }
+          if (!souParceiro() && Date.now() - repassesGerados > 60000) { repassesGerados = Date.now(); return sb.rpc('gerar_repasses').then(function() {}, function() {}).then(carregarParc); }
           if (PA.sel === TODOS) {
             return Promise.all(PA.nomes.map(function(n) { return chk(sb.rpc('parceiro_painel', { p_parceiro: n })).then(function(r) { return r.data; }); })).then(function(lista) {
               var m = { parceiro: 'Todos', equipamentos: [], propostas: [], lancamentos: [] }, vistos = {};
@@ -7933,14 +7935,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             h = pr.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
               return '<tr>' + tdP(x) + '<td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
           } else if (PA.sub === 'contr') {
-            h = cont.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
-              return '<tr>' + tdP(i) + '<td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
+            h = cont.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th style="text-align:right">Repasse ao parceiro</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
+              return '<tr>' + tdP(i) + '<td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td style="text-align:right">' + (i.contrato_modelo !== 'PARCEIRO' && Number(i.repasse_valor) > 0 ? brl(i.repasse_valor) + '/mês' + (i.repasse_dia ? '<br><span class="sx-muted">dia ' + i.repasse_dia + '</span>' : '') : i.contrato_modelo !== 'PARCEIRO' ? '<span style="color:#b45309" title="Informe em Locações → Editar contrato">não informado</span>' : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
           } else {
-            var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele.</span></div>';
+            var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele — gerado sozinho todo mês quando o contrato tem o repasse informado (🔁).</span></div>';
             var rot = function(sen) { return sen === 'RECEBER' ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') : (eu ? 'PLS paga a você' : 'PLS paga ao parceiro'); };
+            lc = lc.slice().sort(function(a, b) { if (a.pago !== b.pago) return a.pago ? 1 : -1; var x = String(a.vencimento || a.competencia || ''), y = String(b.vencimento || b.competencia || ''); return a.pago ? y.localeCompare(x) : x.localeCompare(y); });
             h = topo + (lc.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Competência</th><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + lc.map(function(l) {
               var venc = l.vencimento ? (!l.pago && l.vencimento < hoje() ? '<b style="color:#dc2626">' + fd(l.vencimento) + ' · VENCIDO</b>' : fd(l.vencimento)) : '—';
-              return '<tr>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + venc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
+              return '<tr>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + venc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + (l.auto ? ' <span class="sx-pill sx-st-disp" title="Gerado automaticamente pelo contrato de locação">🔁 automático</span>' : '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
                 (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum lançamento ainda.' + (eu ? '' : ' Use “Gerar comissões do mês”.') + '</div>');
           }
           $('pa-tabela').innerHTML = h;
@@ -7980,15 +7983,42 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Competência</label><input id="pa-n-mes" type="month" class="form-control" value="' + mesAtual() + '"></div>' +
             '<div class="form-group"><label class="form-label">Vencimento</label><input id="pa-n-venc" type="date" class="form-control" value="' + hoje() + '"></div>' +
             '<div class="form-group"><label class="form-label">Valor (R$)</label><input id="pa-n-val" class="form-control" inputmode="decimal" value="0,00"></div>' +
-            '<div class="form-group full-width"><label class="form-label">Descrição</label><input id="pa-n-desc" class="form-control" placeholder="ex.: repasse locação YALE — Kaefer"></div></div>', 'Lançar', function() {
+            '<div class="form-group full-width"><label class="form-label">Descrição</label><input id="pa-n-desc" class="form-control" placeholder="ex.: repasse locação YALE — Kaefer"></div>' +
+            '<div class="form-group"><label class="form-label">Repetição</label><select id="pa-n-rep" class="form-control" onchange="document.getElementById(\'pa-n-ate-box\').style.display=this.value===\'mensal\'?\'\':\'none\'"><option value="unico">Pagamento único</option><option value="mensal">Todo mês, até…</option></select></div>' +
+            '<div class="form-group" id="pa-n-ate-box" style="display:none"><label class="form-label">Último mês (inclusive)</label><input id="pa-n-ate" type="month" class="form-control"><div class="sx-muted" style="font-size:0.75rem;margin-top:3px">Cria um lançamento por mês, com o vencimento no mesmo dia de cada mês.</div></div></div>' +
+            '<div class="sx-dica">Repasse de máquina de parceiro locada pela PLS não precisa lançar aqui: informe o <b>repasse mensal</b> no contrato (Locações → Editar, ou na aprovação do orçamento) e o sistema cria os pagamentos de todos os meses sozinho.</div>', 'Lançar', function() {
             var v = r2(parseValor($('pa-n-val').value)); if (!(v > 0)) throw new Error('Informe o valor.');
-            return chk(sb.from('parceiro_lancamentos').insert({ parceiro: todos ? $('pa-n-par').value : PA.sel, sentido: $('pa-n-sen').value, competencia: $('pa-n-mes').value || null, vencimento: $('pa-n-venc').value || null, valor: v, descricao: $('pa-n-desc').value.trim() || null }).select())
-              .then(function() { return carregarParc(); }).then(function() { renderParc(); showToast('Lançamento criado ✔'); });
+            var base = { parceiro: todos ? $('pa-n-par').value : PA.sel, sentido: $('pa-n-sen').value, valor: v, descricao: $('pa-n-desc').value.trim() || null };
+            var venc = $('pa-n-venc').value || null, comp = $('pa-n-mes').value || (venc ? venc.slice(0, 7) : null), linhas = [];
+            if ($('pa-n-rep').value === 'mensal') {
+              var ate = $('pa-n-ate').value; if (!ate) throw new Error('Informe até qual mês repetir.');
+              if (!venc) throw new Error('Informe o vencimento do primeiro mês.');
+              var dia = Number(venc.slice(8, 10)), y = Number(venc.slice(0, 4)), m = Number(venc.slice(5, 7)), dc = comp ? (Number(comp.slice(0, 4)) * 12 + Number(comp.slice(5, 7))) - (y * 12 + m) : 0;
+              for (var k = 0; k < 120; k++) {
+                var yy = y + Math.floor((m - 1 + k) / 12), mm = (m - 1 + k) % 12 + 1, ult = new Date(yy, mm, 0).getDate();
+                var vd = yy + '-' + String(mm).padStart(2, '0') + '-' + String(Math.min(dia, ult)).padStart(2, '0');
+                var ci = yy * 12 + mm + dc, cs = Math.floor((ci - 1) / 12) + '-' + String((ci - 1) % 12 + 1).padStart(2, '0');
+                if (vd.slice(0, 7) > ate) break;
+                linhas.push(Object.assign({ competencia: cs, vencimento: vd }, base));
+              }
+              if (!linhas.length) throw new Error('O último mês precisa ser igual ou depois do primeiro vencimento.');
+            } else linhas.push(Object.assign({ competencia: comp, vencimento: venc }, base));
+            return chk(sb.from('parceiro_lancamentos').insert(linhas).select())
+              .then(function() { return carregarParc(); }).then(function() { renderParc(); showToast(linhas.length > 1 ? linhas.length + ' lançamentos criados (um por mês) ✔' : 'Lançamento criado ✔'); });
           });
         }
         function pagoLancParc(id) {
           var l = (PA.d.lancamentos || []).filter(function(x) { return x.id === id; })[0]; if (!l) return;
-          chk(sb.from('parceiro_lancamentos').update({ pago: !l.pago, pago_em: l.pago ? null : hoje() }).eq('id', id).select()).then(function() { return carregarParc(); }).then(renderParc).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+          if (l.pago) {
+            if (!confirm('Desfazer o pagamento de ' + brl(l.valor) + ' (' + (l.descricao || '') + ')?')) return;
+            chk(sb.from('parceiro_lancamentos').update({ pago: false, pago_em: null }).eq('id', id).select()).then(function() { return carregarParc(); }).then(renderParc).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+            return;
+          }
+          abrirModal('Registrar pagamento', '<p style="margin:0 0 0.6rem"><b>' + esc(l.descricao || 'Lançamento') + '</b><br><span class="sx-muted">' + (l.sentido === 'RECEBER' ? 'Parceiro paga à PLS' : 'PLS paga ao parceiro') + ' · ' + brl(l.valor) + (l.vencimento ? ' · vencimento ' + fd(l.vencimento) : '') + '</span></p>' +
+            '<div class="form-group"><label class="form-label">Data do pagamento</label><input id="pa-p-data" type="date" class="form-control" value="' + hoje() + '" max="' + hoje() + '"><div class="sx-muted" style="font-size:0.75rem;margin-top:3px">Já vem com a data de hoje. Se pagou em outro dia, troque aqui.</div></div>', 'Confirmar pagamento', function() {
+            var dt = $('pa-p-data').value; if (!dt) throw new Error('Informe a data do pagamento.');
+            return chk(sb.from('parceiro_lancamentos').update({ pago: true, pago_em: dt }).eq('id', id).select()).then(function() { return carregarParc(); }).then(function() { renderParc(); showToast('Pagamento registrado em ' + fd(dt) + ' ✔'); });
+          });
         }
         function delLancParc(id) {
           if (!confirm('Excluir este lançamento?')) return;
@@ -8266,9 +8296,22 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return '<div class="form-group"><label class="form-label">Modelo do contrato</label><select id="' + pref + '-modelo" class="form-control">' + opts([{ v: 'PLS', t: 'Padrão PLS (faturamento PLS)' }, { v: 'PARCEIRO', t: 'Grupo PLS + parceiro (fatura o parceiro)' }], par ? 'PARCEIRO' : 'PLS') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Comissão do parceiro à PLS</label><div style="display:flex;gap:0.4rem"><select id="' + pref + '-comtipo" class="form-control" style="max-width:90px"><option value="pct"' + (it.comissao_tipo !== 'fixo' ? ' selected' : '') + '>%</option><option value="fixo"' + (it.comissao_tipo === 'fixo' ? ' selected' : '') + '>R$/mês</option></select><input id="' + pref + '-comvalor" class="form-control" inputmode="decimal" value="' + numStr(it.comissao_valor || 0) + '"></div></div>';
         }
+        function htmlRepasse(pref, it) {
+          it = it || {};
+          return '<div class="form-group"><label class="form-label">Repasse mensal ao dono (parceiro)</label><input id="' + pref + '-rep" class="form-control" inputmode="decimal" placeholder="R$ por mês — só se a máquina for de parceiro" value="' + (Number(it.repasse_valor) > 0 ? numStr(it.repasse_valor) : '') + '"><div class="sx-muted" style="font-size:0.72rem;margin-top:2px">Máquina de parceiro com faturamento PLS: o sistema cria o pagamento ao parceiro de cada mês do contrato (Parceiros → Comissões e acertos).</div></div>' +
+            '<div class="form-group"><label class="form-label">Dia do pagamento ao parceiro</label><input id="' + pref + '-repdia" type="number" min="1" max="31" class="form-control" placeholder="igual ao vencimento da fatura" value="' + (it.repasse_dia || '') + '"></div>';
+        }
+        function lerRepasse(pref, soSePreenchido) {
+          var el = $(pref + '-rep'); if (!el) return {};
+          var v = String(el.value || '').trim(), d = parseInt($(pref + '-repdia').value, 10);
+          if (!v && soSePreenchido) return {};
+          var n = v ? r2(parseValor(v)) : null; if (v && !(n >= 0)) throw new Error('Repasse ao parceiro inválido.');
+          if ($(pref + '-repdia').value && !(d >= 1 && d <= 31)) throw new Error('Dia do pagamento ao parceiro: de 1 a 31.');
+          return { repasse_valor: n > 0 ? n : null, repasse_dia: d >= 1 && d <= 31 ? d : null };
+        }
         function lerComissao(pref) {
           var par = $(pref + '-modelo').value === 'PARCEIRO';
-          return { contrato_modelo: par ? 'PARCEIRO' : 'PLS', comissao_tipo: par ? $(pref + '-comtipo').value : null, comissao_valor: par ? r2(parseValor($(pref + '-comvalor').value)) : null };
+          return Object.assign({ contrato_modelo: par ? 'PARCEIRO' : 'PLS', comissao_tipo: par ? $(pref + '-comtipo').value : null, comissao_valor: par ? r2(parseValor($(pref + '-comvalor').value)) : null }, lerRepasse(pref, pref === 'lo-n'));
         }
         function comissaoDe(i) {
           if (!i || i.contrato_modelo !== 'PARCEIRO') return 0;
@@ -8300,7 +8343,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-m-envio" type="number" min="0" max="180" class="form-control" value="' + (it.dias_antes != null ? it.dias_antes : 30) + '"></div>' +
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31)</label><input id="lo-m-venc" type="number" min="1" max="31" class="form-control" value="' + (it.dia_vencimento || '') + '"></div>' +
             htmlPrazo('lo-m', it, serv) +
-            (serv ? '' : htmlComissao('lo-m', it)) +
+            (serv ? '' : htmlComissao('lo-m', it) + htmlRepasse('lo-m', it)) +
             '<div class="form-group full-width sx-dica" id="lo-m-ex" style="margin:0"></div>' +
             (serv ? '' : '<details class="form-group full-width" style="margin:0.2rem 0"' + (it.ficha || it.foto_path ? ' open' : '') + '><summary style="cursor:pointer;font-weight:700">📄 Ficha técnica e foto (usadas nas propostas do Comercial)</summary>' +
               '<div class="form-grid" style="margin-top:0.5rem"><div class="form-group full-width"><label class="form-label">Especificação — uma linha por item, no formato Rótulo: valor (linhas sem valor não aparecem)</label><textarea id="lo-m-ficha" class="form-control" rows="9">' + esc(it.ficha || FICHA_PADRAO) + '</textarea></div>' +
@@ -8321,7 +8364,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Dia do vencimento (1–31) <span class="req-star">*</span></label><input id="lo-n-venc" type="number" min="1" max="31" class="form-control"></div>' +
             '<div class="form-group"><label class="form-label">Enviar a fatura quantos dias ANTES do vencimento?</label><input id="lo-n-antes" type="number" min="0" max="180" class="form-control" value="30"></div>' +
             htmlPrazo('lo-n', { data_inicio: hoje() }) +
-            htmlComissao('lo-n', null) +
+            htmlComissao('lo-n', null) + htmlRepasse('lo-n', null) +
             '<div class="form-group full-width"><label class="form-label">Anotações</label><input id="lo-n-obs" class="form-control"></div></div>', 'Criar locação', function() {
             var eq = $('lo-n-eq').value, cli = $('lo-n-cli').value.trim(), venc = parseInt($('lo-n-venc').value, 10), antes = parseInt($('lo-n-antes').value, 10);
             if (!eq) throw new Error('Escolha o equipamento.'); if (!cli) throw new Error('Informe o cliente.');
@@ -10710,7 +10753,20 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="form-group"><label class="form-label">Duração (dias)</label><input id="cm-ap-dur" type="number" min="1" class="form-control" value="' + (d.modalidade === 'diaria' ? (Number(d.dias) || 1) : (Number(d.periodoMin) || 30)) + '"' + '></div>' +
               '<div class="form-group"><label class="sx-chkl" style="margin-top:1.6rem"><input type="checkbox" id="cm-ap-ind" onchange="document.getElementById(\'cm-ap-dur\').disabled=this.checked"> Prazo indeterminado</label></div>' +
               '<div class="form-group"><label class="form-label">Avisar quantos dias antes do fim?</label><input id="cm-ap-av" type="number" min="0" max="180" class="form-control" value="10"></div>' : '') + '</div>';
+          var parcItens = loc && d.modelo !== 'PARCEIRO' ? (d.itens || []).map(function(i) { var a = (L.itens || []).filter(function(x) { return x.id === i.item_id; })[0] || {}; return { item_id: i.item_id, equipamento: i.equipamento, dono: a.dono || i.dono || '', rep: a.repasse_valor, dia: a.repasse_dia }; }).filter(function(x) { return x.dono && !/^PLS/i.test(String(x.dono).trim()); }) : [];
+          if (parcItens.length) corpo += '<div class="sx-sec" style="margin-top:0.8rem">💸 Repasse aos parceiros (donos das máquinas)</div><div class="sx-muted" style="font-size:0.78rem;margin-bottom:0.4rem">Informe quanto a PLS paga por mês ao dono de cada máquina. O sistema já cria todos os pagamentos do contrato em Parceiros → Comissões e acertos.</div>' +
+            '<table class="table-pls"><thead><tr><th>Máquina</th><th>Dono</th><th>Repasse por mês (R$)</th><th>Dia do pagamento</th></tr></thead><tbody>' + parcItens.map(function(x, k) {
+              return '<tr><td>' + esc(x.equipamento) + '</td><td><b>' + esc(x.dono) + '</b></td><td><input id="cm-ap-rep' + k + '" class="form-control" inputmode="decimal" value="' + (Number(x.rep) > 0 ? numStr(x.rep) : '') + '" placeholder="0,00"></td><td><input id="cm-ap-rdia' + k + '" type="number" min="1" max="31" class="form-control" value="' + (x.dia || '') + '" placeholder="igual à fatura"></td></tr>';
+            }).join('') + '</tbody></table>';
           abrirModal('Aprovar proposta ' + p.codigo + ' → contrato', corpo, 'Aprovar e criar contrato', function() {
+            var repasses = {};
+            parcItens.forEach(function(x, k) {
+              var v = String($('cm-ap-rep' + k).value || '').trim(), dd = parseInt($('cm-ap-rdia' + k).value, 10);
+              if (!v) throw new Error('Informe o repasse mensal ao parceiro ' + x.dono + ' (' + x.equipamento + '). Se não houver repasse, coloque 0.');
+              var n = r2(parseValor(v)); if (isNaN(n) || n < 0) throw new Error('Repasse inválido para ' + x.equipamento + '.');
+              if ($('cm-ap-rdia' + k).value && !(dd >= 1 && dd <= 31)) throw new Error('Dia do pagamento ao parceiro: de 1 a 31.');
+              repasses[x.item_id] = { repasse_valor: n > 0 ? n : null, repasse_dia: dd >= 1 && dd <= 31 ? dd : null };
+            });
             var venc = parseInt($('cm-ap-venc').value, 10), antes = parseInt($('cm-ap-antes').value, 10), dataAp = $('cm-ap-data').value || hoje();
             if (!(venc >= 1 && venc <= 31)) throw new Error('Dia do vencimento de 1 a 31.');
             if (isNaN(antes) || antes < 0 || antes > 180) throw new Error('Dias antes: de 0 a 180.');
@@ -10721,10 +10777,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               if (!ind && !(dur > 0)) throw new Error('Informe a duração em dias ou marque prazo indeterminado.');
               prazo = { data_inicio: ini, data_fim: ind ? null : addDias(ini, dur), prazo_indeterminado: ind, aviso_fim_dias: isNaN(av) ? 10 : av };
             }
-            return aprovar(p, venc, antes, dataAp, liq, prazo);
+            return aprovar(p, venc, antes, dataAp, liq, prazo, repasses);
           });
         }
-        function aprovar(p, venc, antes, dataAp, liq, prazo) {
+        function aprovar(p, venc, antes, dataAp, liq, prazo, repasses) {
           var d = JSON.parse(JSON.stringify(p.dados || {})), aprov = { itens: [], novo: null };
           var passo;
           if (p.tipo === 'locacao') {
@@ -10742,7 +10798,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 var a = atuais.filter(function(x) { return x.id === i.item_id; })[0];
                 aprov.itens.push({ item_id: a.id, valor_ant: a.valor, dono: a.dono });
                 seq = seq.then(function() {
-                  return chk(sb.from('loc_itens').update({ status: 'LOCADA', cliente: p.cliente_nome, valor: liq[k], dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, data_inicio: prazo ? prazo.data_inicio : null, data_fim: prazo ? prazo.data_fim : null, prazo_indeterminado: prazo ? prazo.prazo_indeterminado : false, aviso_fim_dias: prazo ? prazo.aviso_fim_dias : 10, contrato_modelo: d.modelo === 'PARCEIRO' ? 'PARCEIRO' : 'PLS', comissao_tipo: d.modelo === 'PARCEIRO' ? (d.comTipo || 'pct') : null, comissao_valor: d.modelo === 'PARCEIRO' ? (Number(d.comValor) || 0) : null }).eq('id', a.id).select());
+                  return chk(sb.from('loc_itens').update(Object.assign({}, (repasses || {})[a.id] || {}, { status: 'LOCADA', cliente: p.cliente_nome, valor: liq[k], dia_vencimento: venc, dias_antes: antes, proposta_id: p.id, data_inicio: prazo ? prazo.data_inicio : null, data_fim: prazo ? prazo.data_fim : null, prazo_indeterminado: prazo ? prazo.prazo_indeterminado : false, aviso_fim_dias: prazo ? prazo.aviso_fim_dias : 10, contrato_modelo: d.modelo === 'PARCEIRO' ? 'PARCEIRO' : 'PLS', comissao_tipo: d.modelo === 'PARCEIRO' ? (d.comTipo || 'pct') : null, comissao_valor: d.modelo === 'PARCEIRO' ? (Number(d.comValor) || 0) : null })).eq('id', a.id).select());
                 }).then(function(u) { if (!u.data || !u.data.length) throw new Error('Sem permissão para atualizar a frota.'); });
               });
               return seq;
@@ -11818,7 +11874,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                         shell('Checklist de equipamentos', 0,
               '<div class="seg"><button type="button" data-t="entrada" class="' + (S.tipo === 'entrada' ? 'on' : '') + '">⬇ Entrada</button><button type="button" data-t="saida" class="' + (S.tipo === 'saida' ? 'on' : '') + '">⬆ Saída</button></div>' +
                     '<div class="fld"><label>Empresa (cliente cadastrado) *</label><input type="text" id="pk-cli" value="' + esc(S.cliente) + '" placeholder="Toque e digite para buscar o cliente" autocomplete="off"><div id="pk-clilist"></div></div>' +
-              '<div class="fld"><label>Equipamento</label><input type="text" id="pk-eq" value="' + esc(S.equipamento) + '" placeholder="Ex.: Empilhadeira 2,5 t, frota 12"></div>' +
+      '<div id="pk-eqsel"></div>' +
+      '<div class="fld"><label>Equipamento</label><input type="text" id="pk-eq" value="' + esc(S.equipamento) + '" placeholder="Ex.: Empilhadeira 2,5 t, frota 12"></div>' +
               '<div class="fld"><label>Fabricante / modelo</label><input type="text" id="pk-mod" value="' + esc(S.modelo) + '" placeholder="Ex.: Hyster H50FT"></div>' +
               '<div class="fld"><label>Horímetro</label><input type="text" id="pk-hor" inputmode="decimal" value="' + esc(S.hor) + '"></div>' +
               '<div class="fld"><label>Inspecionado por *</label><input type="text" id="pk-ins" value="' + esc(S.inspec) + '"></div>' +
@@ -11830,10 +11887,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     function mostrar() {
       var q = norm(ci.value), ls = C.clientes().filter(function(n) { return !q || norm(n + ' ' + ((window.PLS_RAZAO || {})[n] || '')).indexOf(q) >= 0; });
       cl.innerHTML = ls.length ? '<div class="clscroll" style="max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + ((window.PLS_RAZAO || {})[n] ? '<small style="display:block;color:#64748b;font-weight:500;font-size:12px">' + esc(window.PLS_RAZAO[n]) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no setor Clientes do sistema.</div>';
-      cl.querySelectorAll('.opt[data-n]').forEach(function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { S.cliente = o.getAttribute('data-n'); ci.value = S.cliente; cl.innerHTML = ''; ci.classList.add('sel'); }; });
+      cl.querySelectorAll('.opt[data-n]').forEach(function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { S.cliente = o.getAttribute('data-n'); ci.value = S.cliente; cl.innerHTML = ''; ci.classList.add('sel'); S.equip_id = null; eqSel(); }; });
     }
-    if (S.cliente) ci.classList.add('sel');
-    ci.oninput = function() { S.cliente = ''; ci.classList.remove('sel'); mostrar(); };
+    function eqSel() {
+      PLSDOC.seletorEquip($('pk-eqsel'), S.cliente, S.equip_id, function(e) {
+        S.equip_id = e ? e.id : null; if (!e) return;
+        $('pk-eq').value = e.tag || $('pk-eq').value; $('pk-mod').value = [e.marca, e.modelo].filter(Boolean).join(' ') || $('pk-mod').value;
+        if (e.horimetro != null && !$('pk-hor').value.trim()) $('pk-hor').value = String(e.horimetro).replace('.', ',');
+      }, 'Equipamento do cliente (toque para escolher — o checklist vai para a pasta dele):');
+    }
+    if (S.cliente) { ci.classList.add('sel'); eqSel(); }
+    ci.oninput = function() { S.cliente = ''; S.equip_id = null; ci.classList.remove('sel'); mostrar(); var bx = $('pk-eqsel'); if (bx) bx.innerHTML = ''; };
     ci.onfocus = function() { if (!S.cliente) mostrar(); };
     ci.onblur = function() { setTimeout(function() { cl.innerHTML = ''; }, 200); };
     $('pk-ini').onclick = function() {
@@ -12001,7 +12065,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           }
           function linha() {
             var itens = S.itens.filter(function(i) { return !(i.livre && !i.t); }).map(function(i) { return { sec: i.sec, t: i.t, sim: i.sim, s: i.s, obs: i.obs, foto: i.foto }; });
-            return { tipo: S.tipo, cliente: S.cliente, equipamento: S.equipamento || null, fabricante_modelo: S.modelo || null, data: S.data, hora: S.hora, inspecionado_por: S.inspec, horimetro: S.hor || null, itens: itens,
+            return { tipo: S.tipo, cliente: S.cliente, equip_id: S.equip_id || null, equipamento: S.equipamento || null, fabricante_modelo: S.modelo || null, data: S.data, hora: S.hora, inspecionado_por: S.inspec, horimetro: S.hor || null, itens: itens,
               comentarios: S.comentarios || null, condicao: S.condicao || null, local: S.local || null, responsavel: S.resp || null, assinatura: S.assin || null, video_path: S.video || null, video_seg: S.videoSeg || null, n_ruim: itens.filter(function(i) { return i.s === 'ruim'; }).length };
           }
           function salvar() { var q = S.id ? C.sb.from('man_checklists').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_checklists').insert(linha()).select('*'); return C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }
@@ -12053,7 +12117,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             }).catch(function(e) { var w = $('pk-wpdf'); if (w) w.textContent = 'Erro ao gerar PDF'; console.error(e); });
           }
           function editar(r) {
-    S = novoEstado(); S.id = r.id; S.tipo = r.tipo; S.cliente = r.cliente; S.equipamento = r.equipamento || ''; S.modelo = r.fabricante_modelo || ''; S.inspec = r.inspecionado_por || ''; S.hor = r.horimetro || '';
+    S = novoEstado(); S.id = r.id; S.tipo = r.tipo; S.cliente = r.cliente; S.equip_id = r.equip_id || null; S.equipamento = r.equipamento || ''; S.modelo = r.fabricante_modelo || ''; S.inspec = r.inspecionado_por || ''; S.hor = r.horimetro || '';
     S.data = String(r.data).slice(0, 10); S.hora = r.hora || ''; S.comentarios = r.comentarios || ''; S.condicao = r.condicao || ''; S.local = r.local || ''; S.resp = r.responsavel || ''; S.assin = r.assinatura || ''; S.video = r.video_path || ''; S.videoSeg = r.video_seg || 0; S.videoOrig = r.video_path || '';
     var salvos = (r.itens || []).slice(), livres = salvos.filter(function(i) { return i.sec === '6 - OUTROS' && !SECOES[6].its.some(function(x) { return x.t === i.t; }); });
     S.itens.forEach(function(it) {
@@ -12827,7 +12891,9 @@ var PLSENT = (function() {
     var cd = S.cd; cd.razao = c.razao_social || c.razao || nome; cd.fantasia = nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = c.cep || ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
     ['razao:e-razao', 'fantasia:e-fant', 'cnpj:e-cnpj', 'cep:e-cep', 'cidade:e-cid', 'end:e-end', 'tel:e-tel', 'mail:e-mail'].forEach(function(p) { p = p.split(':'); $(p[1]).value = cd[p[0]] || ''; });
     if (!S.local && cd.end) { S.local = cd.end; $('e-local').value = cd.end; }
+    S.equip_id = null; eqSelEnt();
   }
+  function eqSelEnt() { PLSDOC.seletorEquip($('e-eqsel'), S.cliente, S.equip_id, function(e) { S.equip_id = e ? e.id : null; }, 'Equipamento relacionado (opcional — toque para a entrega ir para a pasta da máquina):'); }
   function assinatura(id, chave) {
     var cv = $(id), g = cv.getContext('2d'), tem = !!S[chave], des = false;
     g.lineWidth = 3; g.lineCap = 'round'; g.strokeStyle = '#0f172a';
@@ -12846,7 +12912,7 @@ var PLSENT = (function() {
       '<details><summary style="font-weight:700;font-size:13px;color:#64748b;margin-bottom:8px">Dados do cliente (conferir / completar)</summary>' +
       '<div class="row2">' + f('e-fant', 'Nome do cliente', c.fantasia) + f('e-razao', 'Razão social', c.razao) + '</div><div class="row2">' + f('e-cnpj', 'CNPJ/CPF', c.cnpj) + f('e-tel', 'Telefone', c.tel) + '</div>' + f('e-end', 'Endereço', c.end) + '<div class="row2">' + f('e-cep', 'CEP', c.cep) + f('e-cid', 'Cidade/UF', c.cidade) + '</div>' + f('e-mail', 'E-mail', c.mail) + '</details>' +
       '<div class="hd">ENTREGA</div><div class="row2"><div class="fld"><label>Data da entrega *</label><input type="date" id="e-d" value="' + esc(S.data) + '"></div><div class="fld"><label>Horário *</label><input type="time" id="e-h" value="' + esc(S.hora) + '"></div></div>' +
-      f('e-local', 'Local da entrega', S.local, 'Endereço / setor onde o material foi deixado') + f('e-doc', 'Nota fiscal / pedido (opcional)', S.doc, 'Ex.: NF 1234 ou Pedido 567') +
+      f('e-local', 'Local da entrega', S.local, 'Endereço / setor onde o material foi deixado') + f('e-doc', 'Nota fiscal / pedido (opcional)', S.doc, 'Ex.: NF 1234 ou Pedido 567') + '<div id="e-eqsel"></div>' +
       '<div class="hd">MATERIAIS</div><div class="sub">Um item por material. Marque <b>Entregue</b> para o que foi deixado no cliente e <b>Recolhido</b> para o que voltou com a PLS (ex.: botija vazia).</div>' +
       '<datalist id="e-dl-un">' + UNS.map(function(u) { return '<option value="' + u + '">'; }).join('') + '</datalist><div id="e-itens"></div><button type="button" class="btn2" id="e-iadd">➕ Adicionar material</button>' +
       '<div class="hd">FOTOS</div><div id="e-fotos"></div><label class="btn2" style="display:block;text-align:center">📷 Adicionar fotos<input type="file" accept="image/*" multiple id="e-fi" style="display:none"></label>' +
@@ -12872,7 +12938,7 @@ var PLSENT = (function() {
     if (S.cliente) ci.classList.add('sel');
     ci.oninput = function() { S.cliente = ''; ci.classList.remove('sel'); mostrar(); avisoCli(); }; ci.onfocus = function() { if (!S.cliente) mostrar(); }; ci.onblur = function() { setTimeout(function() { cl.innerHTML = ''; avisoCli(); }, 250); };
     avisoCli();
-    if (S.cliente && !S.id && !S.cd.razao) selCliente(S.cliente);
+    if (S.cliente && !S.id && !S.cd.razao) selCliente(S.cliente); else if (S.cliente) eqSelEnt();
     $('e-iadd').onclick = function() { colher(); S.itens.push({ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }); pintaItens(); var rs = ROOT.querySelectorAll('#e-itens .irow'); var u = rs[rs.length - 1]; u.scrollIntoView({ block: 'center' }); u.querySelector('textarea').focus(); };
     $('e-itens').onclick = function(ev) {
       var m = ev.target.closest('.mv button'); if (m) { [].forEach.call(m.parentNode.children, function(x) { x.classList.toggle('on', x === m); }); return; }
@@ -12889,7 +12955,7 @@ var PLSENT = (function() {
     $('e-save').onclick = salvarForm;
   }
   function linha() {
-    return { cliente: S.cliente, cliente_dados: S.cd, data: S.data || U.hojeISO(), hora: S.hora || null, local_entrega: S.local || null, documento: S.doc || null,
+    return { cliente: S.cliente, cliente_dados: S.cd, equip_id: S.equip_id || null, data: S.data || U.hojeISO(), hora: S.hora || null, local_entrega: S.local || null, documento: S.doc || null,
       itens: S.itens.filter(function(i) { return i.n; }), entregue_por: S.entregue, entregadores_extra: (S.extras || []).filter(Boolean),
       recebido_por: S.rec || null, recebido_doc: S.recDoc || null, recebido_cargo: S.recCargo || null, fotos: S.fotos.map(function(f) { return { path: f.path, leg: f.leg || '' }; }),
       observacoes: S.obs || null, assinatura_cliente: S.ac || null, assinatura_entregador: S.ae || null, updated_at: new Date().toISOString() };
@@ -12951,7 +13017,7 @@ var PLSENT = (function() {
   }
   function editar(r) {
     S = novoEstado(); S.id = r.id; S.numero = r.numero; S.cliente = r.cliente; var d = r.cliente_dados || {}; for (var k in S.cd) S.cd[k] = d[k] || '';
-    S.data = String(r.data || '').slice(0, 10); S.hora = r.hora || ''; S.local = r.local_entrega || ''; S.doc = r.documento || '';
+    S.equip_id = r.equip_id || null; S.data = String(r.data || '').slice(0, 10); S.hora = r.hora || ''; S.local = r.local_entrega || ''; S.doc = r.documento || '';
     S.itens = (r.itens || []).length ? r.itens.map(function(i) { return { n: i.n || '', q: i.q || '', un: i.un || '', mov: i.mov === 'recolhido' ? 'recolhido' : 'entregue', obs: i.obs || '' }; }) : [{ n: '', q: '1', un: 'un', mov: 'entregue', obs: '' }];
     S.fotos = (r.fotos || []).map(function(f) { return { src: f.src, path: f.path, leg: f.leg || '' }; }); S.origPaths = pathsDe(r.fotos);
     S.obs = r.observacoes || ''; S.entregue = r.entregue_por || ''; S.extras = (r.entregadores_extra || []).slice(); S.tecOrig = [r.entregue_por].concat(r.entregadores_extra || []).filter(Boolean);
@@ -13095,7 +13161,7 @@ var PLSDOC = (function() {
   function css() {
     U.css(); if ($('pd-css')) return;
     var st = document.createElement('style'); st.id = 'pd-css';
-    st.textContent = '#pd-lb{position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.97);display:flex;flex-direction:column}#pd-lb .lt{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font:600 14px Arial,sans-serif}#pd-lb .lt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pd-lb .lt button{border:0;border-radius:10px;padding:10px 14px;font-weight:800;background:#fff;color:#0f172a;cursor:pointer}#pd-lb .lb{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}#pd-lb img{width:100%;height:100%;object-fit:contain;touch-action:pinch-zoom;cursor:zoom-in}#pd-lb img.z{width:auto;height:auto;max-width:none;max-height:none;cursor:zoom-out}#pd-lb .nav{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;font-size:28px;width:46px;height:64px;border-radius:10px;cursor:pointer}' +
+    st.textContent = '#pd-lb{position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.94);display:flex;flex-direction:column}#pd-lb .lt{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font:600 14px Arial,sans-serif}#pd-lb .lt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pd-lb .lt button{border:0;border-radius:10px;padding:10px 14px;font-weight:800;background:#fff;color:#0f172a;cursor:pointer}#pd-lb .lb{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}#pd-lb img{max-width:100%;max-height:100%;object-fit:contain;touch-action:pinch-zoom}#pd-lb img.z{max-width:none;max-height:none}#pd-lb .nav{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;font-size:28px;width:46px;height:64px;border-radius:10px;cursor:pointer}' +
       '#pos.pos-doc .pd-foto{width:100%;max-height:300px;object-fit:contain;background:#f1f5f9;border-radius:12px;border:1px solid #e2e8f0;cursor:zoom-in;display:block}#pos.pos-doc .pd-sem{background:#f1f5f9;border-radius:12px;padding:30px;text-align:center;color:#64748b;font-size:40px}#pos.pos-doc .pd-doc{display:flex;gap:10px;align-items:center;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;background:#fff}#pos.pos-doc .pd-doc .ic{font-size:26px;flex:0 0 auto}#pos.pos-doc .pd-doc .tx{flex:1;min-width:0}#pos.pos-doc .pd-doc .tx b{display:block;word-break:break-word}#pos.pos-doc .pd-doc .tx small{color:#64748b}#pos.pos-doc .pd-doc button{border:0;border-radius:8px;padding:9px 11px;font-weight:800;cursor:pointer;background:#fff7ed;color:#c2410c;flex:0 0 auto}#pos.pos-doc .pd-doc button.del{background:#fee2e2;color:#991b1b}' +
       '.pd-pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;margin-top:4px}.pd-pill.r{background:#fee2e2;color:#991b1b}.pd-pill.a{background:#fef3c7;color:#92400e}.pd-pill.g{background:#dcfce7;color:#166534}#pos.pos-doc .pd-pc{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}#pos.pos-doc .pd-pc div{border:1px solid #e2e8f0;border-radius:10px;padding:6px;text-align:center;font-size:12px;cursor:zoom-in;background:#fff}#pos.pos-doc .pd-pc img{width:100%;height:90px;object-fit:cover;border-radius:6px}#pos.pos-doc .pd-q{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}#pos.pos-doc .pd-q button{border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;cursor:pointer}';
     document.head.appendChild(st);
@@ -13122,8 +13188,23 @@ var PLSDOC = (function() {
     pinta();
   }
   // ---------- pasta do equipamento ----------
-  function abrirRoot() { css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; ROOT.className = 'pos-doc'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function abrirRoot() { css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; ROOT.className = 'pos-doc'; ROOT.style.zIndex = '8990'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
   function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; EQ = null; if (C.onClose) C.onClose(); }
+  var HIST = [];
+  function carregarHist() {
+    var id = EQ.id, l = [], ok = function(p) { return p.then(function(r) { return r.data || []; }).catch(function() { return []; }); };
+    return Promise.all([
+      ok(C.sb.from('man_os').select('id,numero,cliente,equipamento,marca,modelo,entrada_data,tecnico,condicao,created_at').eq('equip_id', id)),
+      ok(C.sb.from('man_os').select('id,numero,cliente,equipamento,marca,modelo,entrada_data,tecnico,condicao,created_at').contains('equip_extra', [{ equip_id: id }])),
+      ok(C.sb.from('man_checklists').select('id,tipo,cliente,equipamento,fabricante_modelo,data,hora,inspecionado_por,condicao,n_ruim,created_at').eq('equip_id', id)),
+      ok(C.sb.from('man_entregas').select('id,numero,cliente,data,hora,itens,recebido_por,entregue_por,created_at').eq('equip_id', id))
+    ]).then(function(r) {
+      var vistos = {}; r[0].concat(r[1]).forEach(function(o) { if (vistos[o.id]) return; vistos[o.id] = 1; l.push({ t: 'os', id: o.id, n: o.numero, d: String(o.entrada_data || o.created_at || '').slice(0, 10), cli: o.cliente, txt: (o.tecnico ? 'Técnico ' + o.tecnico : '') + (o.condicao ? ' · ' + o.condicao.replace(/\.$/, '') : ''), ca: o.created_at }); });
+      r[2].forEach(function(c) { l.push({ t: 'ck', id: c.id, d: String(c.data || '').slice(0, 10), cli: c.cliente, txt: (c.tipo === 'saida' ? 'Saída' : 'Entrada') + (c.inspecionado_por ? ' · ' + c.inspecionado_por : '') + (c.condicao === 'inapto' ? ' · não pode operar' : c.condicao === 'apto' ? ' · pode operar' : '') + (c.n_ruim ? ' · ' + c.n_ruim + ' problema(s)' : ''), ca: c.created_at }); });
+      r[3].forEach(function(e) { var it = (e.itens || []).filter(function(i) { return i.mov !== 'recolhido'; }).map(function(i) { return [i.q, i.un, i.n].filter(Boolean).join(' '); }).join('; '); l.push({ t: 'ent', id: e.id, n: e.numero, d: String(e.data || '').slice(0, 10), cli: e.cliente, txt: (it || 'Entrega') + (e.recebido_por ? ' · recebido por ' + e.recebido_por : ''), ca: e.created_at }); });
+      l.sort(function(a, b) { return (b.d + (b.ca || '')).localeCompare(a.d + (a.ca || '')); }); HIST = l;
+    });
+  }
   function carregarDocs() { return C.chk(C.sb.from('man_equip_docs').select('*').eq('equip_id', EQ.id).order('data_doc', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })).then(function(r) { DOCS = r.data || []; }); }
   function pinta() {
     var e = EQ, pec = (e.pecas || []).filter(function(p) { return p.foto; });
@@ -13145,6 +13226,10 @@ var PLSDOC = (function() {
       '<div style="margin:12px 0 4px"><b style="font-size:18px">' + esc(nomeEq(e)) + '</b><br>' + esc(e.cliente || '') + ' ' + frota + '</div>' +
       (e.serie ? '<div class="kv"><span>Nº de série</span><span>' + esc(e.serie) + '</span></div>' : '') + (e.tag ? '<div class="kv"><span>Identificação</span><span>' + esc(e.tag) + '</span></div>' : '') +
       (e.motor ? '<div class="kv"><span>Motor</span><span>' + esc(e.motor) + '</span></div>' : '') + (e.horimetro != null ? '<div class="kv"><span>Horímetro</span><span>' + esc(String(e.horimetro).replace('.', ',')) + ' h' + (e.horimetro_em ? ' (' + br(e.horimetro_em) + ')' : '') + '</span></div>' : '') +
+      '<div class="hd">📜 HISTÓRICO DESTE EQUIPAMENTO (' + HIST.length + ')</div>' + (HIST.length ? HIST.map(function(h) {
+        var tp = h.t === 'os' ? ['🧾', 'OS ' + h.n, '#ffedd5', '#9a3412'] : h.t === 'ent' ? ['📦', 'Entrega ' + h.n, '#dbeafe', '#1e40af'] : ['✅', 'Checklist', '#dcfce7', '#166534'];
+        return '<div class="pd-doc"><span class="ic">' + tp[0] + '</span><div class="tx"><b><span class="pd-pill" style="margin:0 6px 0 0;background:' + tp[2] + ';color:' + tp[3] + '">' + tp[1] + '</span>' + br(h.d) + '</b><small>' + esc(h.cli || '') + (h.txt ? ' · ' + esc(h.txt) : '') + '</small></div><button type="button" data-h="' + h.t + '" data-id="' + h.id + '">👁 Abrir</button></div>';
+      }).join('') : '<div class="sub">Nenhuma OS, checklist ou entrega ligada a este equipamento ainda. As próximas aparecem aqui automaticamente quando o equipamento for escolhido no documento.</div>') +
       '<div class="hd">📁 DOCUMENTOS DO EQUIPAMENTO</div>' + (docsH || '<div class="sub">Nenhum documento ainda. Adicione abaixo o teste de opacidade, o teste de carga e outros documentos desta máquina.</div>') +
       (pec.length ? '<div class="hd">🔩 FOTOS DAS PEÇAS</div><div class="pd-pc">' + pec.map(function(p, k) { return '<div data-pc="' + k + '"><img src="' + p.foto + '" alt=""><br>' + esc(p.i || 'Peça') + (p.p ? '<br><small>' + esc(p.p) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '') +
       (FORM ? form : '<button type="button" class="btn2" id="pd-add" style="margin-top:12px">➕ Adicionar documento</button>');
@@ -13155,6 +13240,7 @@ var PLSDOC = (function() {
     [].forEach.call(ROOT.querySelectorAll('[data-pc]'), function(d) { d.onclick = function() { foto(pec.map(function(p) { return { src: p.foto, leg: [p.i, p.p].filter(Boolean).join(' · ') }; }), +d.getAttribute('data-pc')); }; });
     var ad = $('pd-add'); if (ad) ad.onclick = function() { FORM = true; pinta(); var c = $('pd-cat'); if (c) c.scrollIntoView({ block: 'center' }); };
     ROOT.querySelector('.pk-c').onclick = function(ev) {
+      var hb = ev.target.closest('[data-h]'); if (hb) { var t = hb.getAttribute('data-h'), hid = hb.getAttribute('data-id'), adm = !!C.admin(); try { if (t === 'os') PLSOS.abrir(hid, adm); else if (t === 'ck') PLSCK.abrir(hid, adm); else PLSENT.abrir(hid, adm); } catch (er) { C.toast('Não foi possível abrir: ' + (er.message || er)); } return; }
       var b = ev.target.closest('[data-a]'); if (b) { var d = DOCS.filter(function(x) { return x.id === b.getAttribute('data-id'); })[0]; if (!d) return; if (b.getAttribute('data-a') === 'ver') ver(d); else excluir(d); return; }
       var q = ev.target.closest('[data-q]'); if (q) { var m = +q.getAttribute('data-q'), v = $('pd-val'); if (!m) { v.value = ''; return; } var base = new Date(($('pd-data').value || U.hojeISO()) + 'T12:00:00'); base.setMonth(base.getMonth() + m); v.value = base.toISOString().slice(0, 10); }
     };
@@ -13200,11 +13286,32 @@ var PLSDOC = (function() {
     ROOT.innerHTML = '<div class="pk-top"><b>📁 Pasta do equipamento</b><button type="button" id="pd-x">Fechar</button></div><div class="pk-main"><div class="pk-c"><div class="sub">Carregando…</div></div></div>'; $('pd-x').onclick = fechar;
     C.chk(C.sb.from('man_equip').select('*').eq(campo, valor).maybeSingle()).then(function(r) {
       if (!r.data) throw new Error(campo === 'loc_item_id' ? 'Esta máquina ainda não tem cadastro na Manutenção.' : 'Equipamento não encontrado.');
-      EQ = r.data; return carregarDocs();
+      EQ = r.data; return Promise.all([carregarDocs(), carregarHist()]);
     }).then(pinta).catch(function(e) { C.toast(e.message || String(e)); fechar(); });
+  }
+  // seletor de equipamento do cliente (usado no checklist e na entrega): cards com foto; toque escolhe / toque de novo desmarca
+  function seletorEquip(box, cliente, selId, onPick, rotulo) {
+    if (!box) return; if (!cliente) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0">Carregando equipamentos do cliente…</div>';
+    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo,loc_item_id').eq('cliente', cliente).eq('ativo', true)).then(function(r) {
+      var l = r.data || [];
+      if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente não tem equipamento cadastrado na Manutenção. Preencha os campos à mão (ou cadastre o equipamento para o histórico ficar na pasta dele).</div>'; return; }
+      function pinta() {
+        box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#334155;margin:4px 0 6px">' + (rotulo || 'Equipamento do cliente (toque para escolher):') + '</div>' + l.map(function(e) {
+          var on = e.id === selId;
+          return '<div data-eqp="' + e.id + '" style="display:flex;gap:8px;align-items:center;padding:9px;border:' + (on ? '2px solid #16a34a' : '1px solid #e2e8f0') + ';border-radius:10px;background:' + (on ? '#f0fdf4' : '#fff') + ';margin-bottom:6px;cursor:pointer;font-size:14px">' +
+            (e.foto ? '<img src="' + e.foto + '" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex:0 0 auto">' : '<span style="font-size:24px;flex:0 0 auto">🚜</span>') +
+            '<span style="flex:1;min-width:0"><b>' + esc(nomeEq(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + esc([e.tag, e.serie ? 'Série ' + e.serie : ''].filter(Boolean).join(' · ')) + '</small></span>' + (on ? '<b style="color:#16a34a">✔</b>' : '') + '</div>';
+        }).join('');
+        [].forEach.call(box.querySelectorAll('[data-eqp]'), function(d) { d.onclick = function() { var e = l.filter(function(x) { return x.id === d.getAttribute('data-eqp'); })[0]; selId = selId === e.id ? null : e.id; pinta(); onPick(selId ? e : null); }; });
+      }
+      pinta();
+    }).catch(function() { box.innerHTML = ''; });
   }
   return {
     init: function(c) { for (var k in c) C[k] = c[k]; },
+    seletorEquip: seletorEquip,
+    nomeEq: nomeEq,
     foto: foto,
     abrir: function(id) { abrirPor('id', id); },
     abrirFrota: function(locId) { abrirPor('loc_item_id', locId); },
