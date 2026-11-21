@@ -943,7 +943,8 @@ document.addEventListener('click',function(e){
   if(e.target.closest('[data-osnovo]')){PLSOS.novo();return;}
   var en=e.target.closest('[data-enabrir]');if(en){PLSENT.abrir(en.getAttribute('data-enabrir'),ehAdmin());return;}
   if(e.target.closest('[data-ennovo]')){PLSENT.novo(mnF.cli);return;}
-  var q=e.target.closest('[data-eqabrir]');if(q){PLSEQ.abrir(q.getAttribute('data-eqabrir'));return;}
+  var im=e.target.closest('img.mnimg');if(im&&im.closest('[data-eqabrir]')){PLSDOC.foto(im.getAttribute('src'),0,'');return;}
+  var q=e.target.closest('[data-eqabrir]');if(q){PLSDOC.abrir(q.getAttribute('data-eqabrir'));return;}
   if(e.target.closest('[data-eqnovo]')){PLSEQ.novo(mnF.cli);return;}
 });
 document.addEventListener('input',function(e){if(e.target.id==='ck-q'){ckF.q=e.target.value;ckPintar();}else if(e.target.id==='ck-cli'){ckF.cli=e.target.value;ckPintar();}else if(e.target.id==='ck-mes'){ckF.mes=e.target.value;ckPintar();}else if(e.target.id==='ck-de'){ckF.de=e.target.value;ckPintar();}else if(e.target.id==='ck-ate'){ckF.ate=e.target.value;ckPintar();}});
@@ -3112,9 +3113,159 @@ var PLSENT = (function() {
   };
 })();
 
+/* ===== PLSDOC: pasta do equipamento (foto, documentos como teste de opacidade/carga, fotos das peças) + visualizador de fotos — compartilhado desktop/app ===== */
+var PLSDOC = (function() {
+  var U = PLSU, esc = U.esc, br = U.br, $ = function(id) { return document.getElementById(id); };
+  var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, nome: function() { return ''; }, admin: function() { return false; }, toast: function(m) { alert(m); }, onEditar: null, onClose: null };
+  var BUCKET = 'man-docs';
+  var CATS = [
+    ['opacidade', '🌫️', 'Teste de opacidade (fumaça preta)'],
+    ['carga', '🏋️', 'Teste de carga'],
+    ['laudo', '📋', 'Laudo / inspeção (NR-11, ART)'],
+    ['manual', '📘', 'Manual / certificado'],
+    ['nf', '🧾', 'Nota fiscal / documento de compra'],
+    ['outros', '📎', 'Outros documentos']
+  ];
+  var ROOT = null, EQ = null, DOCS = [], FORM = false;
+  function cat(k) { for (var i = 0; i < CATS.length; i++) if (CATS[i][0] === k) return CATS[i]; return CATS[CATS.length - 1]; }
+  function novoId() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'f' + Date.now() + Math.random().toString(16).slice(2); }
+  function nomeEq(e) { return [e.tag && !/^(EMPILHADEIRA|PALETEIRA|TRANSPALETEIRA)/i.test(e.tag) ? e.tag : '', e.marca, e.modelo].filter(Boolean).join(' ') || e.tag || 'Equipamento'; }
+  function diasAte(d) { if (!d) return null; var a = new Date(String(d).slice(0, 10) + 'T12:00:00'), h = new Date(U.hojeISO() + 'T12:00:00'); return Math.round((a - h) / 864e5); }
+  function pillVal(d) {
+    var n = diasAte(d); if (n === null) return '';
+    if (n < 0) return '<span class="pd-pill r">Vencido há ' + (-n) + ' dia(s)</span>';
+    if (n <= 30) return '<span class="pd-pill a">Vence em ' + n + ' dia(s)</span>';
+    return '<span class="pd-pill g">Válido até ' + br(d) + '</span>';
+  }
+  function css() {
+    U.css(); if ($('pd-css')) return;
+    var st = document.createElement('style'); st.id = 'pd-css';
+    st.textContent = '#pd-lb{position:fixed;inset:0;z-index:100000;background:rgba(2,6,23,.97);display:flex;flex-direction:column}#pd-lb .lt{display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;font:600 14px Arial,sans-serif}#pd-lb .lt span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#pd-lb .lt button{border:0;border-radius:10px;padding:10px 14px;font-weight:800;background:#fff;color:#0f172a;cursor:pointer}#pd-lb .lb{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}#pd-lb img{width:100%;height:100%;object-fit:contain;touch-action:pinch-zoom;cursor:zoom-in}#pd-lb img.z{width:auto;height:auto;max-width:none;max-height:none;cursor:zoom-out}#pd-lb .nav{position:absolute;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.18);color:#fff;font-size:28px;width:46px;height:64px;border-radius:10px;cursor:pointer}' +
+      '#pos.pos-doc .pd-foto{width:100%;max-height:300px;object-fit:contain;background:#f1f5f9;border-radius:12px;border:1px solid #e2e8f0;cursor:zoom-in;display:block}#pos.pos-doc .pd-sem{background:#f1f5f9;border-radius:12px;padding:30px;text-align:center;color:#64748b;font-size:40px}#pos.pos-doc .pd-doc{display:flex;gap:10px;align-items:center;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:8px;background:#fff}#pos.pos-doc .pd-doc .ic{font-size:26px;flex:0 0 auto}#pos.pos-doc .pd-doc .tx{flex:1;min-width:0}#pos.pos-doc .pd-doc .tx b{display:block;word-break:break-word}#pos.pos-doc .pd-doc .tx small{color:#64748b}#pos.pos-doc .pd-doc button{border:0;border-radius:8px;padding:9px 11px;font-weight:800;cursor:pointer;background:#fff7ed;color:#c2410c;flex:0 0 auto}#pos.pos-doc .pd-doc button.del{background:#fee2e2;color:#991b1b}' +
+      '.pd-pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:800;margin-top:4px}.pd-pill.r{background:#fee2e2;color:#991b1b}.pd-pill.a{background:#fef3c7;color:#92400e}.pd-pill.g{background:#dcfce7;color:#166534}#pos.pos-doc .pd-pc{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}#pos.pos-doc .pd-pc div{border:1px solid #e2e8f0;border-radius:10px;padding:6px;text-align:center;font-size:12px;cursor:zoom-in;background:#fff}#pos.pos-doc .pd-pc img{width:100%;height:90px;object-fit:cover;border-radius:6px}#pos.pos-doc .pd-q{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}#pos.pos-doc .pd-q button{border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:6px 10px;font-weight:700;font-size:13px;cursor:pointer}';
+    document.head.appendChild(st);
+  }
+  // ---------- visualizador de fotos ----------
+  function foto(lista, idx, titulo) {
+    css(); if (typeof lista === 'string') lista = [{ src: lista, leg: titulo || '' }]; lista = (lista || []).filter(function(f) { return f && f.src; }); if (!lista.length) return;
+    var i = Math.max(0, Math.min(idx || 0, lista.length - 1)), lb = $('pd-lb'); if (lb) lb.remove();
+    lb = document.createElement('div'); lb.id = 'pd-lb'; document.body.appendChild(lb);
+    function pinta() {
+      var f = lista[i];
+      lb.innerHTML = '<div class="lt"><span>' + esc(f.leg || titulo || '') + (lista.length > 1 ? ' · ' + (i + 1) + '/' + lista.length : '') + '</span><button type="button" data-a="dl">⬇</button><button type="button" data-a="x">✕ Fechar</button></div><div class="lb"><img src="' + f.src + '" alt=""></div>' +
+        (lista.length > 1 ? '<button type="button" class="nav" data-a="ant" style="left:8px">‹</button><button type="button" class="nav" data-a="prx" style="right:8px">›</button>' : '');
+      var im = lb.querySelector('img'); im.onclick = function(ev) { ev.stopPropagation(); im.classList.toggle('z'); };
+    }
+    lb.onclick = function(ev) {
+      var a = ev.target.closest('[data-a]'); if (!a) { if (ev.target.classList.contains('lb')) lb.remove(); return; }
+      var k = a.getAttribute('data-a');
+      if (k === 'x') lb.remove(); else if (k === 'ant') { i = (i - 1 + lista.length) % lista.length; pinta(); } else if (k === 'prx') { i = (i + 1) % lista.length; pinta(); }
+      else if (k === 'dl') U.baixar(lista[i].src, (lista[i].leg || titulo || 'foto').replace(/[\\/:*?"<>|]+/g, ' ') + '.jpg');
+    };
+    var tecla = function(ev) { if (!$('pd-lb')) { document.removeEventListener('keydown', tecla); return; } if (ev.key === 'Escape') lb.remove(); else if (ev.key === 'ArrowRight' && lista.length > 1) { i = (i + 1) % lista.length; pinta(); } else if (ev.key === 'ArrowLeft' && lista.length > 1) { i = (i - 1 + lista.length) % lista.length; pinta(); } };
+    document.addEventListener('keydown', tecla);
+    pinta();
+  }
+  // ---------- pasta do equipamento ----------
+  function abrirRoot() { css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; ROOT.className = 'pos-doc'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; EQ = null; if (C.onClose) C.onClose(); }
+  function carregarDocs() { return C.chk(C.sb.from('man_equip_docs').select('*').eq('equip_id', EQ.id).order('data_doc', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })).then(function(r) { DOCS = r.data || []; }); }
+  function pinta() {
+    var e = EQ, pec = (e.pecas || []).filter(function(p) { return p.foto; });
+    var frota = e.loc_item_id ? '<span class="pd-pill a" style="background:#ffedd5;color:#9a3412">🏷 Frota PLS · ' + (e.cliente === 'PLS EMPILHADEIRAS' ? 'na base' : 'locada') + '</span>' : '';
+    var docsH = CATS.map(function(c) {
+      var l = DOCS.filter(function(d) { return (cat(d.categoria)[0]) === c[0]; }); if (!l.length) return '';
+      return '<div class="gh">' + c[1] + ' ' + esc(c[2]).toUpperCase() + ' (' + l.length + ')</div>' + l.map(function(d, k) {
+        var img = /^image\//.test(d.mime || '');
+        return '<div class="pd-doc"><span class="ic">' + (img ? '🖼️' : /pdf/.test(d.mime || '') ? '📄' : '📎') + '</span><div class="tx"><b>' + esc(d.descricao || d.nome_arquivo || 'Documento') + '</b><small>' + (d.data_doc ? 'Data: ' + br(d.data_doc) + ' · ' : '') + esc(d.nome_arquivo || '') + (d.enviado_por ? ' · enviado por ' + esc(d.enviado_por) : '') + '</small>' + (d.validade ? '<br>' + (k === 0 ? pillVal(d.validade) : '<span class="pd-pill" style="background:#f1f5f9;color:#64748b">Anterior (substituído pelo mais novo)</span>') : '') + '</div>' +
+          '<button type="button" data-a="ver" data-id="' + d.id + '">👁 Abrir</button>' + (C.admin() ? '<button type="button" class="del" data-a="del" data-id="' + d.id + '">🗑</button>' : '') + '</div>';
+      }).join('');
+    }).join('');
+    var form = '<div class="hd">ADICIONAR DOCUMENTO</div><div class="fld"><label>Tipo de documento</label><select id="pd-cat">' + CATS.map(function(c) { return '<option value="' + c[0] + '">' + c[1] + ' ' + esc(c[2]) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="fld"><label>Descrição (opcional)</label><input type="text" id="pd-desc" placeholder="Ex.: Teste de opacidade 2026 — empresa X"></div>' +
+      '<div class="row2"><div class="fld"><label>Data do teste / documento</label><input type="date" id="pd-data" value="' + U.hojeISO() + '"></div><div class="fld"><label>Válido até (opcional)</label><input type="date" id="pd-val"><div class="pd-q"><button type="button" data-q="6">+6 meses</button><button type="button" data-q="12">+1 ano</button><button type="button" data-q="0">sem validade</button></div></div></div>' +
+      '<label class="btn2" style="display:block;text-align:center">📎 Escolher arquivo(s) — PDF ou foto<input type="file" id="pd-file" accept="application/pdf,image/*,.doc,.docx,.xls,.xlsx" multiple style="display:none"></label><div id="pd-sel" class="sub" style="margin-top:6px"></div>' +
+      '<button type="button" class="pk-btn v" id="pd-env" style="width:100%;margin-top:8px">Enviar para a pasta</button>';
+    var corpo = (e.foto ? '<img class="pd-foto" id="pd-ft" src="' + e.foto + '" alt="Foto do equipamento"><div class="sub" style="text-align:center;margin-top:4px">Toque na foto para ampliar</div>' : '<div class="pd-sem">🚜<div style="font-size:14px;margin-top:6px">Sem foto cadastrada. Use “Editar cadastro” para colocar.</div></div>') +
+      '<div style="margin:12px 0 4px"><b style="font-size:18px">' + esc(nomeEq(e)) + '</b><br>' + esc(e.cliente || '') + ' ' + frota + '</div>' +
+      (e.serie ? '<div class="kv"><span>Nº de série</span><span>' + esc(e.serie) + '</span></div>' : '') + (e.tag ? '<div class="kv"><span>Identificação</span><span>' + esc(e.tag) + '</span></div>' : '') +
+      (e.motor ? '<div class="kv"><span>Motor</span><span>' + esc(e.motor) + '</span></div>' : '') + (e.horimetro != null ? '<div class="kv"><span>Horímetro</span><span>' + esc(String(e.horimetro).replace('.', ',')) + ' h' + (e.horimetro_em ? ' (' + br(e.horimetro_em) + ')' : '') + '</span></div>' : '') +
+      '<div class="hd">📁 DOCUMENTOS DO EQUIPAMENTO</div>' + (docsH || '<div class="sub">Nenhum documento ainda. Adicione abaixo o teste de opacidade, o teste de carga e outros documentos desta máquina.</div>') +
+      (pec.length ? '<div class="hd">🔩 FOTOS DAS PEÇAS</div><div class="pd-pc">' + pec.map(function(p, k) { return '<div data-pc="' + k + '"><img src="' + p.foto + '" alt=""><br>' + esc(p.i || 'Peça') + (p.p ? '<br><small>' + esc(p.p) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '') +
+      (FORM ? form : '<button type="button" class="btn2" id="pd-add" style="margin-top:12px">➕ Adicionar documento</button>');
+    ROOT.innerHTML = '<div class="pk-top"><b>📁 ' + esc(nomeEq(e)) + '</b><button type="button" id="pd-x">Fechar</button></div><div class="pk-main"><div class="pk-c">' + corpo + '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="pd-ok">Fechar</button>' + (C.onEditar ? '<button type="button" class="pk-btn g" id="pd-ed">✏ Editar cadastro</button>' : '') + '</div>';
+    $('pd-x').onclick = fechar; $('pd-ok').onclick = fechar;
+    var ed = $('pd-ed'); if (ed) ed.onclick = function() { var id = EQ.id; fechar(); C.onEditar(id); };
+    var ft = $('pd-ft'); if (ft) ft.onclick = function() { foto(e.foto, 0, nomeEq(e) + ' — ' + (e.cliente || '')); };
+    [].forEach.call(ROOT.querySelectorAll('[data-pc]'), function(d) { d.onclick = function() { foto(pec.map(function(p) { return { src: p.foto, leg: [p.i, p.p].filter(Boolean).join(' · ') }; }), +d.getAttribute('data-pc')); }; });
+    var ad = $('pd-add'); if (ad) ad.onclick = function() { FORM = true; pinta(); var c = $('pd-cat'); if (c) c.scrollIntoView({ block: 'center' }); };
+    ROOT.querySelector('.pk-c').onclick = function(ev) {
+      var b = ev.target.closest('[data-a]'); if (b) { var d = DOCS.filter(function(x) { return x.id === b.getAttribute('data-id'); })[0]; if (!d) return; if (b.getAttribute('data-a') === 'ver') ver(d); else excluir(d); return; }
+      var q = ev.target.closest('[data-q]'); if (q) { var m = +q.getAttribute('data-q'), v = $('pd-val'); if (!m) { v.value = ''; return; } var base = new Date(($('pd-data').value || U.hojeISO()) + 'T12:00:00'); base.setMonth(base.getMonth() + m); v.value = base.toISOString().slice(0, 10); }
+    };
+    var fi = $('pd-file'); if (fi) fi.onchange = function() { $('pd-sel').textContent = fi.files.length ? fi.files.length + ' arquivo(s): ' + [].map.call(fi.files, function(f) { return f.name; }).join(', ') : ''; };
+    var en = $('pd-env'); if (en) en.onclick = enviar;
+  }
+  function blobDeDataUrl(d) { return fetch(d).then(function(r) { return r.blob(); }); }
+  function enviar() {
+    var fs = [].slice.call($('pd-file').files || []); if (!fs.length) { C.toast('Escolha o arquivo (PDF ou foto) do documento.'); return; }
+    var big = fs.filter(function(f) { return f.size > 25 * 1024 * 1024; })[0]; if (big) { C.toast('“' + big.name + '” passa de 25 MB. Diminua o arquivo e tente de novo.'); return; }
+    var catv = $('pd-cat').value, desc = $('pd-desc').value.trim(), dt = $('pd-data').value || null, val = $('pd-val').value || null, b = $('pd-env');
+    b.disabled = true; b.textContent = 'Enviando…';
+    fs.reduce(function(p, f) {
+      return p.then(function() {
+        var img = /^image\//.test(f.type) && !/gif|svg/.test(f.type);
+        return (img ? U.comprimir(f, 2200, 0.82).then(blobDeDataUrl).then(function(bl) { return { bl: bl, mime: 'image/jpeg', nome: f.name.replace(/\.[^.]+$/, '') + '.jpg' }; }) : Promise.resolve({ bl: f, mime: f.type || 'application/octet-stream', nome: f.name }))
+          .then(function(o) {
+            var cam = EQ.id + '/' + novoId() + '-' + o.nome.replace(/[^\w.\-]+/g, '_').slice(-80);
+            return C.chk(C.sb.storage.from(BUCKET).upload(cam, o.bl, { contentType: o.mime, upsert: false })).then(function() {
+              return C.chk(C.sb.from('man_equip_docs').insert({ equip_id: EQ.id, categoria: catv, descricao: desc || (fs.length > 1 ? o.nome : cat(catv)[2]), data_doc: dt, validade: val, nome_arquivo: o.nome, caminho: cam, mime: o.mime, tamanho: o.bl.size || null, enviado_por: C.nome() || null }).select('id'));
+            });
+          });
+      });
+    }, Promise.resolve()).then(function() { FORM = false; return carregarDocs(); }).then(function() { pinta(); C.toast('Documento salvo na pasta do equipamento.'); })
+      .catch(function(e) { b.disabled = false; b.textContent = 'Enviar para a pasta'; C.toast('Erro ao enviar: ' + (e.message || e)); });
+  }
+  function ver(d) {
+    C.chk(C.sb.storage.from(BUCKET).createSignedUrl(d.caminho, 600)).then(function(r) {
+      var u = r.data && r.data.signedUrl; if (!u) throw new Error('arquivo não encontrado');
+      if (/^image\//.test(d.mime || '')) foto(u, 0, d.descricao || d.nome_arquivo); else window.open(u, '_blank');
+    }).catch(function(e) { C.toast('Não foi possível abrir: ' + (e.message || e)); });
+  }
+  function excluir(d) {
+    if (!confirm('Excluir o documento “' + (d.descricao || d.nome_arquivo) + '” da pasta?')) return;
+    C.chk(C.sb.from('man_equip_docs').delete().eq('id', d.id).select('id')).then(function(r) {
+      if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.');
+      C.sb.storage.from(BUCKET).remove([d.caminho]).then(function() {}, function() {});
+      return carregarDocs();
+    }).then(pinta).catch(function(e) { C.toast('Erro: ' + (e.message || e)); });
+  }
+  function abrirPor(campo, valor) {
+    abrirRoot(); FORM = false;
+    ROOT.innerHTML = '<div class="pk-top"><b>📁 Pasta do equipamento</b><button type="button" id="pd-x">Fechar</button></div><div class="pk-main"><div class="pk-c"><div class="sub">Carregando…</div></div></div>'; $('pd-x').onclick = fechar;
+    C.chk(C.sb.from('man_equip').select('*').eq(campo, valor).maybeSingle()).then(function(r) {
+      if (!r.data) throw new Error(campo === 'loc_item_id' ? 'Esta máquina ainda não tem cadastro na Manutenção.' : 'Equipamento não encontrado.');
+      EQ = r.data; return carregarDocs();
+    }).then(pinta).catch(function(e) { C.toast(e.message || String(e)); fechar(); });
+  }
+  return {
+    init: function(c) { for (var k in c) C[k] = c[k]; },
+    foto: foto,
+    abrir: function(id) { abrirPor('id', id); },
+    abrirFrota: function(locId) { abrirPor('loc_item_id', locId); },
+    // { equip_id: { n: total, venc: vencidos, prox: vencendo em 30 dias } }
+    contagens: function() {
+      return C.chk(C.sb.from('man_equip_docs').select('equip_id,categoria,validade,data_doc,created_at').order('data_doc', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })).then(function(r) {
+        var m = {}, visto = {}; (r.data || []).forEach(function(d) { var ch = d.equip_id + '|' + d.categoria, ult = !visto[ch]; visto[ch] = 1; var x = m[d.equip_id] = m[d.equip_id] || { n: 0, venc: 0, prox: 0 }; x.n++; if (!ult) return; var n = diasAte(d.validade); if (n !== null) { if (n < 0) x.venc++; else if (n <= 30) x.prox++; } }); return m;
+      }).catch(function() { return {}; });
+    }
+  };
+})();
+
 PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}},onClose:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}}});
 PLSEQ.init({sb:sb,chk:chk,clientes:function(){return D.clientes;},toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')mnPintar();},admin:ehAdmin});
 PLSOS.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},admin:ehAdmin});
+PLSDOC.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},admin:ehAdmin,toast:function(m){toast(m,4500);},onEditar:function(id){PLSEQ.abrir(id);},onClose:function(){if(tab==='checklist'&&(mnSub==='eq'||mnSub==='pc'))mnPintar();}});
 PLSENT.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},tecnicos:function(){return D.tecnicos.slice();},clientes:function(){return D.clientesFull||D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},onClose:function(){if(tab==='checklist'&&mnSub==='docs')dcCarregar();},admin:ehAdmin});
 PLSCOM.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientesFull||D.clientes;},toast:function(m){toast(m,4500);},repaint:function(){if(tab==='comercial')render();},admin:ehAdmin});
 /* vira o dia com o app aberto */
