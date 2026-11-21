@@ -249,8 +249,8 @@ var PLSCK = (function() {
     var ci = $('pk-cli'), cl = $('pk-clilist');
     function norm(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
     function mostrar() {
-      var q = norm(ci.value), ls = C.clientes().filter(function(n) { return !q || norm(n).indexOf(q) >= 0; });
-      cl.innerHTML = ls.length ? '<div class="clscroll" style="max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no setor Clientes do sistema.</div>';
+      var q = norm(ci.value), ls = C.clientes().filter(function(n) { return !q || norm(n + ' ' + ((window.PLS_RAZAO || {})[n] || '')).indexOf(q) >= 0; });
+      cl.innerHTML = ls.length ? '<div class="clscroll" style="max-height:42vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + ((window.PLS_RAZAO || {})[n] ? '<small style="display:block;color:#64748b;font-weight:500;font-size:12px">' + esc(window.PLS_RAZAO[n]) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no setor Clientes do sistema.</div>';
       cl.querySelectorAll('.opt[data-n]').forEach(function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { S.cliente = o.getAttribute('data-n'); ci.value = S.cliente; cl.innerHTML = ''; ci.classList.add('sel'); }; });
     }
     if (S.cliente) ci.classList.add('sel');
@@ -674,7 +674,7 @@ function carregar(){
   ]).then(function(r){
     D.ausencias=(r[6]||[]).map(function(a){return{id:a.id,tec:a.tecnico,ini:a.data_ini,fim:a.data_fim,tipo:a.tipo,obs:a.obs||''};});
     D.tecnicos=r[0];D.canais=r[1];D.tipos=r[2];
-    D.clientes=r[3].map(function(c){return c.nome;});D.clientesFull=r[3];
+    D.clientes=r[3].map(function(c){return c.nome;});D.clientesFull=r[3];var rzm={};r[3].forEach(function(c){if(c.nome&&c.razao_social&&c.razao_social!==c.nome)rzm[c.nome]=c.razao_social;});window.PLS_RAZAO=rzm;
     D.demandas=r[4].map(mapDem);D.servicos=r[5].map(mapSrv);
     $('sync').classList.remove('bad');
   }).catch(function(e){$('sync').classList.add('bad');throw e;});
@@ -813,7 +813,7 @@ function telaLancar(){
   if(!pode('lancar'))return '<div class="empty">Você não tem permissão para lançar demandas.</div>';
   var opt=function(a,ph){return '<option value="">'+ph+'</option>'+a.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');};
   return '<form id="f-lanc" autocomplete="off">'
-   +'<div class="fld"><label>Cliente *</label><input id="l-cli" list="dl-cli" placeholder="Digite para buscar" required><datalist id="dl-cli">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
+   +'<div class="fld"><label>Cliente *</label><input id="l-cli" list="dl-cli" placeholder="Digite para buscar" required><datalist id="dl-cli">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'"'+((window.PLS_RAZAO||{})[c]?' label="'+esc(window.PLS_RAZAO[c])+'"':'')+'>';}).join('')+'</datalist></div>'
    +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="l-tipo" required>'+opt(D.tipos,'Escolha...')+'</select></div>'
    +'<div class="fld"><label>Canal *</label><select id="l-canal" required>'+opt(D.canais,'Escolha...')+'</select></div></div>'
    +'<div class="fld"><label>Data prevista de entrega ao cliente *</label><input id="l-prev" type="date" value="'+hoje()+'" required></div>'
@@ -1018,7 +1018,7 @@ function abrirDem(id,view){
   } else if(view==='edit'){
     var mostraAt=!d.usaServicos||d.servicoUnico;
     h=voltar+'<h2>✏️ Editar demanda</h2><form id="f-edit" autocomplete="off" style="margin-top:10px">'
-     +'<div class="fld"><label>Cliente *</label><input id="e-cli" list="dl-cli-e" value="'+esc(d.cliente)+'" required><datalist id="dl-cli-e">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'">';}).join('')+'</datalist></div>'
+     +'<div class="fld"><label>Cliente *</label><input id="e-cli" list="dl-cli-e" value="'+esc(d.cliente)+'" required><datalist id="dl-cli-e">'+D.clientes.map(function(c){return '<option value="'+esc(c)+'"'+((window.PLS_RAZAO||{})[c]?' label="'+esc(window.PLS_RAZAO[c])+'"':'')+'>';}).join('')+'</datalist></div>'
      +(d.usaServicos?'':'<div class="fld"><label>Técnico *</label><select id="e-tec" required>'+selOpts(D.tecnicos,d.tecnico)+'</select></div>')
      +'<div class="row2"><div class="fld"><label>Tipo *</label><select id="e-tipo" required>'+selOpts(D.tipos,d.tipo)+'</select></div>'
      +'<div class="fld"><label>Canal *</label><select id="e-canal" required>'+selOpts(D.canais,d.canal)+'</select></div></div>'
@@ -2410,8 +2410,8 @@ var PLSEQ = (function() {
     $('eq-x').onclick = function() { if (confirm('Fechar sem salvar?')) fechar(); };
     var ci = $('o-cli'), cl = $('o-clilist');
     function mostrar() {
-      var q = U.norm(ci.value), ls = C.clientes().filter(function(n) { return !q || U.norm(n).indexOf(q) >= 0; });
-      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
+      var q = U.norm(ci.value), ls = C.clientes().filter(function(n) { return !q || U.norm(n + ' ' + ((window.PLS_RAZAO || {})[n] || '')).indexOf(q) >= 0; });
+      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + ((window.PLS_RAZAO || {})[n] ? '<small style="display:block;color:#64748b;font-weight:500;font-size:12px">' + esc(window.PLS_RAZAO[n]) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
       cl.querySelectorAll('.opt[data-n]').forEach(function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { ci.value = o.getAttribute('data-n'); cl.innerHTML = ''; ci.classList.add('sel'); }; });
     }
     if (e.cliente) ci.classList.add('sel');
@@ -2540,7 +2540,7 @@ var PLSOS = (function() {
   }
   function selCliente(nome) {
     colher(); S.cliente = nome; var c = cliObj(nome) || {}; S.equip_id = null; S.extra = []; pintaExtras();
-    var cd = S.cd; cd.razao = c.razao || nome; cd.fantasia = c.fantasia || nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
+    var cd = S.cd; cd.razao = c.razao_social || c.razao || nome; cd.fantasia = nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = c.cep || ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
     ['razao:o-razao', 'fantasia:o-fant', 'cnpj:o-cnpj', 'cep:o-cep', 'cidade:o-cid', 'end:o-end', 'tel:o-tel', 'mail:o-mail'].forEach(function(p) { p = p.split(':'); $(p[1]).value = cd[p[0]] === undefined ? '' : cd[p[0]]; });
     $('o-razao').value = cd.razao; $('o-fant').value = cd.fantasia; pintaEqs();
   }
@@ -2560,7 +2560,7 @@ var PLSOS = (function() {
     var corpo =
       '<div class="hd">CLIENTE</div><div class="fld"><label>Cliente cadastrado *</label><input type="text" id="o-cli" value="' + esc(S.cliente) + '" placeholder="Toque para ver os clientes ou digite para buscar" autocomplete="off"><div id="o-clilist"></div><div id="o-cliaviso"></div></div><div id="o-resto">' +
       '<details' + (S.id ? '' : '') + '><summary style="font-weight:700;font-size:13px;color:#64748b;margin-bottom:8px">Dados do cliente (conferir / completar)</summary>' +
-      '<div class="row2">' + f('o-razao', 'Razão social', c.razao) + f('o-fant', 'Nome fantasia', c.fantasia) + '</div><div class="row2">' + f('o-cnpj', 'CNPJ/CPF', c.cnpj) + f('o-tel', 'Telefone', c.tel) + '</div>' + f('o-end', 'Endereço', c.end) + '<div class="row2">' + f('o-cep', 'CEP', c.cep) + f('o-cid', 'Cidade/UF', c.cidade) + '</div>' + f('o-mail', 'E-mail', c.mail) + '</details>' +
+      '<div class="row2">' + f('o-fant', 'Nome do cliente', c.fantasia) + f('o-razao', 'Razão social', c.razao) + '</div><div class="row2">' + f('o-cnpj', 'CNPJ/CPF', c.cnpj) + f('o-tel', 'Telefone', c.tel) + '</div>' + f('o-end', 'Endereço', c.end) + '<div class="row2">' + f('o-cep', 'CEP', c.cep) + f('o-cid', 'Cidade/UF', c.cidade) + '</div>' + f('o-mail', 'E-mail', c.mail) + '</details>' +
       '<div class="hd">EQUIPAMENTO</div><div id="o-eqs"></div>' + f('o-eq', 'Nome do equipamento *', S.eq, 'Ex.: Empilhadeira elétrica retrátil') + '<div class="row2">' + f('o-marca', 'Marca', S.marca) + f('o-mod', 'Modelo', S.modelo) + '</div><div class="row2">' + f('o-serie', 'Série', S.serie) + f('o-hor', 'Horímetro / KM', S.hor, '', ' inputmode="decimal"') + '</div>' +
       (S.id ? '' : '<label class="chk" id="o-cadl"><input type="checkbox" id="o-cad"' + (S.cadEq ? ' checked' : '') + '> Cadastrar este equipamento na lista do cliente (se ainda não existir)</label>') +
       '<div id="o-extras">' + (S.extra || []).map(linhaExtra).join('') + '</div><button type="button" id="o-xadd" style="width:100%;margin:4px 0 10px;border:1px dashed #ea580c;color:#ea580c;background:#fff7ed;border-radius:10px;padding:12px;font-weight:800;font-size:14px">➕ Adicionar outro equipamento nesta OS</button>' +
@@ -2582,8 +2582,8 @@ var PLSOS = (function() {
       if (av) av.innerHTML = ok ? '' : (v ? '<div class="avcli">⚠ <b>Cliente não cadastrado.</b> Faça o cadastro do cliente antes de iniciar a ordem de serviço (ou escolha um da lista).</div>' : '<div class="sub" style="margin-top:6px">Escolha o cliente na lista para continuar a OS.</div>');
     }
     function mostrar() {
-      var q = U.norm(ci.value), ls = nomesCli().filter(function(n) { return !q || U.norm(n).indexOf(q) >= 0; });
-      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
+      var q = U.norm(ci.value), ls = nomesCli().filter(function(n) { return !q || U.norm(n + ' ' + ((window.PLS_RAZAO || {})[n] || '')).indexOf(q) >= 0; });
+      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + ((window.PLS_RAZAO || {})[n] ? '<small style="display:block;color:#64748b;font-weight:500;font-size:12px">' + esc(window.PLS_RAZAO[n]) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
       [].forEach.call(cl.querySelectorAll('.opt[data-n]'), function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { ci.value = o.getAttribute('data-n'); cl.innerHTML = ''; ci.classList.add('sel'); selCliente(ci.value); avisoCli(); }; });
     }
     if (S.cliente) ci.classList.add('sel');
@@ -2740,7 +2740,7 @@ var PLSOS = (function() {
       var yIni = y, fw = 0;
       if (eqim) { fw = 330; colW = IW - fw - 24; }
       x0 = M;
-      bl('CLIENTE', [{ t: r.cliente, b: 1 }, cd.fantasia && cd.razao && cd.fantasia !== cd.razao ? 'Nome fantasia: ' + cd.fantasia : '', cd.cnpj ? 'CNPJ/CPF: ' + cd.cnpj : '', cd.end ? 'Endereço: ' + cd.end : '', [cd.cidade, cd.cep ? 'CEP ' + cd.cep : ''].filter(Boolean).join(' · '), [cd.tel ? 'Tel.: ' + cd.tel : '', cd.mail ? 'E-mail: ' + cd.mail : ''].filter(Boolean).join('   ')]);
+      bl('CLIENTE', [{ t: r.cliente, b: 1 }, cd.razao && cd.razao !== r.cliente ? 'Razão social: ' + cd.razao : (cd.fantasia && cd.fantasia !== r.cliente ? 'Nome fantasia: ' + cd.fantasia : ''), cd.cnpj ? 'CNPJ/CPF: ' + cd.cnpj : '', cd.end ? 'Endereço: ' + cd.end : '', [cd.cidade, cd.cep ? 'CEP ' + cd.cep : ''].filter(Boolean).join(' · '), [cd.tel ? 'Tel.: ' + cd.tel : '', cd.mail ? 'E-mail: ' + cd.mail : ''].filter(Boolean).join('   ')]);
       var exs = r.equip_extra || [], eql = [{ t: (exs.length ? '1) ' : '') + (r.equipamento || ''), b: 1 }, [r.marca, r.modelo].filter(Boolean).join(' '), 'Série: ' + (r.serie || '—') + '     Horímetro/KM: ' + (r.horimetro || '—')];
       exs.forEach(function(x, i) { eql.push({ t: (i + 2) + ') ' + (x.eq || ''), b: 1 }, [x.marca, x.modelo].filter(Boolean).join(' '), 'Série: ' + (x.serie || '—') + '     Horímetro/KM: ' + (x.hor || '—')); });
       bl(exs.length ? 'EQUIPAMENTOS' : 'EQUIPAMENTO', eql);
@@ -2866,7 +2866,7 @@ var PLSENT = (function() {
   }
   function selCliente(nome) {
     colher(); S.cliente = nome; var c = cliObj(nome) || {};
-    var cd = S.cd; cd.razao = c.razao || nome; cd.fantasia = c.fantasia || nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
+    var cd = S.cd; cd.razao = c.razao_social || c.razao || nome; cd.fantasia = nome; cd.cnpj = c.cnpj || ''; cd.end = c.endereco || ''; cd.cep = c.cep || ''; cd.cidade = ''; cd.tel = c.telefone || ''; cd.mail = c.email || '';
     ['razao:e-razao', 'fantasia:e-fant', 'cnpj:e-cnpj', 'cep:e-cep', 'cidade:e-cid', 'end:e-end', 'tel:e-tel', 'mail:e-mail'].forEach(function(p) { p = p.split(':'); $(p[1]).value = cd[p[0]] || ''; });
     if (!S.local && cd.end) { S.local = cd.end; $('e-local').value = cd.end; }
   }
@@ -2886,7 +2886,7 @@ var PLSENT = (function() {
     var corpo =
       '<div class="hd">CLIENTE</div><div class="fld"><label>Cliente cadastrado *</label><input type="text" id="e-cli" value="' + esc(S.cliente) + '" placeholder="Toque para ver os clientes ou digite para buscar" autocomplete="off"><div id="e-clilist"></div><div id="e-cliaviso"></div></div><div id="e-resto">' +
       '<details><summary style="font-weight:700;font-size:13px;color:#64748b;margin-bottom:8px">Dados do cliente (conferir / completar)</summary>' +
-      '<div class="row2">' + f('e-razao', 'Razão social', c.razao) + f('e-fant', 'Nome fantasia', c.fantasia) + '</div><div class="row2">' + f('e-cnpj', 'CNPJ/CPF', c.cnpj) + f('e-tel', 'Telefone', c.tel) + '</div>' + f('e-end', 'Endereço', c.end) + '<div class="row2">' + f('e-cep', 'CEP', c.cep) + f('e-cid', 'Cidade/UF', c.cidade) + '</div>' + f('e-mail', 'E-mail', c.mail) + '</details>' +
+      '<div class="row2">' + f('e-fant', 'Nome do cliente', c.fantasia) + f('e-razao', 'Razão social', c.razao) + '</div><div class="row2">' + f('e-cnpj', 'CNPJ/CPF', c.cnpj) + f('e-tel', 'Telefone', c.tel) + '</div>' + f('e-end', 'Endereço', c.end) + '<div class="row2">' + f('e-cep', 'CEP', c.cep) + f('e-cid', 'Cidade/UF', c.cidade) + '</div>' + f('e-mail', 'E-mail', c.mail) + '</details>' +
       '<div class="hd">ENTREGA</div><div class="row2"><div class="fld"><label>Data da entrega *</label><input type="date" id="e-d" value="' + esc(S.data) + '"></div><div class="fld"><label>Horário *</label><input type="time" id="e-h" value="' + esc(S.hora) + '"></div></div>' +
       f('e-local', 'Local da entrega', S.local, 'Endereço / setor onde o material foi deixado') + f('e-doc', 'Nota fiscal / pedido (opcional)', S.doc, 'Ex.: NF 1234 ou Pedido 567') +
       '<div class="hd">MATERIAIS</div><div class="sub">Um item por material. Marque <b>Entregue</b> para o que foi deixado no cliente e <b>Recolhido</b> para o que voltou com a PLS (ex.: botija vazia).</div>' +
@@ -2907,8 +2907,8 @@ var PLSENT = (function() {
       if (av) av.innerHTML = ok ? '' : (v ? '<div class="avcli">⚠ <b>Cliente não cadastrado.</b> Faça o cadastro do cliente antes (ou escolha um da lista).</div>' : '<div class="sub" style="margin-top:6px">Escolha o cliente na lista para continuar.</div>');
     }
     function mostrar() {
-      var q = U.norm(ci.value), ls = nomesCli().filter(function(n) { return !q || U.norm(n).indexOf(q) >= 0; });
-      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
+      var q = U.norm(ci.value), ls = nomesCli().filter(function(n) { return !q || U.norm(n + ' ' + ((window.PLS_RAZAO || {})[n] || '')).indexOf(q) >= 0; });
+      cl.innerHTML = ls.length ? '<div class="clscroll">' + ls.map(function(n) { return '<div class="opt" data-n="' + esc(n) + '">' + esc(n) + ((window.PLS_RAZAO || {})[n] ? '<small style="display:block;color:#64748b;font-weight:500;font-size:12px">' + esc(window.PLS_RAZAO[n]) + '</small>' : '') + '</div>'; }).join('') + '</div>' : '<div class="opt vazio">Nenhum cliente encontrado. Cadastre o cliente no sistema.</div>';
       [].forEach.call(cl.querySelectorAll('.opt[data-n]'), function(o) { o.onmousedown = function(ev) { ev.preventDefault(); }; o.onclick = function() { ci.value = o.getAttribute('data-n'); cl.innerHTML = ''; ci.classList.add('sel'); selCliente(ci.value); avisoCli(); }; });
     }
     if (S.cliente) ci.classList.add('sel');
@@ -3041,7 +3041,7 @@ var PLSENT = (function() {
       }
       nova(false);
       // identificação: cliente (largura toda), depois entrega | recebimento lado a lado
-      y = bl('CLIENTE', [{ t: r.cliente, b: 1 }, cd.fantasia && cd.razao && cd.fantasia !== cd.razao ? 'Nome fantasia: ' + cd.fantasia : '', cd.cnpj ? 'CNPJ/CPF: ' + cd.cnpj : '', cd.end ? 'Endereço: ' + cd.end : '', [cd.cidade, cd.cep ? 'CEP ' + cd.cep : ''].filter(Boolean).join(' · '), [cd.tel ? 'Tel.: ' + cd.tel : '', cd.mail ? 'E-mail: ' + cd.mail : ''].filter(Boolean).join('   ')]);
+      y = bl('CLIENTE', [{ t: r.cliente, b: 1 }, cd.razao && cd.razao !== r.cliente ? 'Razão social: ' + cd.razao : (cd.fantasia && cd.fantasia !== r.cliente ? 'Nome fantasia: ' + cd.fantasia : ''), cd.cnpj ? 'CNPJ/CPF: ' + cd.cnpj : '', cd.end ? 'Endereço: ' + cd.end : '', [cd.cidade, cd.cep ? 'CEP ' + cd.cep : ''].filter(Boolean).join(' · '), [cd.tel ? 'Tel.: ' + cd.tel : '', cd.mail ? 'E-mail: ' + cd.mail : ''].filter(Boolean).join('   ')]);
       var yI = y; colW = IW / 2 - 12;
       var y1 = bl('ENTREGA', ['Data: ' + br(r.data) + (r.hora ? ' às ' + r.hora : ''), r.local_entrega ? 'Local: ' + r.local_entrega : '', r.documento ? 'NF / pedido: ' + r.documento : '', 'Entregue por: ' + [r.entregue_por].concat(r.entregadores_extra || []).filter(Boolean).join(', ')]);
       y = yI; x0 = M + IW / 2 + 12;
