@@ -871,16 +871,18 @@ function telaCk(){
 
 /* ---------- Manutenção: OS, equipamentos e peças ---------- */
 var mnSub='docs',OSL=null,ENL=null,DCF={cli:'',tipo:'',q:'',mes:mesAtual(),mexeu:false},mnF={cli:'',q:'',mes:mesAtual()};
-function mnChips(){return '<div class="chips">'+[['docs','🗂️ Histórico'],['eq','🚜 Equipamentos'],['pc','🔩 Peças']].map(function(x){return '<button type="button" class="chip'+(mnSub===x[0]?' on':'')+'" data-mns="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';}
+function mnChips(){return '<div class="chips">'+[['docs','🗂️ Histórico'],['eq','🚜 Equipamentos'],['mo','⚙️ Motores'],['pc','🔩 Peças']].map(function(x){return '<button type="button" class="chip'+(mnSub===x[0]?' on':'')+'" data-mns="'+x[0]+'">'+x[1]+'</button>';}).join('')+'</div>';}
 function osItem(o){var c=o.condicao||'';return '<div class="card" data-osabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge org">🧾 OS '+o.numero+'</span></div>'
   +'<div class="sub">'+esc([o.equipamento,o.marca,o.modelo].filter(Boolean).join(' · ')||'—')+(o.serie?' · série '+esc(o.serie):'')+'</div><div class="sub">'+br(o.entrada_data)+' · '+esc(o.tecnico||'')+'</div>'
   +(c?'<div class="task"><span class="badge '+(/pend/i.test(c)?'org':/fora/i.test(c)?'red':'grn')+'">'+esc(c.replace(/\.$/,''))+'</span></div>':'')+'</div>';}
 function enItem(o){var r=PLSENT.resumoItens(o);return '<div class="card" data-enabrir="'+o.id+'"><div class="t1"><div class="cli">'+esc(o.cliente)+'</div><span class="badge blu">📦 Entrega '+o.numero+'</span></div>'
   +'<div class="sub">📦 '+esc(r.ent||'—')+'</div>'+(r.rec?'<div class="sub">↩ '+esc(r.rec)+'</div>':'')+'<div class="sub">'+br(o.data)+(o.hora?' '+esc(o.hora):'')+' · recebido por '+esc(o.recebido_por||'—')+'</div><div class="sub">Entregue por '+esc(o.entregue_por||'')+'</div></div>';}
-function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto?'<img class="mnimg" src="'+e.foto+'" alt="">':'<div class="mnimg">🚜</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div>'+(e.loc_item_id?'<span class="badge org">🏷 Frota PLS'+(e.cliente==='PLS EMPILHADEIRAS'?' · na base':' · locada')+'</span>':'')+'<div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
+function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto_mini?'<img class="mnimg" data-eqfoto="'+e.id+'" src="'+e.foto_mini+'" alt="" loading="lazy">':'<div class="mnimg">'+(e.tem_foto?'📷':'🚜')+'</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div>'+(e.loc_item_id?'<span class="badge org">🏷 Frota PLS'+(e.cliente==='PLS EMPILHADEIRAS'?' · na base':' · locada')+'</span>':'')+'<div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
 function pcItem(x){var p=x.p,e=x.e;var l1=[p.p?'Cód. PLS '+esc(p.p):'',p.m?'Modelo '+esc(p.m):'',p.q?'Qtd '+esc(p.q):'',p.t?'Revisão '+esc(p.t):''].filter(Boolean).join(' · ');
   return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(p.foto?'<img class="mnimg" src="'+p.foto+'" alt="">':'<div class="mnimg">🔩</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(p.i)+'</div>'+(l1?'<div class="sub">'+l1+'</div>':'')
   +(p.f||p.fc?'<div class="sub">🏭 <b>'+esc(p.f||'—')+'</b>'+(p.fc?' · cód. '+esc(p.fc):'')+'</div>':'')+(p._motor?'<div class="sub"><span class="badge org">⚙️ peça do motor '+esc(p._motor)+'</span></div>':'')+'<div class="sub">'+esc(e.cliente)+' · '+esc(PLSEQ.nomeEquip(e))+'</div></div></div></div>';}
+function moItem(m){var pc=m.pecas||[],n=(PLSEQ.lista()||[]).filter(function(e){return e.motor_id===m.id;}).length,f=null;pc.some(function(p){if(p.foto){f=p.foto;return true;}return false;});
+  return '<div class="card" data-moabrir="'+m.id+'"><div class="mnrow">'+(f?'<img class="mnimg" src="'+f+'" alt="" loading="lazy">':'<div class="mnimg">⚙️</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(m.nome)+'</div><div class="sub">'+pc.length+' peça(s) · '+pc.filter(function(p){return p.foto;}).length+' com foto</div><div class="sub">'+(n?n+' máquina(s) com este motor':'Nenhuma máquina ligada ainda')+'</div>'+(m.obs?'<div class="sub">'+esc(m.obs)+'</div>':'')+'</div></div></div>';}
 function mnClientes(){var m={};if(mnSub==='os')(OSL||[]).forEach(function(o){m[o.cliente]=1;});else if(mnSub==='en')(ENL||[]).forEach(function(o){m[o.cliente]=1;});else(PLSEQ.lista()||[]).forEach(function(e){m[e.cliente]=1;});if(mnF.cli)m[mnF.cli]=1;return Object.keys(m).sort(function(a,b){return a.localeCompare(b,'pt-BR');});}
 function mnPintar(){
   var el=$('mn-lista');if(!el)return;
@@ -896,7 +898,8 @@ function mnPintar(){
     h=le.length?le.map(enItem).join(''):'<div class="empty">'+(ENL.length?'Nenhuma entrega com esse filtro.':'Nenhuma entrega ainda.')+'</div>';
   }else{
     if(PLSEQ.lista()===null){el.innerHTML='<div class="empty">Carregando…</div>';return;}
-    if(mnSub==='eq'){var l2=PLSEQ.equips(mnF);h=(l2.length?'<div class="hint">'+l2.length+' equipamento(s)</div>'+l2.map(eqItem).join(''):'<div class="empty">Nenhum equipamento encontrado.</div>');}
+    if(mnSub==='mo'){var qm=mnF.q.trim().toLowerCase(),lm=(PLSEQ.motores()||[]).filter(function(m){return !qm||[m.nome,m.obs].concat((m.pecas||[]).map(function(p){return [p.i,p.p,p.m,p.f,p.fc].join(' ');})).join(' ').toLowerCase().indexOf(qm)>=0;});h=(lm.length?'<div class="hint">'+lm.length+' motor(es)</div>'+lm.map(moItem).join(''):'<div class="empty">'+((PLSEQ.motores()||[]).length?'Nenhum motor com essa busca.':'Nenhum motor cadastrado ainda.')+'</div>');}
+    else if(mnSub==='eq'){var l2=PLSEQ.equips(mnF);h=(l2.length?'<div class="hint">'+l2.length+' equipamento(s)</div>'+l2.map(eqItem).join(''):'<div class="empty">Nenhum equipamento encontrado.</div>');}
     else{var l3=PLSEQ.pecas(mnF);h=(l3.length?'<div class="hint">'+l3.length+' peça(s) encontrada(s)</div>'+l3.map(pcItem).join(''):'<div class="empty">Nenhuma peça encontrada.</div>');}
   }
   el.innerHTML=h;
@@ -940,9 +943,9 @@ function telaChecklist(){
   if(mnSub==='docs')return h+telaDocs();
   if(mnSub==='ck')return h+telaCk();
   setTimeout(function(){mnPintar();if(mnSub==='os')osCarregar();else if(mnSub==='en')enCarregar();else eqCarregar();},0);
-  var ph=mnSub==='en'?'Buscar cliente, material ou quem recebeu':mnSub==='pc'?'Buscar peça (ex.: motor), código ou fornecedor':mnSub==='eq'?'Buscar marca, modelo, série ou peça':'Buscar OS, equipamento ou série';
-  var bt=mnSub==='en'?'<button type="button" class="btn" data-ennovo="1">＋ Nova entrega de material</button><div class="hint" style="margin-top:8px">Registre o material entregue (e o que foi recolhido), tire foto, colete o nome e a assinatura de quem recebeu e envie o PDF no WhatsApp. Fica salvo em nome do cliente.</div>':mnSub==='os'?'<button type="button" class="btn" data-osnovo="1">＋ Nova ordem de serviço</button><div class="hint" style="margin-top:8px">Preencha, anexe as fotos e envie o PDF no WhatsApp. Fica salva em nome do cliente.</div>':mnSub==='eq'?'<button type="button" class="btn" data-eqnovo="1">＋ Cadastrar equipamento do cliente</button><div class="hint" style="margin-top:8px">Cadastre o equipamento e suas peças (com foto e fornecedor).</div>':'<div class="hint">Todas as peças cadastradas nos equipamentos. Filtre por cliente e digite o nome da peça (ex.: <b>motor</b>).</div>';
-  return h+bt+'<div class="fld" style="margin-top:10px"><label>Cliente</label><select id="mn-cli"><option value="">Todos os clientes</option></select></div>'+(mnSub==='os'||mnSub==='en'?'<div class="fld"><label>Mês</label><select id="mn-mes">'+PLSU.mesesOpts(mnF.mes)+'</select></div>':'')+'<input class="q" id="mn-q" placeholder="'+ph+'" value="'+esc(mnF.q)+'"><div id="mn-lista"></div>';
+  var ph=mnSub==='mo'?'Buscar motor ou peça do motor':mnSub==='en'?'Buscar cliente, material ou quem recebeu':mnSub==='pc'?'Buscar peça (ex.: motor), código ou fornecedor':mnSub==='eq'?'Buscar marca, modelo, série ou peça':'Buscar OS, equipamento ou série';
+  var bt=mnSub==='mo'?'<button type="button" class="btn" data-monovo="1">＋ Cadastrar motor</button><div class="hint" style="margin-top:8px">Cadastre o motor e as peças dele, com foto. As peças valem para todas as máquinas com esse motor.</div>':mnSub==='en'?'<button type="button" class="btn" data-ennovo="1">＋ Nova entrega de material</button><div class="hint" style="margin-top:8px">Registre o material entregue (e o que foi recolhido), tire foto, colete o nome e a assinatura de quem recebeu e envie o PDF no WhatsApp. Fica salvo em nome do cliente.</div>':mnSub==='os'?'<button type="button" class="btn" data-osnovo="1">＋ Nova ordem de serviço</button><div class="hint" style="margin-top:8px">Preencha, anexe as fotos e envie o PDF no WhatsApp. Fica salva em nome do cliente.</div>':mnSub==='eq'?'<button type="button" class="btn" data-eqnovo="1">＋ Cadastrar equipamento do cliente</button><div class="hint" style="margin-top:8px">Cadastre o equipamento e suas peças (com foto e fornecedor).</div>':'<div class="hint">Todas as peças cadastradas nos equipamentos. Filtre por cliente e digite o nome da peça (ex.: <b>motor</b>).</div>';
+  return h+bt+(mnSub==='mo'?'':'<div class="fld" style="margin-top:10px"><label>Cliente</label><select id="mn-cli"><option value="">Todos os clientes</option></select></div>')+(mnSub==='os'||mnSub==='en'?'<div class="fld"><label>Mês</label><select id="mn-mes">'+PLSU.mesesOpts(mnF.mes)+'</select></div>':'')+'<input class="q" id="mn-q" placeholder="'+ph+'" value="'+esc(mnF.q)+'"><div id="mn-lista"></div>';
 }
 document.addEventListener('input',function(e){if(e.target.id==='mn-q'){mnF.q=e.target.value;mnPintar();}else if(e.target.id==='mn-cli'){mnF.cli=e.target.value;mnPintar();}else if(e.target.id==='mn-mes'){mnF.mes=e.target.value;mnPintar();}});
 document.addEventListener('click',function(e){
@@ -951,9 +954,11 @@ document.addEventListener('click',function(e){
   if(e.target.closest('[data-osnovo]')){PLSOS.novo();return;}
   var en=e.target.closest('[data-enabrir]');if(en){PLSENT.abrir(en.getAttribute('data-enabrir'),ehAdmin());return;}
   if(e.target.closest('[data-ennovo]')){PLSENT.novo(mnF.cli);return;}
-  var im=e.target.closest('img.mnimg');if(im&&im.closest('[data-eqabrir]')){PLSDOC.foto(im.getAttribute('src'),0,'');return;}
+  var im=e.target.closest('img.mnimg');if(im&&im.closest('[data-eqabrir]')){var fid=im.getAttribute('data-eqfoto');if(fid){PLSEQ.fotoCompleta(fid).then(function(u){PLSDOC.foto(u||im.getAttribute('src'),0,'');});}else PLSDOC.foto(im.getAttribute('src'),0,'');return;}
   var q=e.target.closest('[data-eqabrir]');if(q){PLSDOC.abrir(q.getAttribute('data-eqabrir'));return;}
   if(e.target.closest('[data-eqnovo]')){PLSEQ.novo(mnF.cli);return;}
+  var mo=e.target.closest('[data-moabrir]');if(mo){if(e.target.closest('img.mnimg')){PLSDOC.foto(e.target.closest('img.mnimg').getAttribute('src'),0,'');return;}PLSEQ.abrirMotor(mo.getAttribute('data-moabrir'));return;}
+  if(e.target.closest('[data-monovo]')){PLSEQ.novoMotor();return;}
 });
 document.addEventListener('input',function(e){if(e.target.id==='ck-q'){ckF.q=e.target.value;ckPintar();}else if(e.target.id==='ck-cli'){ckF.cli=e.target.value;ckPintar();}else if(e.target.id==='ck-mes'){ckF.mes=e.target.value;ckPintar();}else if(e.target.id==='ck-de'){ckF.de=e.target.value;ckPintar();}else if(e.target.id==='ck-ate'){ckF.ate=e.target.value;ckPintar();}});
 document.addEventListener('click',function(e){
@@ -2340,6 +2345,7 @@ var PLSEQ = (function() {
   var U = PLSU, esc = U.esc, $ = function(id) { return document.getElementById(id); };
   var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, clientes: function() { return []; }, toast: function(m) { alert(m); }, onSaved: null, admin: function() { return false; } };
   var LISTA = null, PLANOS = [], ROOT = null, S = null, MOTORES = [];
+  var EQ_COLS_LISTA = 'id,cliente,plano_id,marca,modelo,serie,tag,horimetro,horimetro_em,obs,ativo,created_at,updated_at,pecas,motor,transmissao,loc_item_id,energia,operacao,motor_id,foto_mini,tem_foto';
   function motorPorId(id) { for (var i = 0; i < MOTORES.length; i++) if (MOTORES[i].id === id) return MOTORES[i]; return null; }
   function motorPorNome(n) { n = U.norm(n || '').replace(/\s+/g, ' ').trim(); if (!n) return null; for (var i = 0; i < MOTORES.length; i++) if (U.norm(MOTORES[i].nome).replace(/\s+/g, ' ').trim() === n) return MOTORES[i]; return null; }
   // peças que valem para o equipamento: as do motor (compartilhadas) + as só deste equipamento
@@ -2379,10 +2385,30 @@ var PLSEQ = (function() {
   }
   function fornecedores() { var m = {}; MOTORES.forEach(function(mo) { (mo.pecas || []).forEach(function(p) { if (p.f) m[p.f] = 1; }); }); (LISTA || []).forEach(function(e) { (e.pecas || []).forEach(function(p) { if (p.f) m[p.f] = 1; (p.hist || []).forEach(function(h) { if (h.f) m[h.f] = 1; }); }); }); return Object.keys(m).sort(); }
   function carregar() {
-    return Promise.all([C.chk(C.sb.from('man_planos').select('id,nome,marca,matriz').order('nome')).catch(function() { return { data: [] }; }), C.chk(C.sb.from('man_equip').select('*').order('cliente').order('created_at')), C.chk(C.sb.from('man_motores').select('*').order('nome')).catch(function() { return { data: [] }; })]).then(function(r) {
-      PLANOS = r[0].data || []; LISTA = r[1].data || []; MOTORES = r[2].data || []; return LISTA;
+    return Promise.all([C.chk(C.sb.from('man_planos').select('id,nome,marca,matriz').order('nome')).catch(function() { return { data: [] }; }), C.chk(C.sb.from('man_equip').select(EQ_COLS_LISTA).order('cliente').order('created_at')), C.chk(C.sb.from('man_motores').select('*').order('nome')).catch(function() { return { data: [] }; })]).then(function(r) {
+      PLANOS = r[0].data || []; LISTA = r[1].data || []; LISTA.forEach(function(x) { x._lista = true; }); MOTORES = r[2].data || []; setTimeout(gerarMiniaturas, 2500); return LISTA;
     });
   }
+  // ---------- fotos leves ----------
+  // A lista não baixa a foto grande dos equipamentos (era o que deixava o sistema pesado): usa uma miniatura (foto_mini).
+  // Ao abrir um equipamento, a linha completa é buscada. Se surgir coluna nova em man_equip, acrescente em EQ_COLS_LISTA.
+  function miniDe(d) { return d ? U.recomprimir(d, 160, 0.6) : Promise.resolve(null); }
+  function garantirMini(e) {
+    if (!e || !e.foto || e.foto_mini) return Promise.resolve();
+    var grande = e.foto.length > 150000;
+    return Promise.all([miniDe(e.foto), grande ? U.recomprimir(e.foto, 800, 0.65) : null]).then(function(r) {
+      var d = { foto_mini: r[0] }; if (r[1] && r[1].length < e.foto.length) d.foto = r[1];
+      return C.sb.from('man_equip').update(d).eq('id', e.id).then(function(x) { if (!x.error) { e.foto_mini = d.foto_mini; if (d.foto) e.foto = d.foto; } });
+    }).catch(function() {});
+  }
+  var MINI_RODANDO = false;
+  function gerarMiniaturas() {
+    if (MINI_RODANDO || !LISTA) return; var faltam = LISTA.filter(function(e) { return e.tem_foto && !e.foto_mini; }); if (!faltam.length) return;
+    MINI_RODANDO = true;
+    faltam.reduce(function(p, e) { return p.then(function() { return C.sb.from('man_equip').select('foto').eq('id', e.id).maybeSingle().then(function(r) { if (!r.data || !r.data.foto) return; var t = { id: e.id, foto: r.data.foto }; return garantirMini(t).then(function() { e.foto_mini = t.foto_mini; }); }); }); }, Promise.resolve())
+      .then(function() { MINI_RODANDO = false; if (C.onSaved) C.onSaved(); }, function() { MINI_RODANDO = false; });
+  }
+  function fotoCompleta(id) { return C.sb.from('man_equip').select('foto').eq('id', id).maybeSingle().then(function(r) { return (r.data && r.data.foto) || ''; }); }
   // ---------- tela de cadastro (app) ----------
   function abrirRoot() { U.css(); if (!ROOT) { ROOT = document.createElement('div'); ROOT.id = 'pos'; document.body.appendChild(ROOT); } ROOT.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
   function fechar() { if (ROOT) { ROOT.style.display = 'none'; ROOT.innerHTML = ''; } document.body.style.overflow = ''; }
@@ -2407,9 +2433,14 @@ var PLSEQ = (function() {
   }
   var OP_AJUDA = `<div style="font-size:13px;line-height:1.5;color:#334155;text-align:left"><p style="margin:6px 0"><b>Operação normal (padrão)</b><br>Regime de trabalho em condições controladas, onde valem os intervalos máximos recomendados pelo manual do fabricante.</p><ul style="margin:4px 0 8px 18px;padding:0"><li><b>Ambiente:</b> piso liso, pavimentado, limpo e seco (galpões logísticos fechados, centros de distribuição).</li><li><b>Temperatura:</b> clima ameno, sem calor excessivo ou frio extremo.</li><li><b>Jornada:</b> geralmente 1 turno (até 8 horas/dia), com pausas naturais entre os ciclos.</li><li><b>Carga:</b> dentro da capacidade nominal, sem sobrecarga e com percursos planos.</li></ul><p style="margin:6px 0"><b>Operação severa</b><br>Qualquer condição que acelera o desgaste das peças, contamina os fluidos ou força o conjunto mecânico. Exige reduzir os intervalos de revisão (em até 50%).</p><ul style="margin:4px 0 8px 18px;padding:0"><li><b>Ambiente agressivo:</b> poeira intensa em suspensão (cimento, mineração, grãos, madeira), umidade, maresia, lama ou agentes químicos corrosivos.</li><li><b>Temperaturas extremas:</b> câmaras frigoríficas (choque térmico e condensação nos fluidos) ou fundições/siderurgias com calor intenso.</li><li><b>Jornada contínua:</b> 2 ou 3 turnos seguidos (16 a 24 horas/dia), sem tempo para resfriar os sistemas.</li><li><b>Esforço mecânico elevado:</b> rampas inclinadas, pisos irregulares/esburacados, frenagens bruscas frequentes ou operação contínua perto da capacidade máxima.</li><li><b>Ciclos muito curtos:</b> ligar e desligar várias vezes para trajetos mínimos, o que impede o motor de chegar à temperatura ideal e contamina o óleo.</li></ul><table style="width:100%;border-collapse:collapse;font-size:12.5px"><tr style="background:#f1f5f9"><th style="border:1px solid #cbd5e1;padding:4px;text-align:left">Característica</th><th style="border:1px solid #cbd5e1;padding:4px;text-align:left">Operação normal</th><th style="border:1px solid #cbd5e1;padding:4px;text-align:left">Operação severa</th></tr><tr><td style="border:1px solid #cbd5e1;padding:4px">Piso e local</td><td style="border:1px solid #cbd5e1;padding:4px">Galpão fechado, limpo e plano</td><td style="border:1px solid #cbd5e1;padding:4px">Pátio aberto, poeira, rampas ou piso irregular</td></tr><tr><td style="border:1px solid #cbd5e1;padding:4px">Turnos</td><td style="border:1px solid #cbd5e1;padding:4px">1 turno (até 8h/dia)</td><td style="border:1px solid #cbd5e1;padding:4px">2 a 3 turnos contínuos</td></tr><tr><td style="border:1px solid #cbd5e1;padding:4px">Temperatura</td><td style="border:1px solid #cbd5e1;padding:4px">Ambiente comum</td><td style="border:1px solid #cbd5e1;padding:4px">Câmara fria ou calor extremo</td></tr><tr><td style="border:1px solid #cbd5e1;padding:4px">Impacto no plano</td><td style="border:1px solid #cbd5e1;padding:4px">Prazos padrão do manual</td><td style="border:1px solid #cbd5e1;padding:4px">Redução de até 50% nos intervalos</td></tr></table></div>`;
   function abrirEquip(id, cliente) {
+    var x = id ? (LISTA || []).filter(function(y) { return y.id === id; })[0] : null;
+    if (!x || !x._lista) return abrirEquip0(id, cliente);
+    C.chk(C.sb.from('man_equip').select('*').eq('id', id).maybeSingle()).then(function(r) { if (r.data) { Object.assign(x, r.data); delete x._lista; garantirMini(x); } abrirEquip0(id, cliente); }).catch(function(er) { C.toast('Erro: ' + (er.message || er)); });
+  }
+  function abrirEquip0(id, cliente) {
     var e = id ? (LISTA || []).filter(function(x) { return x.id === id; })[0] : null; if (id && !e) { C.toast('Equipamento não encontrado.'); return; }
     e = e || { cliente: cliente || '', pecas: [] };
-    S = { id: id || null, e: e, orig: (e.pecas || []).slice(), foto: e.foto || '', n: (e.pecas || []).length, pid: e.plano_id || '' };
+    S = { id: id || null, e: e, orig: (e.pecas || []).slice(), foto: e.foto || '', mini: e.foto_mini || null, n: (e.pecas || []).length, pid: e.plano_id || '' };
     abrirRoot();
     var h = '<div class="pk-top"><b>' + (id ? 'Equipamento do cliente' : 'Novo equipamento do cliente') + '</b><button type="button" id="eq-x">✕ Fechar</button></div><div class="pk-main"><div class="pk-c">' +
       (e.loc_item_id ? '<div class="fld"><label>Cliente</label><input type="text" id="o-cli" value="' + esc(e.cliente) + '" readonly style="background:#f1f5f9"><div class="sub" style="margin-top:6px">🏷 Máquina da <b>frota PLS</b>. O cliente acompanha a locação automaticamente (locada: nome do cliente; na base: PLS EMPILHADEIRAS).</div><div id="o-clilist"></div></div>' :
@@ -2459,7 +2490,7 @@ var PLSEQ = (function() {
     $('eq-motor').oninput = function() { pintaMotor(); pintaMov(); };
     pintaMotor(); pintaMov();
     $('eq-plano').onchange = function() { $('eq-dl-int').innerHTML = colsPlano(this.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); };
-    $('eq-fi').onchange = function() { var f = this.files[0]; if (!f) return; U.comprimir(f, 640, 0.65).then(function(d) { S.foto = d; $('eq-foto').innerHTML = '<img src="' + d + '" alt="">'; }).catch(function() { C.toast('Não consegui ler a foto.'); }); };
+    $('eq-fi').onchange = function() { var f = this.files[0]; if (!f) return; U.comprimir(f, 640, 0.65).then(function(d) { S.foto = d; miniDe(d).then(function(m) { S.mini = m; }); $('eq-foto').innerHTML = '<img src="' + d + '" alt="">'; }).catch(function() { C.toast('Não consegui ler a foto.'); }); };
     $('eq-padd').onclick = function() { var b = $('eq-pecas'); b.insertAdjacentHTML('beforeend', cardPeca({}, S.n++)); var l = b.lastChild; l.querySelector('input').focus(); l.scrollIntoView({ block: 'center' }); };
     $('eq-pecas').onclick = function(ev) {
       var mv = ev.target.closest('[data-a="pmov"]'); if (mv) { var row = mv.closest('.prow'); row._mov = !row._mov; row.style.opacity = row._mov ? '.45' : ''; mv.textContent = row._mov ? '↩ desfazer' : '↑ motor'; C.toast(row._mov ? 'Ao salvar, esta peça passa para o cadastro do motor.' : 'Peça continua só neste equipamento.'); return; }
@@ -2478,7 +2509,7 @@ var PLSEQ = (function() {
       var todas = lerPecasForm(), movPecas = [];
       if (motObj && movRows.length) { var idxs = movRows.map(function(r) { return [].indexOf.call(ROOT.querySelectorAll('#eq-pecas .prow'), r); }), vivas = [].filter.call(ROOT.querySelectorAll('#eq-pecas .prow'), function(r) { return r.querySelector('.pi').value.trim(); }); todas = todas.filter(function(p, k) { var mov = vivas[k] && vivas[k]._mov; if (mov) movPecas.push(p); return !mov; }); }
       var d = { tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: motObj ? motObj.nome : ($('eq-motor').value.trim() || null), motor_id: motObj ? motObj.id : null, transmissao: $('eq-trans').value.trim() || null,
-        plano_id: $('eq-plano').value || null, energia: $('eq-energia').value || null, operacao: $('eq-oper').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, pecas: todas, updated_at: new Date().toISOString() };
+        plano_id: $('eq-plano').value || null, energia: $('eq-energia').value || null, operacao: $('eq-oper').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, foto_mini: S.foto ? (S.mini || null) : null, pecas: todas, updated_at: new Date().toISOString() };
       if (!e.loc_item_id) d.cliente = cli;
       if (!d.tag && !d.marca && !d.modelo) { C.toast('Informe ao menos a identificação, a marca ou o modelo.'); return; }
       if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : U.hojeISO(); }
@@ -2525,7 +2556,7 @@ var PLSEQ = (function() {
 
   return {
     init: function(c) { for (var k in c) C[k] = c[k]; }, opAjuda: function() { return OP_AJUDA; },
-    carregar: carregar, setLista: function(l, p, m) { LISTA = l; if (p) PLANOS = p; if (m) MOTORES = m; }, setMotores: function(m) { MOTORES = m || []; }, motores: function() { return MOTORES; }, motorPorId: motorPorId, pecasDe: pecasDe, abrirMotor: function(id, voltar) { abrirMotor(id, voltar); }, novoMotor: function() { abrirMotor(null); }, lista: function() { return LISTA; }, planos: function() { return PLANOS; }, pecas: pecasFlat, equips: equipsFiltrados, nomeEquip: nomeEquip, aplicarHist: aplicarHist, fornecedores: fornecedores,
+    carregar: carregar, setLista: function(l, p, m) { LISTA = l; if (p) PLANOS = p; if (m) MOTORES = m; }, setMotores: function(m) { MOTORES = m || []; }, motores: function() { return MOTORES; }, fotoCompleta: fotoCompleta, motorPorId: motorPorId, pecasDe: pecasDe, abrirMotor: function(id, voltar) { abrirMotor(id, voltar); }, novoMotor: function() { abrirMotor(null); }, lista: function() { return LISTA; }, planos: function() { return PLANOS; }, pecas: pecasFlat, equips: equipsFiltrados, nomeEquip: nomeEquip, aplicarHist: aplicarHist, fornecedores: fornecedores,
     novo: function(cli) { (LISTA ? Promise.resolve() : carregar()).then(function() { abrirEquip(null, cli); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); },
     abrir: function(id) { (LISTA ? Promise.resolve() : carregar()).then(function() { abrirEquip(id); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); }
   };
@@ -2569,7 +2600,7 @@ var PLSOS = (function() {
     $('pk-x').onclick = fechaFn || fechar;
   }
   function carregarEquips() {
-    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
+    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
   }
   function eqDoCliente() { return EQS.filter(function(e) { return e.cliente === S.cliente && e.ativo !== false; }); }
   // ---------- formulário ----------
@@ -2612,7 +2643,7 @@ var PLSOS = (function() {
   }
   function pintaEqs() {
     var l = S.cliente ? eqDoCliente() : [], b = $('o-eqs'); if (!b) return;
-    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
+    b.innerHTML = l.length ? '<div class="sub">Equipamentos cadastrados deste cliente (toque para preencher):</div>' + l.map(function(e) { return '<div class="eqc' + (S.equip_id === e.id ? ' on' : '') + '" data-id="' + e.id + '">' + (e.foto_mini ? '<img src="' + e.foto_mini + '" alt="">' : '<span style="font-size:26px">🚜</span>') + '<span><b>' + esc(PLSEQ.nomeEquip(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + (e.serie ? 'Série ' + esc(e.serie) : 'sem série') + (e.horimetro != null ? ' · ' + esc(String(e.horimetro).replace('.', ',')) + ' h' : '') + '</small></span></div>'; }).join('') : (S.cliente ? '<div class="sub">Este cliente ainda não tem equipamento cadastrado — preencha abaixo (ele pode ser cadastrado ao salvar).</div>' : '');
     [].forEach.call(b.querySelectorAll('.eqc'), function(d) {
       d.onclick = function() {
         colher(); var e = EQS.filter(function(x) { return x.id === d.getAttribute('data-id'); })[0]; if (!e) return;
@@ -3357,14 +3388,14 @@ var PLSDOC = (function() {
   function seletorEquip(box, cliente, selId, onPick, rotulo) {
     if (!box) return; if (!cliente) { box.innerHTML = ''; return; }
     box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0">Carregando equipamentos do cliente…</div>';
-    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto,ativo,loc_item_id').eq('cliente', cliente).eq('ativo', true)).then(function(r) {
+    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').eq('cliente', cliente).eq('ativo', true)).then(function(r) {
       var l = r.data || [];
       if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente não tem equipamento cadastrado na Manutenção. Preencha os campos à mão (ou cadastre o equipamento para o histórico ficar na pasta dele).</div>'; return; }
       function pinta() {
         box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#334155;margin:4px 0 6px">' + (rotulo || 'Equipamento do cliente (toque para escolher):') + '</div>' + l.map(function(e) {
           var on = e.id === selId;
           return '<div data-eqp="' + e.id + '" style="display:flex;gap:8px;align-items:center;padding:9px;border:' + (on ? '2px solid #16a34a' : '1px solid #e2e8f0') + ';border-radius:10px;background:' + (on ? '#f0fdf4' : '#fff') + ';margin-bottom:6px;cursor:pointer;font-size:14px">' +
-            (e.foto ? '<img src="' + e.foto + '" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex:0 0 auto">' : '<span style="font-size:24px;flex:0 0 auto">🚜</span>') +
+            (e.foto_mini ? '<img src="' + e.foto_mini + '" alt="" style="width:42px;height:42px;object-fit:cover;border-radius:8px;flex:0 0 auto">' : '<span style="font-size:24px;flex:0 0 auto">🚜</span>') +
             '<span style="flex:1;min-width:0"><b>' + esc(nomeEq(e)) + '</b>' + (e.loc_item_id ? ' <small style="background:#ffedd5;color:#9a3412;border-radius:6px;padding:1px 6px;font-weight:700">🏷 Frota PLS</small>' : '') + '<br><small style="color:#64748b">' + esc([e.tag, e.serie ? 'Série ' + e.serie : ''].filter(Boolean).join(' · ')) + '</small></span>' + (on ? '<b style="color:#16a34a">✔</b>' : '') + '</div>';
         }).join('');
         [].forEach.call(box.querySelectorAll('[data-eqp]'), function(d) { d.onclick = function() { var e = l.filter(function(x) { return x.id === d.getAttribute('data-eqp'); })[0]; selId = selId === e.id ? null : e.id; pinta(); onPick(selId ? e : null); }; });
