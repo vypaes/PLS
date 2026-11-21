@@ -2597,7 +2597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v72 — 21/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v73 — 21/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -11187,8 +11187,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var lista = lista0.filter(function(c) { return !q || norm(c.nome + ' ' + (c.razao_social || '') + ' ' + (c.cnpj || '') + ' ' + (c.contato || '') + ' ' + (c.telefone || '')).indexOf(q) >= 0; })
             .sort(function(a, b) { return a.nome.localeCompare(b.nome, 'pt-BR'); });
           var semCnpj = lista0.filter(function(c) { return !c.cnpj; }).length;
-          $('cl-kpis').innerHTML = kpi('Clientes', lista0.length, '', '#2563eb') + kpi('Sem CNPJ', semCnpj, 'complete quando puder', '#64748b');
-          $('mn-clientes').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>CNPJ</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Canal / status</th><th></th></tr></thead><tbody>' +
+          $('cl-kpis').innerHTML = kpi('Clientes', lista0.length, '', '#2563eb') + kpi('Sem CNPJ/CPF', semCnpj, 'complete quando puder', '#64748b');
+          $('mn-clientes').innerHTML = lista.length ? '<table class="table-pls"><thead><tr><th>Cliente</th><th>CNPJ / CPF</th><th>Contato</th><th>Telefone</th><th>E-mail</th><th>Canal / status</th><th></th></tr></thead><tbody>' +
             lista.map(function(c) {
               return '<tr><td><b>' + esc(c.nome) + '</b>' + (c.razao_social && c.razao_social !== c.nome ? '<br><span style="font-size:.8rem;color:#334155">Razão social: ' + esc(c.razao_social) + '</span>' : '') + (c.endereco ? '<br><span class="sx-muted">' + esc(c.endereco) + '</span>' : '') + (c.obs ? '<br><span class="sx-muted">' + esc(c.obs) + '</span>' : '') + '</td><td>' + esc(c.cnpj || '—') + '</td><td>' + esc(c.contato || '—') + '</td><td>' + esc(c.telefone || '—') + '</td><td>' + esc(c.email || '—') + '</td>' +
                 '<td>' + esc(c.canal || '—') + '<br><span class="sx-muted">' + esc(c.status || '') + '</span></td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="cli-ed" data-id="' + esc(c.id) + '">✏ Editar</button> ' +
@@ -11204,7 +11204,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-grid">' +
             '<div class="form-group"><label class="form-label">Nome do cliente <span class="req-star">*</span></label><input id="mn-c-nome" class="form-control" value="' + esc(c.nome || '') + '" placeholder="Como vocês chamam (ex.: Actemio)"><small class="sx-muted">É por este nome que o cliente aparece nas buscas, OS e demandas.</small></div>' +
             '<div class="form-group"><label class="form-label">Razão social</label><input id="mn-c-razao" class="form-control" value="' + esc(c.razao_social || '') + '" placeholder="Nome no CNPJ (ex.: Cisnerg)"><small class="sx-muted">Também dá para buscar o cliente por ela.</small></div>' +
-            '<div class="form-group"><label class="form-label">CNPJ</label><div style="display:flex;gap:6px"><input id="mn-c-cnpj" class="form-control" value="' + esc(c.cnpj || '') + '" placeholder="00.000.000/0000-00" inputmode="numeric"><button type="button" class="btn-pls-secondary" id="mn-c-bcnpj" title="Buscar dados da empresa pelo CNPJ" style="white-space:nowrap">🔎 Buscar</button></div><small class="sx-muted" id="mn-c-cnpj-msg">Digite o CNPJ e aperte Enter para preencher a razão social e o endereço.</small></div>' +
+            '<div class="form-group"><label class="form-label">CNPJ ou CPF</label><div style="display:flex;gap:6px"><input id="mn-c-cnpj" class="form-control" value="' + esc(c.cnpj || '') + '" placeholder="CNPJ (empresa) ou CPF (pessoa física)" inputmode="numeric"><button type="button" class="btn-pls-secondary" id="mn-c-bcnpj" title="Buscar dados pelo CNPJ / conferir CPF" style="white-space:nowrap">🔎 Buscar</button></div><small class="sx-muted" id="mn-c-cnpj-msg">Empresa: digite o CNPJ e aperte Enter para preencher os dados. Pessoa física: digite o CPF.</small></div>' +
             f('contato', 'Pessoa de contato', c.contato) + f('telefone', 'Telefone / WhatsApp', c.telefone) + f('email', 'E-mail', c.email) +
             '<div class="form-group"><label class="form-label">CEP</label><div style="display:flex;gap:6px"><input id="mn-c-cep" class="form-control" value="' + esc(c.cep || '') + '" placeholder="00000-000" inputmode="numeric" maxlength="9"><button type="button" class="btn-pls-secondary" id="mn-c-bcep" style="white-space:nowrap">🔎 Buscar</button></div><small class="sx-muted" id="mn-c-cep-msg">Digite o CEP e aperte Enter: o endereço vem preenchido.</small></div>' +
             f('endereco', 'Endereço', c.endereco, ' full-width') +
@@ -11243,7 +11243,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             }).catch(function() { msg('mn-c-cep-msg', 'Não foi possível buscar agora (sem internet?). Digite o endereço.', true); });
           }
           function porCnpj() {
-            var n = so(cnpj.value); if (n.length !== 14) { msg('mn-c-cnpj-msg', 'O CNPJ precisa ter 14 números.', true); return; }
+            var n = so(cnpj.value);
+            if (n.length === 11) {
+              var okCpf = !/^(\d)\1{10}$/.test(n) && [9, 10].every(function(t) { var sm = 0; for (var i = 0; i < t; i++) sm += +n[i] * (t + 1 - i); var dv = (sm * 10) % 11 % 10; return dv === +n[t]; });
+              if (!okCpf) { msg('mn-c-cnpj-msg', 'CPF inválido. Confira os números.', true); return; }
+              cnpj.value = n.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+              msg('mn-c-cnpj-msg', '✔ CPF válido (pessoa física). A Receita não libera dados de pessoa física: preencha o nome e use o CEP para o endereço.');
+              (cep.value.trim() ? end : cep).focus(); return;
+            }
+            if (n.length !== 14) { msg('mn-c-cnpj-msg', 'Digite um CNPJ (14 números) ou um CPF (11 números).', true); return; }
             cnpj.value = n.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5'); msg('mn-c-cnpj-msg', 'Buscando empresa…');
             fetch('https://brasilapi.com.br/api/cnpj/v1/' + n).then(function(r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function(d) {
               var rz = $('mn-c-razao'); if (d.razao_social) rz.value = d.razao_social;
