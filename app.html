@@ -880,7 +880,7 @@ function enItem(o){var r=PLSENT.resumoItens(o);return '<div class="card" data-en
 function eqItem(e){return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(e.foto?'<img class="mnimg" src="'+e.foto+'" alt="">':'<div class="mnimg">🚜</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(e.cliente)+'</div>'+(e.loc_item_id?'<span class="badge org">🏷 Frota PLS'+(e.cliente==='PLS EMPILHADEIRAS'?' · na base':' · locada')+'</span>':'')+'<div class="sub">'+esc(PLSEQ.nomeEquip(e))+'</div><div class="sub">'+(e.serie?'Série '+esc(e.serie)+' · ':'')+(e.pecas||[]).length+' peça(s)'+(e.horimetro!=null?' · '+esc(String(e.horimetro).replace('.',','))+' h':'')+'</div></div></div></div>';}
 function pcItem(x){var p=x.p,e=x.e;var l1=[p.p?'Cód. PLS '+esc(p.p):'',p.m?'Modelo '+esc(p.m):'',p.q?'Qtd '+esc(p.q):'',p.t?'Revisão '+esc(p.t):''].filter(Boolean).join(' · ');
   return '<div class="card" data-eqabrir="'+e.id+'"><div class="mnrow">'+(p.foto?'<img class="mnimg" src="'+p.foto+'" alt="">':'<div class="mnimg">🔩</div>')+'<div style="flex:1;min-width:0"><div class="cli">'+esc(p.i)+'</div>'+(l1?'<div class="sub">'+l1+'</div>':'')
-  +(p.f||p.fc?'<div class="sub">🏭 <b>'+esc(p.f||'—')+'</b>'+(p.fc?' · cód. '+esc(p.fc):'')+'</div>':'')+'<div class="sub">'+esc(e.cliente)+' · '+esc(PLSEQ.nomeEquip(e))+'</div></div></div></div>';}
+  +(p.f||p.fc?'<div class="sub">🏭 <b>'+esc(p.f||'—')+'</b>'+(p.fc?' · cód. '+esc(p.fc):'')+'</div>':'')+(p._motor?'<div class="sub"><span class="badge org">⚙️ peça do motor '+esc(p._motor)+'</span></div>':'')+'<div class="sub">'+esc(e.cliente)+' · '+esc(PLSEQ.nomeEquip(e))+'</div></div></div></div>';}
 function mnClientes(){var m={};if(mnSub==='os')(OSL||[]).forEach(function(o){m[o.cliente]=1;});else if(mnSub==='en')(ENL||[]).forEach(function(o){m[o.cliente]=1;});else(PLSEQ.lista()||[]).forEach(function(e){m[e.cliente]=1;});if(mnF.cli)m[mnF.cli]=1;return Object.keys(m).sort(function(a,b){return a.localeCompare(b,'pt-BR');});}
 function mnPintar(){
   var el=$('mn-lista');if(!el)return;
@@ -2339,14 +2339,22 @@ var PLSU = (function() {
 var PLSEQ = (function() {
   var U = PLSU, esc = U.esc, $ = function(id) { return document.getElementById(id); };
   var C = { sb: null, chk: function(p) { return p.then(function(r) { if (r.error) throw r.error; return r; }); }, clientes: function() { return []; }, toast: function(m) { alert(m); }, onSaved: null, admin: function() { return false; } };
-  var LISTA = null, PLANOS = [], ROOT = null, S = null;
+  var LISTA = null, PLANOS = [], ROOT = null, S = null, MOTORES = [];
+  function motorPorId(id) { for (var i = 0; i < MOTORES.length; i++) if (MOTORES[i].id === id) return MOTORES[i]; return null; }
+  function motorPorNome(n) { n = U.norm(n || '').replace(/\s+/g, ' ').trim(); if (!n) return null; for (var i = 0; i < MOTORES.length; i++) if (U.norm(MOTORES[i].nome).replace(/\s+/g, ' ').trim() === n) return MOTORES[i]; return null; }
+  // peças que valem para o equipamento: as do motor (compartilhadas) + as só deste equipamento
+  function pecasDe(e) {
+    if (!e) return []; var m = e.motor_id ? motorPorId(e.motor_id) : null, out = [];
+    if (m) (m.pecas || []).forEach(function(p) { var c = Object.assign({}, p); c._motor = m.nome; out.push(c); });
+    return out.concat(e.pecas || []);
+  }
   function nomeEquip(e) { return [e.tag, [e.marca, e.modelo].filter(Boolean).join(' ')].filter(Boolean).join(' · ') || 'Equipamento'; }
   function pecasFlat(filtro) {
     filtro = filtro || {}; var q = U.norm(filtro.q || ''), out = [];
     (LISTA || []).forEach(function(e) {
       if (filtro.cli && e.cliente !== filtro.cli) return;
-      (e.pecas || []).forEach(function(p, i) {
-        var tx = U.norm([p.i, p.p, p.m, p.f, p.fc, e.cliente, e.marca, e.modelo, e.tag, e.serie].join(' '));
+      pecasDe(e).forEach(function(p, i) {
+        var tx = U.norm([p.i, p.p, p.m, p.f, p.fc, p._motor, e.cliente, e.marca, e.modelo, e.tag, e.serie].join(' '));
         if (!q || q.split(/\s+/).every(function(w) { return tx.indexOf(w) >= 0; })) out.push({ p: p, e: e, i: i });
       });
     });
@@ -2358,7 +2366,7 @@ var PLSEQ = (function() {
     return (LISTA || []).filter(function(e) {
       if (filtro.cli && e.cliente !== filtro.cli) return false;
       if (!q) return true;
-      var tx = U.norm([e.cliente, e.marca, e.modelo, e.serie, e.tag, e.motor, e.obs].concat((e.pecas || []).map(function(p) { return [p.i, p.p, p.m, p.f, p.fc].join(' '); })).join(' '));
+      var tx = U.norm([e.cliente, e.marca, e.modelo, e.serie, e.tag, e.motor, e.obs].concat(pecasDe(e).map(function(p) { return [p.i, p.p, p.m, p.f, p.fc].join(' '); })).join(' '));
       return q.split(/\s+/).every(function(w) { return tx.indexOf(w) >= 0; });
     });
   }
@@ -2369,10 +2377,10 @@ var PLSEQ = (function() {
     if (!nova.hist.length) delete nova.hist;
     return nova;
   }
-  function fornecedores() { var m = {}; (LISTA || []).forEach(function(e) { (e.pecas || []).forEach(function(p) { if (p.f) m[p.f] = 1; (p.hist || []).forEach(function(h) { if (h.f) m[h.f] = 1; }); }); }); return Object.keys(m).sort(); }
+  function fornecedores() { var m = {}; MOTORES.forEach(function(mo) { (mo.pecas || []).forEach(function(p) { if (p.f) m[p.f] = 1; }); }); (LISTA || []).forEach(function(e) { (e.pecas || []).forEach(function(p) { if (p.f) m[p.f] = 1; (p.hist || []).forEach(function(h) { if (h.f) m[h.f] = 1; }); }); }); return Object.keys(m).sort(); }
   function carregar() {
-    return Promise.all([C.chk(C.sb.from('man_planos').select('id,nome,marca,matriz').order('nome')).catch(function() { return { data: [] }; }), C.chk(C.sb.from('man_equip').select('*').order('cliente').order('created_at'))]).then(function(r) {
-      PLANOS = r[0].data || []; LISTA = r[1].data || []; return LISTA;
+    return Promise.all([C.chk(C.sb.from('man_planos').select('id,nome,marca,matriz').order('nome')).catch(function() { return { data: [] }; }), C.chk(C.sb.from('man_equip').select('*').order('cliente').order('created_at')), C.chk(C.sb.from('man_motores').select('*').order('nome')).catch(function() { return { data: [] }; })]).then(function(r) {
+      PLANOS = r[0].data || []; LISTA = r[1].data || []; MOTORES = r[2].data || []; return LISTA;
     });
   }
   // ---------- tela de cadastro (app) ----------
@@ -2409,13 +2417,15 @@ var PLSEQ = (function() {
       '<div class="fld"><label>Identificação / TAG / frota</label><input type="text" id="eq-tag" value="' + esc(e.tag || '') + '" placeholder="Ex.: Empilhadeira elétrica retrátil"></div>' +
       '<div class="row2"><div class="fld"><label>Marca</label><input type="text" id="eq-marca" value="' + esc(e.marca || '') + '"></div><div class="fld"><label>Modelo</label><input type="text" id="eq-mod" value="' + esc(e.modelo || '') + '"></div></div>' +
       '<div class="row2"><div class="fld"><label>Nº de série</label><input type="text" id="eq-serie" value="' + esc(e.serie || '') + '"></div><div class="fld"><label>Horímetro atual</label><input type="text" inputmode="decimal" id="eq-hor" value="' + (e.horimetro != null ? esc(String(e.horimetro).replace('.', ',')) : '') + '"></div></div>' +
-      '<div class="row2"><div class="fld"><label>Motor</label><input type="text" id="eq-motor" value="' + esc(e.motor || '') + '"></div><div class="fld"><label>Transmissão</label><input type="text" id="eq-trans" value="' + esc(e.transmissao || '') + '"></div></div>' +
+      '<datalist id="eq-dl-mot">' + MOTORES.map(function(m) { return '<option value="' + esc(m.nome) + '">'; }).join('') + '</datalist>' +
+      '<div class="row2"><div class="fld"><label>Motor</label><input type="text" id="eq-motor" list="eq-dl-mot" autocomplete="off" placeholder="Escolha do catálogo ou digite" value="' + esc(e.motor_id && motorPorId(e.motor_id) ? motorPorId(e.motor_id).nome : (e.motor || '')) + '"></div><div class="fld"><label>Transmissão</label><input type="text" id="eq-trans" value="' + esc(e.transmissao || '') + '"></div></div>' +
       '<div class="row2"><div class="fld"><label>Tipo do equipamento</label><select id="eq-energia"><option value="">— escolher —</option><option value="combustao"' + (e.energia === 'combustao' ? ' selected' : '') + '>Combustão (diesel / GLP)</option><option value="eletrica"' + (e.energia === 'eletrica' ? ' selected' : '') + '>Elétrica / paleteira</option></select></div><div class="fld"><label>Operação do cliente</label><select id="eq-oper"><option value="">— escolher —</option><option value="normal"' + (e.operacao === 'normal' ? ' selected' : '') + '>Normal</option><option value="severa"' + (e.operacao === 'severa' ? ' selected' : '') + '>Severa</option></select></div></div>' +
       '<details style="margin:-4px 0 12px"><summary style="cursor:pointer;font-weight:700;color:#1d4ed8;font-size:14px">ℹ O que é operação normal e severa? (define o ciclo da preventiva)</summary>' + OP_AJUDA + '</details>' +
       '<div class="fld"><label>Plano de manutenção</label><select id="eq-plano"><option value="">— nenhum —</option>' + PLANOS.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === e.plano_id ? ' selected' : '') + '>' + esc(p.nome) + '</option>'; }).join('') + '</select></div>' +
       '<div class="fld"><label>Foto do equipamento</label><div class="pcf"><div id="eq-foto">' + (e.foto ? '<img src="' + e.foto + '" alt="">' : '') + '</div><label class="pk-btn g" style="flex:1;text-align:center;padding:11px;font-size:14px">📷 Foto<input type="file" accept="image/*" id="eq-fi" style="display:none"></label></div></div>' +
       '<div class="fld"><label>Observações</label><input type="text" id="eq-obs" value="' + esc(e.obs || '') + '"></div>' +
-      '<div class="hd">PEÇAS DESTE EQUIPAMENTO</div><div class="sub">Cada peça pode ter foto e fornecedor. Quando o fornecedor mudar, o anterior fica no histórico.</div>' +
+      '<div id="eq-motpec"></div>' +
+      '<div class="hd">PEÇAS SÓ DESTE EQUIPAMENTO</div><div class="sub">Peças que valem só para esta máquina (as do motor ficam no cadastro do motor, acima). Cada peça pode ter foto e fornecedor; quando o fornecedor mudar, o anterior fica no histórico.</div>' +
       '<datalist id="eq-dl-forn">' + fornecedores().map(function(f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist><datalist id="eq-dl-int">' + colsPlano(e.plano_id).map(function(c) { return '<option value="' + esc(c) + '">'; }).join('') + '</datalist>' +
       '<div id="eq-pecas">' + (e.pecas || []).map(function(p, k) { return cardPeca(p, k); }).join('') + '</div><button type="button" class="btn2" id="eq-padd">➕ Adicionar peça</button>' +
       '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="eq-ok">Salvar equipamento</button>' + (id && C.admin() && !e.loc_item_id ? '<button type="button" class="pk-btn r" id="eq-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
@@ -2429,10 +2439,33 @@ var PLSEQ = (function() {
     }
     if (e.cliente) ci.classList.add('sel');
     ci.oninput = function() { ci.classList.remove('sel'); mostrar(); }; ci.onfocus = function() { if (!ci.classList.contains('sel')) mostrar(); }; ci.onblur = function() { setTimeout(function() { cl.innerHTML = ''; }, 200); };
+    function pintaMotor() {
+      var box = $('eq-motpec'); if (!box) return; var txt = $('eq-motor').value.trim(), m = motorPorNome(txt);
+      if (m) {
+        var n = (LISTA || []).filter(function(x) { return x.motor_id === m.id; }).length, pc = m.pecas || [];
+        box.innerHTML = '<div class="hd">⚙️ PEÇAS DO MOTOR ' + esc(m.nome) + ' (' + pc.length + ')</div><div class="sub">Compartilhadas com todas as máquinas com este motor' + (n ? ' (' + n + ' cadastrada' + (n > 1 ? 's' : '') + ')' : '') + '. Cadastre uma vez e vale para todas.</div>' +
+          (pc.length ? pc.map(function(p) { return '<div style="display:flex;gap:8px;align-items:center;border:1px solid #e2e8f0;border-radius:10px;padding:8px;margin-bottom:6px;background:#f8fafc">' + (p.foto ? '<img src="' + p.foto + '" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px">' : '<span style="font-size:22px">🔩</span>') + '<span style="flex:1;min-width:0;font-size:14px"><b>' + esc(p.i) + '</b><br><small style="color:#64748b">' + esc([p.p ? 'Cód. ' + p.p : '', p.m, p.q, p.t].filter(Boolean).join(' · ')) + '</small></span></div>'; }).join('') : '<div class="sub">Nenhuma peça cadastrada neste motor ainda.</div>') +
+          '<button type="button" class="btn2" id="eq-motedit">✏ Editar peças do motor ' + esc(m.nome) + '</button>';
+        $('eq-motedit').onclick = function() { if (!confirm('Abrir o cadastro do motor ' + m.nome + '? O que você mudou neste equipamento e ainda não salvou será perdido.')) return; abrirMotor(m.id, id); };
+      } else if (txt) {
+        box.innerHTML = '<div class="sub" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px;color:#9a3412">⚙️ O motor “' + esc(txt) + '” ainda não está no catálogo. Cadastre para as peças dele valerem para todas as máquinas com esse motor.<br><button type="button" class="btn2" id="eq-motnovo" style="margin-top:8px">➕ Cadastrar motor “' + esc(txt) + '” no catálogo</button></div>';
+        $('eq-motnovo').onclick = function() {
+          C.chk(C.sb.from('man_motores').insert({ nome: txt.toUpperCase() }).select('*')).then(function(r) { MOTORES.push(r.data[0]); MOTORES.sort(function(a, b) { return a.nome.localeCompare(b.nome); }); $('eq-motor').value = r.data[0].nome; $('eq-dl-mot').innerHTML = MOTORES.map(function(x) { return '<option value="' + esc(x.nome) + '">'; }).join(''); pintaMotor(); pintaMov(); C.toast('Motor cadastrado. Use “↑ motor” nas peças para passar para o motor.'); })
+            .catch(function(er) { C.toast('Erro: ' + (er.message || er)); });
+        };
+      } else box.innerHTML = '';
+    }
+    function pintaMov() { var tem = !!motorPorNome($('eq-motor').value); [].forEach.call(ROOT.querySelectorAll('#eq-pecas .prow'), function(r) { var b = r.querySelector('[data-a="pmov"]'); if (tem && !b) { r.insertAdjacentHTML('afterbegin', '<button type="button" data-a="pmov" style="position:absolute;top:8px;right:46px;border:0;background:#ffedd5;color:#9a3412;border-radius:8px;padding:6px 9px;font-weight:800;font-size:12px" title="Passar esta peça para o cadastro do motor (vale para todas as máquinas com este motor)">↑ motor</button>'); } else if (!tem && b) b.remove(); if (r._mov) r.style.opacity = '.45'; }); }
+    $('eq-motor').oninput = function() { pintaMotor(); pintaMov(); };
+    pintaMotor(); pintaMov();
     $('eq-plano').onchange = function() { $('eq-dl-int').innerHTML = colsPlano(this.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); };
     $('eq-fi').onchange = function() { var f = this.files[0]; if (!f) return; U.comprimir(f, 640, 0.65).then(function(d) { S.foto = d; $('eq-foto').innerHTML = '<img src="' + d + '" alt="">'; }).catch(function() { C.toast('Não consegui ler a foto.'); }); };
     $('eq-padd').onclick = function() { var b = $('eq-pecas'); b.insertAdjacentHTML('beforeend', cardPeca({}, S.n++)); var l = b.lastChild; l.querySelector('input').focus(); l.scrollIntoView({ block: 'center' }); };
-    $('eq-pecas').onclick = function(ev) { var b = ev.target.closest('[data-a="pdel"]'); if (b && confirm('Remover esta peça?')) b.closest('.prow').remove(); };
+    $('eq-pecas').onclick = function(ev) {
+      var mv = ev.target.closest('[data-a="pmov"]'); if (mv) { var row = mv.closest('.prow'); row._mov = !row._mov; row.style.opacity = row._mov ? '.45' : ''; mv.textContent = row._mov ? '↩ desfazer' : '↑ motor'; C.toast(row._mov ? 'Ao salvar, esta peça passa para o cadastro do motor.' : 'Peça continua só neste equipamento.'); return; }
+      var b = ev.target.closest('[data-a="pdel"]'); if (b && confirm('Remover esta peça?')) b.closest('.prow').remove();
+    };
+    $('eq-padd').addEventListener('click', function() { pintaMov(); });
     $('eq-pecas').onchange = function(ev) {
       if (!ev.target.classList.contains('pfi')) return; var f = ev.target.files[0], row = ev.target.closest('.prow'); if (!f) return;
       U.comprimir(f, 520, 0.6).then(function(d) { row._foto = d; row.querySelector('.pfoto').innerHTML = '<img src="' + d + '" alt="">'; }).catch(function() { C.toast('Não consegui ler a foto.'); });
@@ -2441,21 +2474,58 @@ var PLSEQ = (function() {
       var cli = ci.value.trim(); if (!cli) { C.toast('Informe o cliente.'); return; }
       if (!e.loc_item_id && C.clientes().indexOf(cli) < 0) { C.toast('Escolha um cliente da lista cadastrada (busque e toque no nome).'); return; }
       var hor = String($('eq-hor').value || '').trim().replace(/\./g, '').replace(',', '.'); hor = hor === '' || isNaN(Number(hor)) ? null : Number(hor);
-      var d = { tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: $('eq-motor').value.trim() || null, transmissao: $('eq-trans').value.trim() || null,
-        plano_id: $('eq-plano').value || null, energia: $('eq-energia').value || null, operacao: $('eq-oper').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, pecas: lerPecasForm(), updated_at: new Date().toISOString() };
+      var motObj = motorPorNome($('eq-motor').value), movRows = [].filter.call(ROOT.querySelectorAll('#eq-pecas .prow'), function(r) { return r._mov; });
+      var todas = lerPecasForm(), movPecas = [];
+      if (motObj && movRows.length) { var idxs = movRows.map(function(r) { return [].indexOf.call(ROOT.querySelectorAll('#eq-pecas .prow'), r); }), vivas = [].filter.call(ROOT.querySelectorAll('#eq-pecas .prow'), function(r) { return r.querySelector('.pi').value.trim(); }); todas = todas.filter(function(p, k) { var mov = vivas[k] && vivas[k]._mov; if (mov) movPecas.push(p); return !mov; }); }
+      var d = { tag: $('eq-tag').value.trim() || null, marca: $('eq-marca').value.trim() || null, modelo: $('eq-mod').value.trim() || null, serie: $('eq-serie').value.trim() || null, motor: motObj ? motObj.nome : ($('eq-motor').value.trim() || null), motor_id: motObj ? motObj.id : null, transmissao: $('eq-trans').value.trim() || null,
+        plano_id: $('eq-plano').value || null, energia: $('eq-energia').value || null, operacao: $('eq-oper').value || null, obs: $('eq-obs').value.trim() || null, foto: S.foto || null, pecas: todas, updated_at: new Date().toISOString() };
       if (!e.loc_item_id) d.cliente = cli;
       if (!d.tag && !d.marca && !d.modelo) { C.toast('Informe ao menos a identificação, a marca ou o modelo.'); return; }
       if (hor !== (e.horimetro != null ? Number(e.horimetro) : null)) { d.horimetro = hor; d.horimetro_em = hor == null ? null : U.hojeISO(); }
       var b = $('eq-ok'); b.disabled = true; b.textContent = 'Salvando…';
       var q = id ? C.sb.from('man_equip').update(d).eq('id', id).select('id') : C.sb.from('man_equip').insert(d).select('id');
-      C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregar(); }).then(function() { C.toast('Equipamento salvo.'); fechar(); if (C.onSaved) C.onSaved(); })
+      (movPecas.length ? C.chk(C.sb.from('man_motores').update({ pecas: (motObj.pecas || []).concat(movPecas), updated_at: new Date().toISOString() }).eq('id', motObj.id).select('id')) : Promise.resolve()).then(function() { return C.chk(q); }).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregar(); }).then(function() { C.toast('Equipamento salvo.'); fechar(); if (C.onSaved) C.onSaved(); })
         .catch(function(er) { b.disabled = false; b.textContent = 'Salvar equipamento'; C.toast('Erro: ' + (er.message || er)); });
     };
     var del = $('eq-del'); if (del) del.onclick = function() { if (!confirm('Excluir este equipamento e suas peças?')) return; C.chk(C.sb.from('man_equip').delete().eq('id', id).select('id')).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para excluir.'); return carregar(); }).then(function() { fechar(); if (C.onSaved) C.onSaved(); }).catch(function(er) { C.toast('Erro: ' + (er.message || er)); }); };
   }
+  // ---------- cadastro do motor: peças compartilhadas por todas as máquinas com o mesmo motor ----------
+  function abrirMotor(mid, voltarEquip) {
+    var m = mid ? motorPorId(mid) : { nome: '', obs: '', pecas: [] }; if (mid && !m) { C.toast('Motor não encontrado.'); return; }
+    var usam = mid ? (LISTA || []).filter(function(x) { return x.motor_id === mid; }) : [];
+    S = { id: mid || null, e: m, orig: (m.pecas || []).slice(), n: (m.pecas || []).length, motor: true };
+    abrirRoot();
+    ROOT.innerHTML = '<div class="pk-top"><b>⚙️ ' + (mid ? 'Motor ' + esc(m.nome) : 'Novo motor') + '</b><button type="button" id="mo-x">✕ Fechar</button></div><div class="pk-main"><div class="pk-c">' +
+      '<div class="fld"><label>Nome do motor *</label><input type="text" id="mo-nome" value="' + esc(m.nome || '') + '" placeholder="Ex.: XINCHAI C490BPG, MAZDA 2.2 GLP"></div>' +
+      '<div class="fld"><label>Observações</label><input type="text" id="mo-obs" value="' + esc(m.obs || '') + '"></div>' +
+      (usam.length ? '<div class="sub" style="background:#f1f5f9;border-radius:10px;padding:10px"><b>' + usam.length + ' máquina(s) com este motor:</b><br>' + usam.map(function(x) { return esc(x.cliente) + ' — ' + esc(nomeEquip(x)) + (x.serie ? ' (série ' + esc(x.serie) + ')' : ''); }).join('<br>') + '</div>' : '') +
+      '<div class="hd">PEÇAS DO MOTOR</div><div class="sub">Valem para todas as máquinas com este motor. Peça que é só de uma máquina, cadastre no próprio equipamento.</div>' +
+      '<datalist id="eq-dl-forn">' + fornecedores().map(function(f) { return '<option value="' + esc(f) + '">'; }).join('') + '</datalist><datalist id="eq-dl-int"><option value="250 h"><option value="500 h"><option value="1000 h"><option value="2000 h"></datalist>' +
+      '<div id="eq-pecas">' + (m.pecas || []).map(function(p, k) { return cardPeca(p, k); }).join('') + '</div><button type="button" class="btn2" id="eq-padd">➕ Adicionar peça ao motor</button>' +
+      '</div></div><div class="pk-foot"><button type="button" class="pk-btn" id="mo-ok">Salvar motor</button>' + (mid && C.admin() && !usam.length ? '<button type="button" class="pk-btn r" id="mo-del" style="flex:0 0 auto;padding:14px 16px">🗑</button>' : '') + '</div>';
+    function sair() { fechar(); if (voltarEquip) abrirEquip(voltarEquip); else if (C.onSaved) C.onSaved(); }
+    $('mo-x').onclick = function() { if (confirm('Fechar sem salvar?')) sair(); };
+    $('eq-padd').onclick = function() { var b = $('eq-pecas'); b.insertAdjacentHTML('beforeend', cardPeca({}, S.n++)); var l = b.lastChild; l.querySelector('input').focus(); l.scrollIntoView({ block: 'center' }); };
+    $('eq-pecas').onclick = function(ev) { var b = ev.target.closest('[data-a="pdel"]'); if (b && confirm('Remover esta peça do motor? Ela sai de todas as máquinas com este motor.')) b.closest('.prow').remove(); };
+    $('eq-pecas').onchange = function(ev) {
+      if (!ev.target.classList.contains('pfi')) return; var f = ev.target.files[0], row = ev.target.closest('.prow'); if (!f) return;
+      U.comprimir(f, 520, 0.6).then(function(d) { row._foto = d; row.querySelector('.pfoto').innerHTML = '<img src="' + d + '" alt="">'; }).catch(function() { C.toast('Não consegui ler a foto.'); });
+    };
+    $('mo-ok').onclick = function() {
+      var nome = $('mo-nome').value.trim().toUpperCase(); if (!nome) { C.toast('Informe o nome do motor.'); return; }
+      var outro = motorPorNome(nome); if (outro && outro.id !== mid) { C.toast('Já existe o motor ' + outro.nome + ' no catálogo.'); return; }
+      var d = { nome: nome, obs: $('mo-obs').value.trim() || null, pecas: lerPecasForm(), updated_at: new Date().toISOString() }, b = $('mo-ok'); b.disabled = true; b.textContent = 'Salvando…';
+      var q = mid ? C.sb.from('man_motores').update(d).eq('id', mid).select('id') : C.sb.from('man_motores').insert(d).select('id');
+      C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return mid && nome !== m.nome ? C.chk(C.sb.from('man_equip').update({ motor: nome }).eq('motor_id', mid).select('id')) : null; })
+        .then(function() { return carregar(); }).then(function() { C.toast('Motor salvo. As peças valem para todas as máquinas com este motor.'); sair(); })
+        .catch(function(er) { b.disabled = false; b.textContent = 'Salvar motor'; C.toast('Erro: ' + (er.message || er)); });
+    };
+    var del = $('mo-del'); if (del) del.onclick = function() { if (!confirm('Excluir o motor ' + m.nome + ' do catálogo?')) return; C.chk(C.sb.from('man_motores').delete().eq('id', mid).select('id')).then(function() { return carregar(); }).then(sair).catch(function(er) { C.toast('Erro: ' + (er.message || er)); }); };
+  }
+
   return {
     init: function(c) { for (var k in c) C[k] = c[k]; }, opAjuda: function() { return OP_AJUDA; },
-    carregar: carregar, setLista: function(l, p) { LISTA = l; if (p) PLANOS = p; }, lista: function() { return LISTA; }, planos: function() { return PLANOS; }, pecas: pecasFlat, equips: equipsFiltrados, nomeEquip: nomeEquip, aplicarHist: aplicarHist, fornecedores: fornecedores,
+    carregar: carregar, setLista: function(l, p, m) { LISTA = l; if (p) PLANOS = p; if (m) MOTORES = m; }, setMotores: function(m) { MOTORES = m || []; }, motores: function() { return MOTORES; }, motorPorId: motorPorId, pecasDe: pecasDe, abrirMotor: function(id, voltar) { abrirMotor(id, voltar); }, novoMotor: function() { abrirMotor(null); }, lista: function() { return LISTA; }, planos: function() { return PLANOS; }, pecas: pecasFlat, equips: equipsFiltrados, nomeEquip: nomeEquip, aplicarHist: aplicarHist, fornecedores: fornecedores,
     novo: function(cli) { (LISTA ? Promise.resolve() : carregar()).then(function() { abrirEquip(null, cli); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); },
     abrir: function(id) { (LISTA ? Promise.resolve() : carregar()).then(function() { abrirEquip(id); }).catch(function(e) { C.toast('Erro: ' + (e.message || e)); }); }
   };
@@ -2535,7 +2605,7 @@ var PLSOS = (function() {
   function pintaExtras() { var b = $('o-extras'); if (b) b.innerHTML = (S.extra || []).map(linhaExtra).join(''); }
   function datalistPecas() {
     var e = S && S.equip_id && PLSEQ.lista() ? PLSEQ.lista().filter(function(x) { return x.id === S.equip_id; })[0] : null, h = '';
-    ((e && e.pecas) || []).forEach(function(p) { h += '<option value="' + esc(p.i) + '">'; }); var d = $('o-dl-pc'); if (d) d.innerHTML = h;
+    PLSEQ.pecasDe(e).forEach(function(p) { h += '<option value="' + esc(p.i) + '">'; }); var d = $('o-dl-pc'); if (d) d.innerHTML = h;
   }
   function pintaFotos() {
     $('o-fotos').innerHTML = S.fotos.length ? '<div class="thumbs">' + S.fotos.map(function(f, i) { return '<div class="th"><button type="button" class="x" data-a="fdel" data-i="' + i + '">✕</button><img loading="lazy" src="' + f.src + '" alt=""><input type="text" placeholder="Legenda (opcional)" value="' + esc(f.leg || '') + '"></div>'; }).join('') + '</div>' : '';
@@ -3199,7 +3269,7 @@ var PLSDOC = (function() {
   }
   function carregarDocs() { return C.chk(C.sb.from('man_equip_docs').select('*').eq('equip_id', EQ.id).order('data_doc', { ascending: false, nullsFirst: false }).order('created_at', { ascending: false })).then(function(r) { DOCS = r.data || []; }); }
   function pinta() {
-    var e = EQ, pec = (e.pecas || []).filter(function(p) { return p.foto; });
+    var e = EQ, pec = (EQ._pecas || PLSEQ.pecasDe(e)).filter(function(p) { return p.foto; });
     var frota = e.loc_item_id ? '<span class="pd-pill a" style="background:#ffedd5;color:#9a3412">🏷 Frota PLS · ' + (e.cliente === 'PLS EMPILHADEIRAS' ? 'na base' : 'locada') + '</span>' : '';
     var docsH = CATS.map(function(c) {
       var l = DOCS.filter(function(d) { return (cat(d.categoria)[0]) === c[0]; }); if (!l.length) return '';
@@ -3279,7 +3349,8 @@ var PLSDOC = (function() {
     ROOT.innerHTML = '<div class="pk-top"><b>📁 Pasta do equipamento</b><button type="button" id="pd-x">Fechar</button></div><div class="pk-main"><div class="pk-c"><div class="sub">Carregando…</div></div></div>'; $('pd-x').onclick = fechar;
     C.chk(C.sb.from('man_equip').select('*').eq(campo, valor).maybeSingle()).then(function(r) {
       if (!r.data) throw new Error(campo === 'loc_item_id' ? 'Esta máquina ainda não tem cadastro na Manutenção.' : 'Equipamento não encontrado.');
-      EQ = r.data; return Promise.all([carregarDocs(), carregarHist()]);
+      EQ = r.data; var mp = EQ.motor_id && !PLSEQ.motorPorId(EQ.motor_id) ? C.sb.from('man_motores').select('*').eq('id', EQ.motor_id).maybeSingle().then(function(x) { if (x.data) EQ._pecas = (x.data.pecas || []).map(function(p) { return Object.assign({ _motor: x.data.nome }, p); }).concat(EQ.pecas || []); }, function() {}) : null;
+      return Promise.all([carregarDocs(), carregarHist(), mp]);
     }).then(pinta).catch(function(e) { C.toast(e.message || String(e)); fechar(); });
   }
   // seletor de equipamento do cliente (usado no checklist e na entrega): cards com foto; toque escolhe / toque de novo desmarca
