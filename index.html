@@ -2264,19 +2264,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .sx-acoes { white-space: nowrap; text-align: right; }
     .sx-acoes .btn-pls-secondary { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
     .sx-del { color: #b91c1c; }
-    /* Parceiros: visual compacto */
-    #setor-parceiros .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 0.45rem; margin-bottom: 0.6rem; }
-    #setor-parceiros .kpi-card { padding: 0.35rem 0.6rem; }
-    #setor-parceiros .kpi-card .kpi-num { font-size: 1.1rem !important; line-height: 1.2; }
-    #setor-parceiros .kpi-card .kpi-txt { font-size: 0.74rem; }
-    #setor-parceiros .kpi-card .sx-muted { font-size: 0.66rem; }
-    #setor-parceiros .table-container { max-height: none; overflow: visible; }
-    #setor-parceiros .table-pls { font-size: 0.78rem; }
-    #setor-parceiros .table-pls th, #setor-parceiros .table-pls td { padding: 0.3rem 0.5rem; }
-    #setor-parceiros .table-pls th { position: static; }
-    #setor-parceiros .sx-toolbar { margin-bottom: 0.5rem; gap: 0.35rem; }
-    #setor-parceiros .sx-subbtn { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
-    #setor-parceiros .sx-acoes .btn-pls-secondary { padding: 0.15rem 0.45rem; }
+    /* Visual compacto em todas as telas (não vale para o modo TV nem para a impressão) */
+    body:not(.tv-mode-active) .pls-main-content { padding-top: 0.7rem; }
+    body:not(.tv-mode-active) .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 0.45rem; margin-bottom: 0.6rem; }
+    body:not(.tv-mode-active) .kpi-card { padding: 0.35rem 0.6rem; }
+    body:not(.tv-mode-active) .kpi-card .kpi-num { font-size: 1.1rem !important; line-height: 1.2; }
+    body:not(.tv-mode-active) .kpi-card .kpi-txt { font-size: 0.74rem; margin-top: 0.1rem; }
+    body:not(.tv-mode-active) .kpi-card .sx-muted { font-size: 0.66rem; }
+    body:not(.tv-mode-active) .table-container { max-height: none; overflow-y: visible; }
+    body:not(.tv-mode-active) .table-pls { font-size: 0.78rem; }
+    body:not(.tv-mode-active) .table-pls th, body:not(.tv-mode-active) .table-pls td { padding: 0.3rem 0.5rem; }
+    body:not(.tv-mode-active) .table-pls th { position: static; }
+    body:not(.tv-mode-active) .card-pls { padding: 0.8rem; margin-bottom: 0.8rem; }
+    body:not(.tv-mode-active) .sx-toolbar { margin-bottom: 0.5rem; gap: 0.35rem; }
+    body:not(.tv-mode-active) .sx-subnav { gap: 0.35rem; margin-bottom: 0.5rem; padding: 0.2rem 0; }
+    body:not(.tv-mode-active) .sx-subbtn { min-width: 120px; padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    body:not(.tv-mode-active) .sx-acoes .btn-pls-secondary { padding: 0.15rem 0.45rem; }
+    body:not(.tv-mode-active) .btn-pls-primary, body:not(.tv-mode-active) .btn-pls-secondary { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+    body:not(.tv-mode-active) .form-control { padding: 0.3rem 0.5rem; font-size: 0.82rem; }
+    body:not(.tv-mode-active) .sx-h4 { margin: 0.9rem 0 0.4rem; }
     .sx-chk { width: 20px; height: 20px; cursor: pointer; accent-color: #16a34a; }
     .sx-pill { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
     .sx-ok, .sx-st-ok { background: #dcfce7; color: #166534; border-color: #86efac; }
@@ -2610,7 +2616,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v82 — 22/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v83 — 22/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
