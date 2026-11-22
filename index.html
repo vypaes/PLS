@@ -2597,7 +2597,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v80 — 21/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v81 — 22/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7940,13 +7940,33 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           } else {
             var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele — gerado sozinho todo mês quando o contrato tem o repasse informado (🔁).</span></div>';
             var rot = function(sen) { return sen === 'RECEBER' ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') : (eu ? 'PLS paga a você' : 'PLS paga ao parceiro'); };
-            lc = lc.slice().sort(function(a, b) { if (a.pago !== b.pago) return a.pago ? 1 : -1; var x = String(a.vencimento || a.competencia || ''), y = String(b.vencimento || b.competencia || ''); return a.pago ? y.localeCompare(x) : x.localeCompare(y); });
-            h = topo + (lc.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Competência</th><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + lc.map(function(l) {
-              var venc = l.vencimento ? (!l.pago && l.vencimento < hoje() ? '<b style="color:#dc2626">' + fd(l.vencimento) + ' · VENCIDO</b>' : fd(l.vencimento)) : '—';
-              return '<tr>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + venc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + (l.auto ? ' <span class="sx-pill sx-st-disp" title="Gerado automaticamente pelo contrato de locação">🔁 automático</span>' : '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : '<span class="sx-pill sx-hoje">EM ABERTO</span>') + '</td>' +
-                (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum lançamento ainda.' + (eu ? '' : ' Use “Gerar comissões do mês”.') + '</div>');
+            var hj = hoje(), MN = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+            var mesDe = function(l) { return String(l.vencimento || l.competencia || '').slice(0, 7); };
+            var nomeMes = function(m) { return MN[Number(m.slice(5, 7)) - 1] + '/' + m.slice(0, 4); };
+            var somaMes = function(m, k) { var y = Number(m.slice(0, 4)), mm = Number(m.slice(5, 7)) - 1 + k; while (mm < 0) { mm += 12; y--; } while (mm > 11) { mm -= 12; y++; } return y + '-' + (mm < 9 ? '0' : '') + (mm + 1); };
+            var mesSel = PA.mes || mesAtual(), venc = function(a, b) { return String(a.vencimento || a.competencia || '').localeCompare(String(b.vencimento || b.competencia || '')); };
+            var atras = lc.filter(function(l) { return !l.pago && l.vencimento && l.vencimento < hj; }).sort(venc);
+            var doMes = lc.filter(function(l) { return mesDe(l) === mesSel && atras.indexOf(l) < 0; }).sort(function(a, b) { if (a.pago !== b.pago) return a.pago ? 1 : -1; return venc(a, b); });
+            var ms = {}; lc.forEach(function(l) { if (mesDe(l)) ms[mesDe(l)] = 1; }); ms[mesAtual()] = 1; ms[mesSel] = 1;
+            var ks = Object.keys(ms).sort(), mIni = ks[0], mFim = ks[ks.length - 1], mOpts = '';
+            for (var mk = mIni; mk <= mFim; mk = somaMes(mk, 1)) mOpts += '<option value="' + mk + '"' + (mk === mesSel ? ' selected' : '') + '>' + nomeMes(mk) + (mk === mesAtual() ? ' (este mês)' : '') + '</option>';
+            var linha = function(l) {
+              var vc = l.vencimento ? (!l.pago && l.vencimento < hj ? '<b style="color:#dc2626">' + fd(l.vencimento) + ' · VENCIDO</b>' : fd(l.vencimento)) : '—';
+              return '<tr' + (!l.pago && l.vencimento && l.vencimento < hj ? ' style="background:#fef2f2"' : '') + '>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + vc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + (l.auto ? ' <span class="sx-pill sx-st-disp" title="Gerado automaticamente pelo contrato de locação">🔁 automático</span>' : '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : l.vencimento && l.vencimento < hj ? '<span class="sx-pill sx-atraso">ATRASADO</span>' : '<span class="sx-pill sx-hoje">A PAGAR</span>') + '</td>' +
+                (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>';
+            };
+            var tab = function(arr) { return '<table class="table-pls"><thead><tr>' + thP + '<th>Competência</th><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + arr.map(linha).join('') + '</tbody></table>'; };
+            var tot = function(arr, sen, pg) { return arr.filter(function(l) { return l.sentido === sen && !!l.pago === pg; }).reduce(function(t, l) { return t + Number(l.valor); }, 0); };
+            var aPagarM = tot(doMes, 'PAGAR', false), aRecM = tot(doMes, 'RECEBER', false), pagoM = tot(doMes, 'PAGAR', true) + tot(doMes, 'RECEBER', true);
+            var nav = '<div class="sx-toolbar" style="margin-top:0.8rem"><button type="button" class="btn-pls-secondary" data-sx="pa-mes" data-v="-1">◀</button><select id="pa-mes-sel" class="form-control sx-w" style="max-width:230px;font-weight:700">' + mOpts + '</select><button type="button" class="btn-pls-secondary" data-sx="pa-mes" data-v="1">▶</button>' +
+              (mesSel !== mesAtual() ? '<button type="button" class="btn-pls-secondary" data-sx="pa-mes" data-v="hoje">Voltar para este mês</button>' : '') +
+              '<span class="sx-muted">' + (aPagarM ? (eu ? 'PLS paga a você' : 'PLS paga ao parceiro') + ' (a pagar): <b>' + brl(aPagarM) + '</b> · ' : '') + (aRecM ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') + ' (a pagar): <b>' + brl(aRecM) + '</b> · ' : '') + 'já pago no mês: <b>' + brl(pagoM) + '</b></span></div>';
+            h = topo +
+              (atras.length ? '<div style="margin:0.6rem 0 0.3rem;font-weight:800;color:#b91c1c">⚠ Atrasadas — ' + atras.length + ' lançamento(s), de qualquer mês</div>' + tab(atras) : '') +
+              nav + (doMes.length ? tab(doMes) : '<div class="sx-vazio">Nenhum lançamento com vencimento em ' + nomeMes(mesSel) + '.' + (eu ? '' : ' Use “Gerar comissões do mês”.') + '</div>');
           }
           $('pa-tabela').innerHTML = h;
+          var pms = $('pa-mes-sel'); if (pms) pms.onchange = function() { PA.mes = this.value; renderParc(); };
         }
         function linhasKV(arr) { return '<table class="table-pls"><tbody>' + arr.filter(function(x) { return x[1] != null && x[1] !== ''; }).map(function(x) { return '<tr><td style="width:38%;font-weight:700">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</tbody></table>'; }
         function verOrcParc(id) {
@@ -13753,6 +13773,7 @@ var PLSDOC = (function() {
             case 'lo-novo': abrirItem(null, a.getAttribute('data-tipo')); break;
             case 'fr-novo': abrirFrota(null); break;
             case 'pa-sub': PA.sub = a.getAttribute('data-v'); renderParc(); break;
+            case 'pa-mes': { var vv = a.getAttribute('data-v'), cur = PA.mes || mesAtual(); if (vv === 'hoje') PA.mes = mesAtual(); else { var yy = Number(cur.slice(0, 4)), mn = Number(cur.slice(5, 7)) - 1 + Number(vv); while (mn < 0) { mn += 12; yy--; } while (mn > 11) { mn -= 12; yy++; } PA.mes = yy + '-' + (mn < 9 ? '0' : '') + (mn + 1); } renderParc(); break; }
             case 'pa-ver-orc': verOrcParc(id); break;
             case 'pa-ver-eq': verEqParc(id); break;
             case 'pa-gerar': gerarComissoes(); break;
