@@ -2264,6 +2264,19 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .sx-acoes { white-space: nowrap; text-align: right; }
     .sx-acoes .btn-pls-secondary { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
     .sx-del { color: #b91c1c; }
+    /* Parceiros: visual compacto */
+    #setor-parceiros .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(122px, 1fr)); gap: 0.45rem; margin-bottom: 0.6rem; }
+    #setor-parceiros .kpi-card { padding: 0.35rem 0.6rem; }
+    #setor-parceiros .kpi-card .kpi-num { font-size: 1.1rem !important; line-height: 1.2; }
+    #setor-parceiros .kpi-card .kpi-txt { font-size: 0.74rem; }
+    #setor-parceiros .kpi-card .sx-muted { font-size: 0.66rem; }
+    #setor-parceiros .table-container { max-height: none; overflow: visible; }
+    #setor-parceiros .table-pls { font-size: 0.78rem; }
+    #setor-parceiros .table-pls th, #setor-parceiros .table-pls td { padding: 0.3rem 0.5rem; }
+    #setor-parceiros .table-pls th { position: static; }
+    #setor-parceiros .sx-toolbar { margin-bottom: 0.5rem; gap: 0.35rem; }
+    #setor-parceiros .sx-subbtn { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+    #setor-parceiros .sx-acoes .btn-pls-secondary { padding: 0.15rem 0.45rem; }
     .sx-chk { width: 20px; height: 20px; cursor: pointer; accent-color: #16a34a; }
     .sx-pill { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
     .sx-ok, .sx-st-ok { background: #dcfce7; color: #166534; border-color: #86efac; }
@@ -2597,7 +2610,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v81 — 22/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v82 — 22/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7923,22 +7936,26 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var com = cont.reduce(function(t, i) { return t + comissaoDe(i); }, 0), fat = cont.reduce(function(t, i) { return t + Number(i.valor || 0); }, 0);
           var aRec = lc.filter(function(l) { return l.sentido === 'RECEBER' && !l.pago; }).reduce(function(t, l) { return t + Number(l.valor); }, 0);
           var aPag = lc.filter(function(l) { return l.sentido === 'PAGAR' && !l.pago; }).reduce(function(t, l) { return t + Number(l.valor); }, 0);
-          $('pa-kpis').innerHTML = kpi('Equipamentos', eq.filter(function(i) { return i.status !== 'BAIXADO'; }).length, '', '#334155') + kpi('Disponíveis', n('DISPONÍVEL'), '', '#2563eb') + kpi('Locados', n('LOCADA'), brl(fat) + '/mês', '#16a34a') +
-            kpi('Em manutenção', n('EM MANUTENÇÃO'), '', 'var(--pls-red)') + kpi('Orçamentos em aberto', pr.filter(function(x) { return x.status === 'ENVIADA'; }).length, '', '#d97706') + kpi(eu ? 'Comissão devida à PLS' : 'Comissão prevista à PLS', brl(com), 'por mês, contratos do grupo', '#7c3aed') +
+          $('pa-kpis').innerHTML = kpi('Equipamentos', eq.filter(function(i) { return i.status !== 'BAIXADO'; }).length, '', '#334155') + kpi('Disponíveis', n('DISPONÍVEL'), '', '#2563eb') + kpi('Locados', n('LOCADA'), eu ? '' : brl(fat) + '/mês', '#16a34a') +
+            kpi('Em manutenção', n('EM MANUTENÇÃO'), '', 'var(--pls-red)') + kpi('Orçamentos em aberto', pr.filter(function(x) { return x.status === 'ENVIADA'; }).length, '', '#d97706') + (eu ? '' : kpi(eu ? 'Comissão devida à PLS' : 'Comissão prevista à PLS', brl(com), 'por mês, contratos do grupo', '#7c3aed')) +
             kpi(eu ? 'Você deve à PLS' : 'Parceiro deve à PLS', brl(aRec), 'em aberto', '#dc2626') + kpi(eu ? 'PLS deve a você' : 'PLS deve ao parceiro', brl(aPag), 'em aberto', '#0891b2');
           var h = '';
           if (PA.sub === 'equip') {
-            h = eq.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Status</th><th>Equipamento</th><th>Cliente</th><th>Anotações</th></tr></thead><tbody>' + eq.map(function(i) {
-              return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '>' + tdP(i) + '<td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b></td><td>' + esc(i.cliente || '—') + '</td><td>' + esc(i.anotacoes || (i.status === 'BAIXADO' ? (i.baixa_motivo || '') : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento deste parceiro na frota.</div>';
+            h = eq.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Status</th><th>Equipamento</th>' + (eu ? '' : '<th>Cliente</th>') + '<th>Anotações</th></tr></thead><tbody>' + eq.map(function(i) {
+              return '<tr' + (i.status === 'BAIXADO' ? ' class="sx-row-enc"' : '') + '>' + tdP(i) + '<td>' + badgeStatus(i.status) + '</td><td><b>' + esc(i.equipamento) + '</b></td>' + (eu ? '' : '<td>' + esc(i.cliente || '—') + '</td>') + '<td>' + esc(i.anotacoes || (i.status === 'BAIXADO' ? (i.baixa_motivo || '') : '')) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum equipamento deste parceiro na frota.</div>';
           } else if (PA.sub === 'orc') {
             var cor = { ENVIADA: '#d97706', APROVADA: '#16a34a', RECUSADA: '#dc2626' };
-            h = pr.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Código</th><th>Situação</th><th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
-              return '<tr>' + tdP(x) + '<td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td><td>' + esc(x.cliente_nome) + '</td><td>' + esc((x.equipamentos || []).join(', ')) + '</td><td style="text-align:right">' + brl(x.valor_mensal) + '</td><td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
+            h = pr.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Código</th><th>Situação</th>' + (eu ? '' : '<th>Cliente</th>') + '<th>Equipamento</th>' + (eu ? '' : '<th style="text-align:right">Valor mensal</th>') + '<th>Emissão</th><th></th></tr></thead><tbody>' + pr.map(function(x) {
+              return '<tr>' + tdP(x) + '<td><b>' + esc(x.codigo) + '</b></td><td><b style="color:' + (cor[x.status] || '#334155') + '">' + esc(x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status) + '</b></td>' + (eu ? '' : '<td>' + esc(x.cliente_nome) + '</td>') + '<td>' + esc((x.equipamentos || []).join(', ')) + '</td>' + (eu ? '' : '<td style="text-align:right">' + brl(x.valor_mensal) + '</td>') + '<td>' + fd(x.emissao) + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-orc" data-id="' + x.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum orçamento com equipamento deste parceiro.</div>';
+          } else if (PA.sub === 'contr' && eu) {
+            h = cont.length ? '<table class="table-pls"><thead><tr><th>Equipamento</th><th>Contrato</th><th style="text-align:right">A receber por mês</th><th>Dia</th></tr></thead><tbody>' + cont.map(function(i) {
+              var ok = i.contrato_modelo !== 'PARCEIRO' && Number(i.repasse_valor) > 0;
+              return '<tr><td><b>' + esc(i.equipamento) + '</b></td><td>Contrato ativo</td><td style="text-align:right">' + (ok ? '<b>' + brl(i.repasse_valor) + '</b>' : '<span class="sx-muted">ainda não informado</span>') + '</td><td>' + (ok && i.repasse_dia ? 'dia ' + esc(i.repasse_dia) : '—') + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
           } else if (PA.sub === 'contr') {
             h = cont.length ? '<table class="table-pls"><thead><tr>' + thP + '<th>Cliente</th><th>Equipamento</th><th style="text-align:right">Valor mensal</th><th>Vence</th><th>Contrato</th><th style="text-align:right">Comissão à PLS</th><th style="text-align:right">Repasse ao parceiro</th><th></th></tr></thead><tbody>' + cont.map(function(i) {
               return '<tr>' + tdP(i) + '<td><b>' + esc(i.cliente || '—') + '</b></td><td>' + esc(i.equipamento) + '</td><td style="text-align:right">' + brl(i.valor) + '</td><td>dia ' + esc(i.dia_vencimento || '—') + '</td><td>' + (i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS') + '</td><td style="text-align:right">' + (i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '%)' : '') : '—') + '</td><td style="text-align:right">' + (i.contrato_modelo !== 'PARCEIRO' && Number(i.repasse_valor) > 0 ? brl(i.repasse_valor) + '/mês' + (i.repasse_dia ? '<br><span class="sx-muted">dia ' + i.repasse_dia + '</span>' : '') : i.contrato_modelo !== 'PARCEIRO' ? '<span style="color:#b45309" title="Informe em Locações → Editar contrato">não informado</span>' : '—') + '</td><td><button type="button" class="btn-pls-secondary" data-sx="pa-ver-eq" data-id="' + i.id + '">Ver</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum contrato ativo.</div>';
           } else {
-            var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted">“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele — gerado sozinho todo mês quando o contrato tem o repasse informado (🔁).</span></div>';
+            var topo = eu ? '' : '<div class="sx-toolbar"><button type="button" class="btn-pls-primary" data-sx="pa-gerar">⚙ Gerar comissões do mês</button><button type="button" class="btn-pls-secondary" data-sx="pa-novo">➕ Novo lançamento</button><span class="sx-muted" style="cursor:help" title="“Parceiro paga à PLS” = comissão. “PLS paga ao parceiro” = repasse de locação que a PLS faturou de equipamento dele — gerado sozinho todo mês quando o contrato tem o repasse informado (🔁).">ⓘ o que é cada tipo?</span></span></div>';
             var rot = function(sen) { return sen === 'RECEBER' ? (eu ? 'Você paga à PLS' : 'Parceiro paga à PLS') : (eu ? 'PLS paga a você' : 'PLS paga ao parceiro'); };
             var hj = hoje(), MN = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
             var mesDe = function(l) { return String(l.vencimento || l.competencia || '').slice(0, 7); };
@@ -7951,11 +7968,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             var ks = Object.keys(ms).sort(), mIni = ks[0], mFim = ks[ks.length - 1], mOpts = '';
             for (var mk = mIni; mk <= mFim; mk = somaMes(mk, 1)) mOpts += '<option value="' + mk + '"' + (mk === mesSel ? ' selected' : '') + '>' + nomeMes(mk) + (mk === mesAtual() ? ' (este mês)' : '') + '</option>';
             var linha = function(l) {
-              var vc = l.vencimento ? (!l.pago && l.vencimento < hj ? '<b style="color:#dc2626">' + fd(l.vencimento) + ' · VENCIDO</b>' : fd(l.vencimento)) : '—';
-              return '<tr' + (!l.pago && l.vencimento && l.vencimento < hj ? ' style="background:#fef2f2"' : '') + '>' + tdP(l) + '<td>' + esc(l.competencia || '—') + '</td><td>' + vc + '</td><td>' + rot(l.sentido) + '</td><td>' + esc(l.descricao || '') + (l.auto ? ' <span class="sx-pill sx-st-disp" title="Gerado automaticamente pelo contrato de locação">🔁 automático</span>' : '') + '</td><td style="text-align:right;font-weight:700">' + brl(l.valor) + '</td><td>' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em) + '</span>' : l.vencimento && l.vencimento < hj ? '<span class="sx-pill sx-atraso">ATRASADO</span>' : '<span class="sx-pill sx-hoje">A PAGAR</span>') + '</td>' +
-                (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '">' + (l.pago ? 'Desfazer pagamento' : '✔ Marcar pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '">Excluir</button></td>') + '</tr>';
+              var atr = !l.pago && l.vencimento && l.vencimento < hj;
+              var vc = l.vencimento ? (atr ? '<b style="color:#dc2626">' + fd(l.vencimento).slice(0, 5) + '</b>' : fd(l.vencimento).slice(0, 5)) : '—';
+              return '<tr' + (atr ? ' style="background:#fef2f2"' : '') + '><td style="white-space:nowrap">' + vc + '</td>' + tdP(l) + '<td>' + esc(l.descricao || '') + (l.auto ? ' <span class="sx-muted" title="Gerado automaticamente pelo contrato de locação">🔁</span>' : '') + '<div class="sx-muted">' + rot(l.sentido) + '</div></td><td style="text-align:right;font-weight:700;white-space:nowrap">' + brl(l.valor) + '</td><td style="white-space:nowrap">' + (l.pago ? '<span class="sx-pill sx-st-ok">PAGO ' + fd(l.pago_em).slice(0, 5) + '</span>' : atr ? '<span class="sx-pill sx-atraso">ATRASADO</span>' : '<span class="sx-pill sx-hoje">A PAGAR</span>') + '</td>' +
+                (eu ? '' : '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-sx="pa-pago" data-id="' + l.id + '" title="' + (l.pago ? 'Desfazer pagamento' : 'Marcar como pago') + '">' + (l.pago ? '↩ Desfazer' : '✔ Pago') + '</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="pa-del" data-id="' + l.id + '" title="Excluir">🗑</button></td>') + '</tr>';
             };
-            var tab = function(arr) { return '<table class="table-pls"><thead><tr>' + thP + '<th>Competência</th><th>Vencimento</th><th>Tipo</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + arr.map(linha).join('') + '</tbody></table>'; };
+            var tab = function(arr) { return '<table class="table-pls"><thead><tr><th>Vence</th>' + thP + '<th>Descrição</th><th style="text-align:right">Valor</th><th>Situação</th>' + (eu ? '' : '<th></th>') + '</tr></thead><tbody>' + arr.map(linha).join('') + '</tbody></table>'; };
             var tot = function(arr, sen, pg) { return arr.filter(function(l) { return l.sentido === sen && !!l.pago === pg; }).reduce(function(t, l) { return t + Number(l.valor); }, 0); };
             var aPagarM = tot(doMes, 'PAGAR', false), aRecM = tot(doMes, 'RECEBER', false), pagoM = tot(doMes, 'PAGAR', true) + tot(doMes, 'RECEBER', true);
             var nav = '<div class="sx-toolbar" style="margin-top:0.8rem"><button type="button" class="btn-pls-secondary" data-sx="pa-mes" data-v="-1">◀</button><select id="pa-mes-sel" class="form-control sx-w" style="max-width:230px;font-weight:700">' + mOpts + '</select><button type="button" class="btn-pls-secondary" data-sx="pa-mes" data-v="1">▶</button>' +
@@ -7971,14 +7989,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function linhasKV(arr) { return '<table class="table-pls"><tbody>' + arr.filter(function(x) { return x[1] != null && x[1] !== ''; }).map(function(x) { return '<tr><td style="width:38%;font-weight:700">' + esc(x[0]) + '</td><td>' + esc(x[1]) + '</td></tr>'; }).join('') + '</tbody></table>'; }
         function verOrcParc(id) {
           var x = (PA.d.propostas || []).filter(function(y) { return y.id === id; })[0]; if (!x) return;
-          abrirModal('Orçamento ' + x.codigo, linhasKV([['Cliente', x.cliente_nome], ['Situação', x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status], ['Equipamentos', (x.equipamentos || []).join(', ')], ['Valor mensal', brl(x.valor_mensal)],
-            ['Emissão', fd(x.emissao)], ['Enviada em', x.enviada_em ? fd(x.enviada_em) : ''], ['Aprovada em', x.aprovada_em ? fd(x.aprovada_em) : ''], ['Recusada em', x.recusada_em ? fd(x.recusada_em) : ''], ['Motivo', x.motivo],
-            ['Local de entrega', x.local], ['Início previsto', x.entrega ? fd(x.entrega) : ''], ['Período mínimo', x.periodo_min ? x.periodo_min + ' dias' : ''], ['Modelo', x.modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
-            ['Comissão à PLS', x.modelo === 'PARCEIRO' && x.comissao_valor != null ? (x.comissao_tipo === 'fixo' ? brl(x.comissao_valor) + '/mês' : numStr(x.comissao_valor) + '%') : '']]), 'Fechar', function() {});
+          abrirModal('Orçamento ' + x.codigo, linhasKV([['Cliente', souParceiro() ? '' : x.cliente_nome], ['Situação', x.status === 'ENVIADA' ? 'EM ABERTO' : x.status === 'APROVADA' ? 'FECHOU' : x.status === 'RECUSADA' ? 'NÃO FECHOU' : x.status], ['Equipamentos', (x.equipamentos || []).join(', ')], ['Valor mensal', souParceiro() ? '' : brl(x.valor_mensal)],
+            ['Emissão', fd(x.emissao)], ['Enviada em', x.enviada_em ? fd(x.enviada_em) : ''], ['Aprovada em', x.aprovada_em ? fd(x.aprovada_em) : ''], ['Recusada em', x.recusada_em ? fd(x.recusada_em) : ''], ['Motivo', souParceiro() ? '' : x.motivo],
+            ['Local de entrega', souParceiro() ? '' : x.local], ['Início previsto', x.entrega ? fd(x.entrega) : ''], ['Período mínimo', x.periodo_min ? x.periodo_min + ' dias' : ''], ['Modelo', x.modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
+            ['Comissão à PLS', !souParceiro() && x.modelo === 'PARCEIRO' && x.comissao_valor != null ? (x.comissao_tipo === 'fixo' ? brl(x.comissao_valor) + '/mês' : numStr(x.comissao_valor) + '%') : '']]), 'Fechar', function() {});
         }
         function verEqParc(id) {
           var i = (PA.d.equipamentos || []).filter(function(y) { return y.id === id; })[0]; if (!i) return;
-          abrirModal('Contrato — ' + (i.cliente || ''), linhasKV([['Cliente', i.cliente], ['Equipamento', i.equipamento], ['Valor mensal', brl(i.valor)], ['Vencimento', i.dia_vencimento ? 'todo dia ' + i.dia_vencimento : ''], ['Modelo do contrato', i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
+          abrirModal('Contrato — ' + (souParceiro() ? i.equipamento : (i.cliente || '')), linhasKV(souParceiro() ? [['Equipamento', i.equipamento], ['Contrato', 'Contrato ativo'], ['A receber (repasse)', i.contrato_modelo !== 'PARCEIRO' && Number(i.repasse_valor) > 0 ? brl(i.repasse_valor) + '/mês' + (i.repasse_dia ? ' · todo dia ' + i.repasse_dia : '') : ''], ['Anotações', i.anotacoes]] : [['Cliente', i.cliente], ['Equipamento', i.equipamento], ['Valor mensal', brl(i.valor)], ['Vencimento', i.dia_vencimento ? 'todo dia ' + i.dia_vencimento : ''], ['Modelo do contrato', i.contrato_modelo === 'PARCEIRO' ? 'Grupo PLS + parceiro' : 'Padrão PLS'],
             ['Comissão à PLS', i.contrato_modelo === 'PARCEIRO' ? brl(comissaoDe(i)) + (i.comissao_tipo === 'pct' ? ' (' + numStr(i.comissao_valor) + '% do valor)' : ' por mês') : ''], ['Anotações', i.anotacoes]]) +
             (i.ficha ? '<div class="sx-sec">Ficha técnica</div>' + linhasKV(fichaLinhas(i.ficha).map(function(l) { var k = l.indexOf(':'); return k < 0 ? ['Descrição', l] : [l.slice(0, k).trim(), l.slice(k + 1).trim()]; })) : ''), 'Fechar', function() {});
         }
