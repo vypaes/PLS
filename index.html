@@ -2616,7 +2616,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v83 — 22/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v84 — 23/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10158,7 +10158,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var its = d.itens || [];
           R('<div class="pp-titulo"><div class="pp-tit-main">CONTRATO DE LOCAÇÃO DE EQUIPAMENTO</div><div class="pp-tit-tipo">Contrato nº ' + esc(p.codigo || '____') + ' · ' + esc(fd(p.emissao)) + '</div></div>');
           R('<h3 class="ctg-h">LOCADORA</h3><div class="pp-keep">' + kv([['Razão social', loca.n], ['CNPJ', loca.c], ['Inscrição estadual', ''], ['Endereço completo', loca.e], ['Contato', ''], ['Telefone', loca.t], ['E-mail financeiro/contratual', '']]) + '</div>');
-          R('<h3 class="ctg-h">LOCATÁRIA</h3><div class="pp-keep">' + kv([['Razão social', (window.PLS_RAZAO || {})[p.cliente_nome] || p.cliente_nome || ''], ['CNPJ', p.cliente_cnpj || ''], ['Inscrição estadual', ''], ['Endereço completo', ''], ['Contato', p.destinatario || ''], ['Telefone', ''], ['E-mail financeiro/contratual', '']]) + '</div>');
+          R('<h3 class="ctg-h">LOCATÁRIA</h3><div class="pp-keep">' + kv([['Razão social', (window.PLS_RAZAO || {})[p.cliente_nome] || p.cliente_nome || ''], ['CNPJ', p.cliente_cnpj || (cliPorNome(p.cliente_nome) || {}).cnpj || ''], ['Inscrição estadual', ''], ['Endereço completo', (p.dados && p.dados.endereco) || (cliPorNome(p.cliente_nome) || {}).endereco || ''], ['Contato', p.destinatario || (cliPorNome(p.cliente_nome) || {}).contato || ''], ['Telefone', (cliPorNome(p.cliente_nome) || {}).telefone || ''], ['E-mail financeiro/contratual', (cliPorNome(p.cliente_nome) || {}).email || '']]) + '</div>');
           var eqs = its.map(function(i) { return i.equipamento; }).filter(Boolean).join(' · ');
           R('<h3 class="ctg-h">QUADRO-RESUMO DAS CONDIÇÕES COMERCIAIS</h3><div>' + kv([
             ['Equipamento / frota / modelo', eqs], ['Horímetro na entrega', ''], ['Nº de série/chassi', ''],
@@ -10190,7 +10190,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           });
           return out;
         }
+        function comCadastro(p) {
+          var c = cliPorNome(p.cliente_nome); if (!c) return p;
+          var q = Object.assign({}, p); q.cliente_cnpj = p.cliente_cnpj || c.cnpj || null; q.destinatario = p.destinatario || c.contato || null;
+          q.dados = Object.assign({}, p.dados || {}); q.dados.endereco = q.dados.endereco || c.endereco || ''; return q;
+        }
         function htmlProposta(p) {
+          p = comCadastro(p);
           var d = p.dados || {}, tipo = p.tipo, loc = tipo === 'locacao';
           var mod = modeloDe(tipo), textos = Object.assign({}, mod.textos, d.textos || {}), intro = introAtual(d, mod);
           var resum = loc && d.formato !== 'completa', ehContrato = !!d._contrato;
@@ -10300,7 +10306,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="pp-cv-dark">' +
                 '<div class="pp-cv-tt"><div class="pp-cv-sub">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div><div class="pp-cv-h1">PROPOSTA<br>COMERCIAL</div></div>' +
                 '<div class="pp-cv-cols"><div class="pp-cv-c1"><div class="pp-cv-lb">PROPOSTA PARA</div><div class="pp-cv-nm">' + esc((cliente || '').toUpperCase()) + '</div>' +
-                  (p.cliente_cnpj ? '<div class="pp-cv-tx">CNPJ: ' + esc(p.cliente_cnpj) + '</div>' : '') + (p.destinatario ? '<div class="pp-cv-tx">A/C: ' + esc(p.destinatario) + '</div>' : '') + '</div>' +
+                  (p.cliente_cnpj ? '<div class="pp-cv-tx">CNPJ: ' + esc(p.cliente_cnpj) + '</div>' : '') + (p.dados && p.dados.endereco ? '<div class="pp-cv-tx">' + esc(p.dados.endereco) + '</div>' : '') + (p.destinatario ? '<div class="pp-cv-tx">A/C: ' + esc(p.destinatario) + '</div>' : '') + '</div>' +
                 '<div class="pp-cv-c2"><div class="pp-cv-lb">PROPOSTA POR</div><div class="pp-cv-nm">' + EMP.nome + '</div>' + (grupo && parc && !/^pls/i.test(parc) ? '<div class="pp-cv-tx">em parceria com <b>' + esc(parc) + '</b></div>' : '') + '<div class="pp-cv-tx">CNPJ: ' + EMP.cnpj + '</div>' +
                   '<div class="pp-cv-tx pp-cv-sm">' + esc(EMP.foneLinha) + '<br>' + esc(EMP.email) + ' · ' + esc(EMP.site) + '<br>' + esc(EMP.insta) + '</div></div></div>' +
                 '<div class="pp-cv-rod"><span>Emitida em ' + esc(fd(p.emissao)) + (loc ? ' · Validade: ' + validade + ' dias' : '') + '</span><span>' + esc(EMP.cidade) + '/RJ</span></div>' +
@@ -10526,7 +10532,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var mod = modeloDe(tipo);
           var ultimoLocal = ''; C.props.some(function(p) { if (p.tipo === 'locacao' && p.dados && p.dados.local) { ultimoLocal = p.dados.local; return true; } });
           return {
-            id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', dest: '', abrev: '', emissao: hoje(), validade: 10,
+            id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', end: '', dest: '', abrev: '', emissao: hoje(), validade: 10,
             itens: [], man: [{ qtd: 1, equip: '', marca: '', tipo: '' }], inicio: '', termino: '', valorBase: 0, diaVenc: 15,
             descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal, periodoMin: 30, modalidade: 'mensal', dias: 5, diasPagto: 30, pagtoTxt: '', escopo: '', compl: '', assin: true, forma: 'Boleto', capa: false, modelo: 'PLS', comTipo: 'pct', comValor: 0, formato: 'resumida', manutPor: 'LOCADORA', transPor: 'LOCADORA',
             textos: Object.assign({}, mod.textos), intro: mod.intro, auto: { escopo: true, pagto: true, compl: true, termino: true }
@@ -10534,7 +10540,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function estadoDe(p) {
           var d = p.dados || {}, e = novoEstado(p.tipo);
-          e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.dest = p.destinatario || '';
+          e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.end = (p.dados && p.dados.endereco) || ''; e.dest = p.destinatario || '';
           e.emissao = p.emissao; e.validade = p.validade_dias || 10;
           ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'modalidade', 'dias', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'auto', 'modelo', 'comTipo', 'comValor', 'formato', 'manutPor', 'transPor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
           if (d.itens) e.itens = JSON.parse(JSON.stringify(d.itens));
@@ -10543,7 +10549,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           return e;
         }
         function objDe(E) {
-          var dados = { abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', formato: E.formato || 'resumida', manutPor: E.manutPor || 'LOCADORA', transPor: E.transPor || 'LOCADORA', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
+          var dados = { endereco: (E.end || '').trim() || null, abrev: E.abrev, intro: E.intro, textos: E.textos, escopo: E.escopo, pagtoTxt: E.pagtoTxt, compl: E.compl, assin: E.assin, forma: E.forma, capa: E.capa, descTipo: E.descTipo, desc: E.desc, auto: E.auto, modelo: E.modelo || 'PLS', formato: E.formato || 'resumida', manutPor: E.manutPor || 'LOCADORA', transPor: E.transPor || 'LOCADORA', comTipo: E.comTipo || 'pct', comValor: Number(E.comValor) || 0 };
           if (E.itens) { var ps = {}; E.itens.forEach(function(i) { var li = L.itens.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) i.dono = li.dono; if (i.dono && !/^pls/i.test(i.dono)) ps[i.dono] = 1; }); dados.parceiro = Object.keys(ps).join(' / '); }
           if (E.tipo === 'locacao') { dados.itens = E.itens; dados.entrega = E.entrega; dados.local = E.local; dados.periodoMin = E.periodoMin; dados.modalidade = E.modalidade === 'diaria' ? 'diaria' : 'mensal'; dados.dias = Number(E.dias) || 0; dados.diasPagto = E.diasPagto; }
           else { dados.man = E.man; dados.inicio = E.inicio; dados.termino = E.termino; dados.valorBase = E.valorBase; dados.diaVenc = E.diaVenc; }
@@ -10556,6 +10562,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           function v(id) { var el = $(id); return el ? el.value : null; }
           if (v('cm-cliente') != null) E.cliente = v('cm-cliente');
           if (v('cm-cnpj') != null) E.cnpj = v('cm-cnpj');
+          if (v('cm-end') != null) E.end = v('cm-end');
           if (v('cm-dest') != null) E.dest = v('cm-dest');
           if (v('cm-abrev') != null) E.abrev = v('cm-abrev');
           if (v('cm-emissao') != null) E.emissao = v('cm-emissao') || hoje();
@@ -10676,6 +10683,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="sx-sec">Cliente</div><div class="form-grid">' +
               '<div class="form-group"><label class="form-label">Cliente <span class="req-star">*</span></label><input id="cm-cliente" class="form-control" list="cm-dl-cli" value="' + esc(E.cliente) + '" placeholder="Razão social"><datalist id="cm-dl-cli">' + Object.keys(clientes).sort().map(PLS_optCli).join('') + '</datalist></div>' +
               '<div class="form-group"><label class="form-label">CNPJ</label><input id="cm-cnpj" class="form-control" inputmode="numeric" maxlength="18" value="' + esc(E.cnpj) + '" placeholder="00.000.000/0000-00"></div>' +
+              '<div class="form-group full-width"><label class="form-label">Endereço do cliente <span class="sx-muted">(vem do cadastro do cliente; altere se for outro local)</span></label><input id="cm-end" class="form-control" value="' + esc(E.end) + '" placeholder="Rua, número, bairro, cidade/UF — CEP"></div>' +
               '<div class="form-group"><label class="form-label">A/C — pessoa a quem a proposta é destinada</label><input id="cm-dest" class="form-control" value="' + esc(E.dest) + '" placeholder="ex.: Sr. João — Compras"></div>' +
               '<div class="form-group"><label class="form-label">Nome na assinatura (opcional, se for muito longo)</label><input id="cm-abrev" class="form-control" value="' + esc(E.abrev) + '"></div>' +
               '<div class="form-group"><label class="form-label">Data de emissão</label><input id="cm-emissao" type="date" class="form-control" value="' + esc(E.emissao) + '"></div>' +
@@ -12233,7 +12241,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return { tipo: S.tipo, cliente: S.cliente, equip_id: S.equip_id || null, equipamento: S.equipamento || null, fabricante_modelo: S.modelo || null, data: S.data, hora: S.hora, inspecionado_por: S.inspec, horimetro: S.hor || null, itens: itens,
               comentarios: S.comentarios || null, condicao: S.condicao || null, local: S.local || null, responsavel: S.resp || null, assinatura: S.assin || null, video_path: S.video || null, video_seg: S.videoSeg || null, n_ruim: itens.filter(function(i) { return i.s === 'ruim'; }).length };
           }
-          function salvar() { var q = S.id ? C.sb.from('man_checklists').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_checklists').insert(linha()).select('*'); return C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }
+          function cadastraEquip() {
+    if (S.id || S.equip_id || !S.cliente || !(S.equipamento || S.modelo)) return Promise.resolve();
+    var nc = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); };
+    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,ativo').eq('ativo', true)).then(function(r) {
+      var ja = (r.data || []).filter(function(e) { return nc(e.cliente) === nc(S.cliente) && nc(e.tag) === nc(S.equipamento) && nc([e.marca, e.modelo].filter(Boolean).join(' ')) === nc(S.modelo); })[0];
+      if (ja) { S.equip_id = ja.id; return; }
+      var mm = String(S.modelo || '').trim().split(/\s+/), hor = Number(String(S.hor || '').replace(/\./g, '').replace(',', '.'));
+      return C.chk(C.sb.from('man_equip').insert({ cliente: S.cliente, tag: S.equipamento || null, marca: mm.length > 1 ? mm[0] : null, modelo: mm.length > 1 ? mm.slice(1).join(' ') : (S.modelo || null), horimetro: isNaN(hor) || !S.hor ? null : hor, horimetro_em: isNaN(hor) || !S.hor ? null : S.data }).select('id')).then(function(x) { if (x.data && x.data[0]) S.equip_id = x.data[0].id; });
+    }).catch(function() {});
+  }
+  function salvar() { return cadastraEquip().then(function() { var q = S.id ? C.sb.from('man_checklists').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_checklists').insert(linha()).select('*'); return C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }); }
         
           // ---------- final / visualização ----------
           function resumoTxt(r) {
@@ -12773,7 +12791,7 @@ var PLSOS = (function() {
   function carregarEquips() {
     return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
   }
-  function eqDoCliente() { return EQS.filter(function(e) { return e.cliente === S.cliente && e.ativo !== false; }); }
+  function eqDoCliente() { return EQS.filter(function(e) { return U.norm(e.cliente).replace(/\s+/g, ' ').trim() === U.norm(S.cliente).replace(/\s+/g, ' ').trim() && e.ativo !== false; }); }
   // ---------- formulário ----------
   function colher() {
     if (!$('o-cli')) return;
@@ -12823,6 +12841,7 @@ var PLSOS = (function() {
         ['o-eq:eq', 'o-marca:marca', 'o-mod:modelo', 'o-serie:serie', 'o-hor:hor'].forEach(function(p) { p = p.split(':'); $(p[0]).value = S[p[1]]; }); pintaEqs(); datalistPecas();
       };
     });
+    if (!S.equip_id && l.length === 1 && !S.id && b.querySelector('.eqc')) b.querySelector('.eqc').onclick();
   }
   function selCliente(nome) {
     colher(); S.cliente = nome; var c = cliObj(nome) || {}; S.equip_id = null; S.extra = []; pintaExtras();
@@ -13559,9 +13578,11 @@ var PLSDOC = (function() {
   function seletorEquip(box, cliente, selId, onPick, rotulo) {
     if (!box) return; if (!cliente) { box.innerHTML = ''; return; }
     box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0">Carregando equipamentos do cliente…</div>';
-    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').eq('cliente', cliente).eq('ativo', true)).then(function(r) {
-      var l = r.data || [];
-      if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente não tem equipamento cadastrado na Manutenção. Preencha os campos à mão (ou cadastre o equipamento para o histórico ficar na pasta dele).</div>'; return; }
+    var nc = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); };
+    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').eq('ativo', true).order('tag')).then(function(r) {
+      var l = (r.data || []).filter(function(e) { return nc(e.cliente) === nc(cliente); });
+      if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente ainda não tem equipamento cadastrado. Preencha os campos abaixo: o equipamento será cadastrado sozinho ao salvar e da próxima vez já aparece aqui.</div>'; return; }
+      if (!selId && l.length === 1) { selId = l[0].id; setTimeout(function() { onPick(l[0]); }, 0); }
       function pinta() {
         box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#334155;margin:4px 0 6px">' + (rotulo || 'Equipamento do cliente (toque para escolher):') + '</div>' + l.map(function(e) {
           var on = e.id === selId;
@@ -13778,8 +13799,14 @@ var PLSDOC = (function() {
           else if (t.id === 'mn-k-ate') { M.kAte = t.value; renderCk(); }
           // Comercial: preenche o CNPJ a partir do cadastro único de clientes
           else if (t.id === 'cm-cliente') {
-            var c = cliPorNome(t.value), campo = $('cm-cnpj');
-            if (c && c.cnpj && campo && !campo.value.trim()) campo.value = c.cnpj;
+            var c = cliPorNome(t.value);
+            if (c && C.ed && $('cm-cnpj')) {
+              var A = C.ed._ac = C.ed._ac || {};
+              [['cm-cnpj', 'cnpj'], ['cm-end', 'endereco'], ['cm-dest', 'contato']].forEach(function(f) {
+                var el = $(f[0]), val = c[f[1]]; if (!el || !val) return;
+                var cur = el.value.trim(); if (!cur || cur === A[f[0]]) { el.value = val; A[f[0]] = val; }
+              });
+            }
           }
         });
 

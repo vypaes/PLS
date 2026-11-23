@@ -433,7 +433,17 @@ var PLSCK = (function() {
     return { tipo: S.tipo, cliente: S.cliente, equip_id: S.equip_id || null, equipamento: S.equipamento || null, fabricante_modelo: S.modelo || null, data: S.data, hora: S.hora, inspecionado_por: S.inspec, horimetro: S.hor || null, itens: itens,
       comentarios: S.comentarios || null, condicao: S.condicao || null, local: S.local || null, responsavel: S.resp || null, assinatura: S.assin || null, video_path: S.video || null, video_seg: S.videoSeg || null, n_ruim: itens.filter(function(i) { return i.s === 'ruim'; }).length };
   }
-  function salvar() { var q = S.id ? C.sb.from('man_checklists').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_checklists').insert(linha()).select('*'); return C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }
+  function cadastraEquip() {
+    if (S.id || S.equip_id || !S.cliente || !(S.equipamento || S.modelo)) return Promise.resolve();
+    var nc = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); };
+    return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,ativo').eq('ativo', true)).then(function(r) {
+      var ja = (r.data || []).filter(function(e) { return nc(e.cliente) === nc(S.cliente) && nc(e.tag) === nc(S.equipamento) && nc([e.marca, e.modelo].filter(Boolean).join(' ')) === nc(S.modelo); })[0];
+      if (ja) { S.equip_id = ja.id; return; }
+      var mm = String(S.modelo || '').trim().split(/\s+/), hor = Number(String(S.hor || '').replace(/\./g, '').replace(',', '.'));
+      return C.chk(C.sb.from('man_equip').insert({ cliente: S.cliente, tag: S.equipamento || null, marca: mm.length > 1 ? mm[0] : null, modelo: mm.length > 1 ? mm.slice(1).join(' ') : (S.modelo || null), horimetro: isNaN(hor) || !S.hor ? null : hor, horimetro_em: isNaN(hor) || !S.hor ? null : S.data }).select('id')).then(function(x) { if (x.data && x.data[0]) S.equip_id = x.data[0].id; });
+    }).catch(function() {});
+  }
+  function salvar() { return cadastraEquip().then(function() { var q = S.id ? C.sb.from('man_checklists').update(linha()).eq('id', S.id).select('*') : C.sb.from('man_checklists').insert(linha()).select('*'); return C.chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return r.data[0]; }); }); }
 
   // ---------- final / visualização ----------
   function resumoTxt(r) {
@@ -1688,7 +1698,14 @@ var PLSCOM = (function() {
             linhas.map(function(l) { return '<tr' + (l.b ? ' class="pp-tb-b"' : '') + '><td>' + esc(l.k) + '</td><td>' + (l.raw ? l.v : esc(l.v)) + '</td></tr>'; }).join('') + '</tbody></table>';
         }
 
+        function cadCli(n) { var l = (X.clientes && X.clientes()) || [], k = String(n || '').trim().toLowerCase(); for (var i = 0; i < l.length; i++) { var c = l[i]; if (typeof c === 'object' && String(c.nome || '').trim().toLowerCase() === k) return c; } return null; }
+        function comCadastro(p) {
+          var c = cadCli(p.cliente_nome); if (!c) return p;
+          var q = Object.assign({}, p); q.cliente_cnpj = p.cliente_cnpj || c.cnpj || null; q.destinatario = p.destinatario || c.contato || null;
+          q.dados = Object.assign({}, p.dados || {}); q.dados.endereco = q.dados.endereco || c.endereco || ''; return q;
+        }
         function htmlProposta(p) {
+          p = comCadastro(p);
           var d = p.dados || {}, tipo = p.tipo, loc = tipo === 'locacao';
           var mod = modeloDe(tipo), textos = Object.assign({}, mod.textos, d.textos || {}), intro = introAtual(d, mod);
           var resum = loc && d.formato !== 'completa', ehContrato = !!d._contrato;
@@ -1798,7 +1815,7 @@ var PLSCOM = (function() {
               '<div class="pp-cv-dark">' +
                 '<div class="pp-cv-tt"><div class="pp-cv-sub">' + (loc ? 'LOCAÇÃO DE EMPILHADEIRA' : 'MANUTENÇÃO DE EMPILHADEIRAS') + '</div><div class="pp-cv-h1">PROPOSTA<br>COMERCIAL</div></div>' +
                 '<div class="pp-cv-cols"><div class="pp-cv-c1"><div class="pp-cv-lb">PROPOSTA PARA</div><div class="pp-cv-nm">' + esc((cliente || '').toUpperCase()) + '</div>' +
-                  (p.cliente_cnpj ? '<div class="pp-cv-tx">CNPJ: ' + esc(p.cliente_cnpj) + '</div>' : '') + (p.destinatario ? '<div class="pp-cv-tx">A/C: ' + esc(p.destinatario) + '</div>' : '') + '</div>' +
+                  (p.cliente_cnpj ? '<div class="pp-cv-tx">CNPJ: ' + esc(p.cliente_cnpj) + '</div>' : '') + (p.dados && p.dados.endereco ? '<div class="pp-cv-tx">' + esc(p.dados.endereco) + '</div>' : '') + (p.destinatario ? '<div class="pp-cv-tx">A/C: ' + esc(p.destinatario) + '</div>' : '') + '</div>' +
                 '<div class="pp-cv-c2"><div class="pp-cv-lb">PROPOSTA POR</div><div class="pp-cv-nm">' + EMP.nome + '</div>' + (grupo && parc && !/^pls/i.test(parc) ? '<div class="pp-cv-tx">em parceria com <b>' + esc(parc) + '</b></div>' : '') + '<div class="pp-cv-tx">CNPJ: ' + EMP.cnpj + '</div>' +
                   '<div class="pp-cv-tx pp-cv-sm">' + esc(EMP.foneLinha) + '<br>' + esc(EMP.email) + ' · ' + esc(EMP.site) + '<br>' + esc(EMP.insta) + '</div></div></div>' +
                 '<div class="pp-cv-rod"><span>Emitida em ' + esc(fd(p.emissao)) + (loc ? ' · Validade: ' + validade + ' dias' : '') + '</span><span>' + esc(EMP.cidade) + '/RJ</span></div>' +
@@ -1829,6 +1846,7 @@ var PLSCOM = (function() {
   function addAnosISO(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setFullYear(d.getFullYear() + n); d.setDate(d.getDate() - 1); function p(k) { return k < 10 ? '0' + k : '' + k; } return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
   function numStr(n) { n = Number(n || 0); return n ? String(n).replace('.', ',') : ''; }
   function parseValor(s) { s = String(s == null ? '' : s).trim().replace(/[R$\s]/g, ''); if (!s) return 0; if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.'); var n = parseFloat(s); return isNaN(n) ? 0 : n; }
+  function cadCli(n) { var l = (X.clientes && X.clientes()) || [], k = String(n || '').trim().toLowerCase(); for (var i = 0; i < l.length; i++) { var c = l[i]; if (typeof c === 'object' && String(c.nome || '').trim().toLowerCase() === k) return c; } return null; }
   function fmtCnpjV(s) { var d = String(s || '').replace(/\D/g, '').slice(0, 14); if (d.length <= 11) return d; return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2'); }
   var ST = { RASCUNHO: ['Rascunho', ''], ENVIADA: ['Enviada', 'org'], APROVADA: ['Aprovada', 'grn'], RECUSADA: ['Recusada', 'red'], CANCELADA: ['Cancelada', ''] };
   function vencida(p) { return p.status === 'ENVIADA' && addDiasISO(p.emissao, p.validade_dias || 10) < hojeISO(); }
@@ -2002,14 +2020,14 @@ var PLSCOM = (function() {
   function novoEstado(tipo) {
     var mod = modeloDe(tipo), ultimoLocal = '';
     PS.props.some(function(p) { if (p.tipo === 'locacao' && p.dados && p.dados.local) { ultimoLocal = p.dados.local; return true; } });
-    return { id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', dest: '', abrev: '', emissao: hojeISO(), validade: 10,
+    return { id: null, tipo: tipo, codigo: '', status: 'RASCUNHO', cliente: '', cnpj: '', end: '', dest: '', abrev: '', emissao: hojeISO(), validade: 10,
       itens: [], man: [{ qtd: 1, equip: '', marca: '', tipo: '' }], inicio: '', termino: '', valorBase: 0, diaVenc: 15, descTipo: 'pct', desc: 0, entrega: '', local: ultimoLocal,
       periodoMin: 30, modalidade: 'mensal', dias: 5, diasPagto: 30, forma: 'Boleto', assin: true, modelo: 'PLS', comTipo: 'pct', comValor: 0, formato: 'resumida', manutPor: 'LOCADORA', transPor: 'LOCADORA',
       textos: Object.assign({}, mod.textos), intro: mod.intro, escopo: '', pagtoTxt: '', compl: '', capa: false, extra: {} };
   }
   function estadoDe(p) {
     var d = p.dados || {}, e = novoEstado(p.tipo);
-    e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.dest = p.destinatario || ''; e.emissao = p.emissao; e.validade = p.validade_dias || 10;
+    e.id = p.id; e.codigo = p.codigo; e.status = p.status; e.cliente = p.cliente_nome; e.cnpj = p.cliente_cnpj || ''; e.end = (p.dados && p.dados.endereco) || ''; e.dest = p.destinatario || ''; e.emissao = p.emissao; e.validade = p.validade_dias || 10;
     ['abrev', 'inicio', 'termino', 'valorBase', 'diaVenc', 'descTipo', 'desc', 'entrega', 'local', 'periodoMin', 'modalidade', 'dias', 'diasPagto', 'pagtoTxt', 'escopo', 'compl', 'assin', 'forma', 'capa', 'intro', 'modelo', 'comTipo', 'comValor', 'formato', 'manutPor', 'transPor'].forEach(function(k) { if (d[k] != null) e[k] = d[k]; });
     if (d.itens) e.itens = JSON.parse(JSON.stringify(d.itens));
     if (d.man) e.man = JSON.parse(JSON.stringify(d.man));
@@ -2033,7 +2051,7 @@ var PLSCOM = (function() {
     }
   }
   function objDe(e) {
-    var dados = { abrev: e.abrev, intro: e.intro, textos: e.textos, escopo: e.escopo, pagtoTxt: e.pagtoTxt, compl: e.compl, assin: e.assin, forma: e.forma, capa: e.capa, descTipo: e.descTipo, desc: e.desc, modelo: e.modelo || 'PLS', formato: e.formato || 'resumida', manutPor: e.manutPor || 'LOCADORA', transPor: e.transPor || 'LOCADORA', comTipo: e.comTipo || 'pct', comValor: Number(e.comValor) || 0 };
+    var dados = { endereco: (e.end || '').trim() || null, abrev: e.abrev, intro: e.intro, textos: e.textos, escopo: e.escopo, pagtoTxt: e.pagtoTxt, compl: e.compl, assin: e.assin, forma: e.forma, capa: e.capa, descTipo: e.descTipo, desc: e.desc, modelo: e.modelo || 'PLS', formato: e.formato || 'resumida', manutPor: e.manutPor || 'LOCADORA', transPor: e.transPor || 'LOCADORA', comTipo: e.comTipo || 'pct', comValor: Number(e.comValor) || 0 };
     Object.keys(e.extra || {}).forEach(function(k) { dados[k] = e.extra[k]; });
     if (e.tipo === 'locacao') {
       var ps = {}; e.itens.forEach(function(i) { var li = PS.loc.filter(function(x) { return x.id === i.item_id; })[0]; if (li && li.dono) i.dono = li.dono; if (i.dono && !/^pls/i.test(i.dono)) ps[i.dono] = 1; });
@@ -2050,6 +2068,7 @@ var PLSCOM = (function() {
     if (v('pe-cliente') != null) E.cliente = v('pe-cliente');
     if (v('pe-cnpj') != null) E.cnpj = v('pe-cnpj');
     if (v('pe-dest') != null) E.dest = v('pe-dest');
+    if (v('pe-end') != null) E.end = v('pe-end');
     if (v('pe-validade') != null) E.validade = parseInt(v('pe-validade'), 10) || 10;
     if (v('pe-desc-tipo') != null) E.descTipo = v('pe-desc-tipo');
     if (v('pe-desc') != null) E.desc = parseValor(v('pe-desc'));
@@ -2123,6 +2142,7 @@ var PLSCOM = (function() {
     var h = '<div id="pcm-ed">' + (E.id ? '' : '<div class="dica">O número do orçamento é gerado quando você salva.</div>') +
       '<div class="sec">CLIENTE</div><div class="fld"><label>Cliente *</label><input type="text" id="pe-cliente" list="pe-dl" value="' + esc(E.cliente) + '" placeholder="Razão social" autocomplete="off"><datalist id="pe-dl">' + Object.keys(nomes).filter(Boolean).sort().map(function(n) { return '<option value="' + esc(n) + '">'; }).join('') + '</datalist></div>' +
       '<div class="row2"><div class="fld"><label>CNPJ</label><input type="tel" id="pe-cnpj" maxlength="18" value="' + esc(E.cnpj) + '" placeholder="00.000.000/0000-00"></div><div class="fld"><label>A/C (contato)</label><input type="text" id="pe-dest" value="' + esc(E.dest) + '" placeholder="ex.: Sr. João"></div></div>' +
+      '<div class="fld"><label>Endereço do cliente (vem do cadastro)</label><input type="text" id="pe-end" value="' + esc(E.end) + '" placeholder="Rua, número, bairro, cidade/UF"></div>' +
       (loc ? '<div class="fld"><label>Validade da proposta (dias)</label><input type="number" id="pe-validade" min="1" max="365" value="' + E.validade + '"></div>' : '');
     if (loc) {
       h += '<div class="sec">EQUIPAMENTOS (SÓ OS DISPONÍVEIS)</div><div class="fld" id="pe-sel">' + seletorEq() + '</div><div id="pe-itens">' + blocoItens() + '</div>' +
@@ -2228,7 +2248,14 @@ var PLSCOM = (function() {
     }
     if (t.id === 'pe-cliente') {
       var nm = String(t.value).trim().toLowerCase(), prev = PS.props.filter(function(x) { return String(x.cliente_nome).toLowerCase() === nm; })[0];
-      if (prev) { if (!$('pe-cnpj').value && prev.cliente_cnpj) $('pe-cnpj').value = prev.cliente_cnpj; if (!$('pe-dest').value && prev.destinatario) $('pe-dest').value = prev.destinatario; }
+      var cd = cadCli(t.value);
+      if (cd && E) {
+        var A = E._ac = E._ac || {};
+        [['pe-cnpj', 'cnpj'], ['pe-end', 'endereco'], ['pe-dest', 'contato']].forEach(function(f) {
+          var el = $(f[0]), val = cd[f[1]]; if (!el || !val) return;
+          var cur = el.value.trim(); if (!cur || cur === A[f[0]]) { el.value = val; A[f[0]] = val; }
+        });
+      } else if (prev) { if (!$('pe-cnpj').value && prev.cliente_cnpj) $('pe-cnpj').value = prev.cliente_cnpj; if (!$('pe-dest').value && prev.destinatario) $('pe-dest').value = prev.destinatario; }
     }
     resumo();
   });
@@ -2602,7 +2629,7 @@ var PLSOS = (function() {
   function carregarEquips() {
     return C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').order('cliente')).then(function(r) { EQS = r.data || []; }).catch(function() { EQS = []; });
   }
-  function eqDoCliente() { return EQS.filter(function(e) { return e.cliente === S.cliente && e.ativo !== false; }); }
+  function eqDoCliente() { return EQS.filter(function(e) { return U.norm(e.cliente).replace(/\s+/g, ' ').trim() === U.norm(S.cliente).replace(/\s+/g, ' ').trim() && e.ativo !== false; }); }
   // ---------- formulário ----------
   function colher() {
     if (!$('o-cli')) return;
@@ -2651,7 +2678,7 @@ var PLSOS = (function() {
         S.equip_id = e.id; S.eq = (pl && pl.nome) || e.tag || 'Equipamento'; S.marca = e.marca || ''; S.modelo = e.modelo || ''; S.serie = e.serie || ''; if (e.horimetro != null) S.hor = String(e.horimetro).replace('.', ',');
         ['o-eq:eq', 'o-marca:marca', 'o-mod:modelo', 'o-serie:serie', 'o-hor:hor'].forEach(function(p) { p = p.split(':'); $(p[0]).value = S[p[1]]; }); pintaEqs(); datalistPecas();
       };
-    });
+    });    if (!S.equip_id && l.length === 1 && !S.id && b.querySelector('.eqc')) b.querySelector('.eqc').onclick();
   }
   function selCliente(nome) {
     colher(); S.cliente = nome; var c = cliObj(nome) || {}; S.equip_id = null; S.extra = []; pintaExtras();
@@ -3388,9 +3415,11 @@ var PLSDOC = (function() {
   function seletorEquip(box, cliente, selId, onPick, rotulo) {
     if (!box) return; if (!cliente) { box.innerHTML = ''; return; }
     box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0">Carregando equipamentos do cliente…</div>';
-    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').eq('cliente', cliente).eq('ativo', true)).then(function(r) {
-      var l = r.data || [];
-      if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente não tem equipamento cadastrado na Manutenção. Preencha os campos à mão (ou cadastre o equipamento para o histórico ficar na pasta dele).</div>'; return; }
+    var nc = function(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim(); };
+    C.chk(C.sb.from('man_equip').select('id,cliente,tag,marca,modelo,serie,horimetro,foto_mini,ativo,loc_item_id').eq('ativo', true).order('tag')).then(function(r) {
+      var l = (r.data || []).filter(function(e) { return nc(e.cliente) === nc(cliente); });
+      if (!l.length) { box.innerHTML = '<div style="font-size:13px;color:#64748b;margin:4px 0 10px">Este cliente ainda não tem equipamento cadastrado. Preencha os campos abaixo: o equipamento será cadastrado sozinho ao salvar e da próxima vez já aparece aqui.</div>'; return; }
+      if (!selId && l.length === 1) { selId = l[0].id; setTimeout(function() { onPick(l[0]); }, 0); }
       function pinta() {
         box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#334155;margin:4px 0 6px">' + (rotulo || 'Equipamento do cliente (toque para escolher):') + '</div>' + l.map(function(e) {
           var on = e.id === selId;
@@ -3418,6 +3447,7 @@ var PLSDOC = (function() {
     }
   };
 })();
+window.PLSDOC = PLSDOC; // o checklist (módulo fora desta função) usa o seletor de equipamento da pasta
 
 PLSCK.init({sb:sb,chk:chk,nome:function(){return perfil?perfil.nome:'';},clientes:function(){return D.clientes;},logo:LOGO_FULL,toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}},onClose:function(){if(tab==='checklist'){if(mnSub==='docs')dcCarregar();else ckCarregar();}}});
 PLSEQ.init({sb:sb,chk:chk,clientes:function(){return D.clientes;},toast:function(m){toast(m,4500);},onSaved:function(){if(tab==='checklist')mnPintar();},admin:ehAdmin});
