@@ -2245,6 +2245,18 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     body.setor-nenhum #setor-nenhum { display: block; }
 
     .sx-subnav { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; position: sticky; top: var(--topbar-h, 0px); z-index: 50; background: #f8fafc; padding: 0.4rem 0; }
+
+    .lz { font: 11pt/1.4 Arial, Helvetica, sans-serif; color: #111; }
+    .lz-top { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #f97316; padding-bottom: 8px; margin-bottom: 10px; }
+    .lz-top img { height: 54px; } .lz-h { font-size: 17pt; font-weight: 800; } .lz-s { color: #555; font-size: 10pt; }
+    .lz-d { width: 100%; border-collapse: collapse; margin-bottom: 8px; } .lz-d td { border: 1px solid #cbd5e1; padding: 5px 8px; font-size: 10pt; }
+    .lz-sec { background: #1e293b; color: #fff; font-weight: 700; padding: 4px 8px; margin: 12px 0 6px; font-size: 10.5pt; }
+    .lz-it { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; page-break-inside: avoid; }
+    .lz-t { font-weight: 700; margin-bottom: 2px; } .lz-ft { display: block; max-height: 80mm; max-width: 100%; margin-top: 6px; border: 1px solid #cbd5e1; } .lz-sf { color: #94a3b8; font-size: 9pt; margin-top: 4px; }
+    .lz-dec { text-align: justify; font-size: 10pt; } .lz-ass { display: flex; gap: 30px; margin-top: 46px; text-align: center; page-break-inside: avoid; }
+    .lz-ass > div { flex: 1; font-size: 10pt; } .lz-ass span { color: #64748b; font-size: 9pt; } .lz-l { border-top: 1px solid #111; margin-bottom: 4px; }
+    .lz-rod { margin-top: 14px; color: #64748b; font-size: 8.5pt; text-align: center; }
+    @media print { .lz-top, .lz-sec { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     .sx-subbtn { flex: 1; min-width: 150px; padding: 0.7rem 1rem; border: 2px solid #e2e8f0; background: #fff; color: #334155; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
     .sx-subbtn:hover { border-color: var(--accent); }
     .sx-subbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
@@ -2616,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v84 — 23/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v85 — 24/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -10993,8 +11005,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('man_equip').select('*').order('cliente').order('created_at')),
             chk(sb.from('man_revisoes').select('*').order('data', { ascending: false })),
             chk(sb.from('man_ciclos').select('*').order('ordem')).catch(function() { return { data: [] }; }),
-            chk(sb.from('man_motores').select('*').order('nome')).catch(function() { return { data: [] }; })
+            chk(sb.from('man_motores').select('*').order('nome')).catch(function() { return { data: [] }; }),
+            chk(sb.from('man_pendencias').select('id,status,cliente,checklist_id').in('status', ['aberta', 'orcamento'])).catch(function() { return { data: [] }; })
           ]).then(function(r) {
+            M.pendRes = (r[5] && r[5].data) || [];
             M.planos = r[0].data || []; M.equip = r[1].data || []; M.rev = r[2].data || []; M.ciclos = (r[3] && r[3].data) || []; M.motores = (r[4] && r[4].data) || []; try { PLSEQ.setLista(M.equip, M.planos, M.motores); } catch (x) {}
             carregado.manutencao = true;
             if (ehAdmin()) sincronizarClientes(M.equip.map(function(e) { return e.cliente; }));
@@ -11132,6 +11146,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="docs">🗂️ Histórico dos clientes<br><small style="font-weight:500;opacity:.8">OS · entregas · checklists</small></button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="vencimentos">🔔 Vencimentos das manutenções<br><small style="font-weight:500;opacity:.8">revisões vencidas e a vencer</small></button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="equip">🚜 Equipamentos e peças<br><small style="font-weight:500;opacity:.8">dos clientes</small></button>' +
+              '<button type="button" class="sx-subbtn" data-man="sub" data-v="pend">🛠️ Pendências dos equipamentos <span id="pd-badge" style="display:none;background:#dc2626;color:#fff;border-radius:99px;padding:0 7px;font-size:.7rem;margin-left:4px"></span><br><small style="font-weight:500;opacity:.8">itens com problema dos checklists</small></button>' +
               '<button type="button" class="sx-subbtn" data-man="sub" data-v="planos">📋 Planos de manutenção<br><small style="font-weight:500;opacity:.8">modelos de revisão</small></button>' +
             '</div>' +
             '<div id="mn-p-motores" class="sx-pane"><div class="sx-toolbar"><div class="mn-modo"><button type="button" data-man="eqmodo" data-v="equip">🚜 Equipamentos</button><button type="button" data-man="eqmodo" data-v="pecas">🔩 Buscar peças</button><button type="button" data-man="eqmodo" data-v="motores">⚙️ Motores</button></div><button type="button" class="btn-pls-primary" data-man="mot-novo">➕ Novo motor</button></div>' +
@@ -11150,6 +11165,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<input id="mn-d-busca" class="form-control sx-w2" placeholder="Buscar nº, cliente, equipamento, série, material, técnico…"></div>' +
               '<div class="mn-resumo" id="mn-d-resumo"></div>' +
               '<div class="table-container" id="mn-docs"></div>' +
+            '</div>' +
+            '<div id="mn-p-pend" class="sx-pane">' +
+              '<div class="sx-toolbar"><select id="pd-fil" class="form-control sx-w"><option value="abertas">Com itens em aberto</option><option value="orc">Em orçamento</option><option value="todas">Todas</option></select>' +
+                '<select id="pd-cli" class="form-control sx-w"><option value="">Todos os clientes</option></select>' +
+                '<button type="button" class="btn-pls-secondary" data-man="pd-ref" title="Valores de referência usados na sugestão de orçamento">💲 Valores de referência</button></div>' +
+              '<div class="sx-dica">Cada item marcado como <b>ruim</b> num checklist cai aqui. Nada vira demanda sozinho: escolha os itens e crie a demanda (equipamento da PLS) ou a <b>sugestão de orçamento</b> (equipamento de cliente/parceiro). Se o cliente não quiser consertar, gere o <b>laudo com fotos</b>.</div>' +
+              '<div id="mn-pend"></div>' +
             '</div>' +
             '<div id="mn-p-vencimentos" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -11181,12 +11203,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function renderMan() {
           montarMan();
-          if (['docs', 'vencimentos', 'equip', 'planos'].indexOf(M.sub) < 0) M.sub = M.sub === 'pecas' ? (M.eqModo = 'pecas', 'equip') : 'docs';
+          if (['docs', 'vencimentos', 'equip', 'planos', 'pend'].indexOf(M.sub) < 0) M.sub = M.sub === 'pecas' ? (M.eqModo = 'pecas', 'equip') : 'docs';
           var vis = M.sub === 'equip' ? (M.eqModo === 'pecas' ? 'pecas' : M.eqModo === 'motores' ? 'motores' : 'equip') : M.sub;
-          ['docs', 'vencimentos', 'equip', 'planos', 'pecas', 'motores'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === vis ? 'block' : 'none'; });
+          ['docs', 'vencimentos', 'equip', 'planos', 'pend', 'pecas', 'motores'].forEach(function(v) { var p = $('mn-p-' + v); if (p) p.style.display = v === vis ? 'block' : 'none'; });
           document.querySelectorAll('#setor-manutencao .mn-modo button').forEach(function(b) { b.classList.toggle('on', b.getAttribute('data-v') === vis); });
           document.querySelectorAll('#setor-manutencao .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === M.sub); });
-          if (M.sub === 'docs') carregarDocs(); else if (M.sub === 'vencimentos') renderVenc(); else if (vis === 'pecas') renderPecasMan(); else if (vis === 'motores') renderMotores(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'entregas') carregarEnt(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
+          pdBadge(); if (M.sub === 'pend') carregarPend(); else if (M.sub === 'docs') carregarDocs(); else if (M.sub === 'vencimentos') renderVenc(); else if (vis === 'pecas') renderPecasMan(); else if (vis === 'motores') renderMotores(); else if (M.sub === 'equip') renderEquipMan(); else if (M.sub === 'checklists') carregarCk(); else if (M.sub === 'os') carregarOs(); else if (M.sub === 'entregas') carregarEnt(); else if (M.sub === 'pecas') renderPecasMan(); else renderPlanosMan();
         }
         function pillSev(s) { return s === 2 ? '<span class="sx-pill sx-atraso">VENCIDA</span>' : s === 1 ? '<span class="sx-pill sx-hoje">PERTO DE VENCER</span>' : '<span class="sx-pill sx-st-ok">EM DIA</span>'; }
         function renderVenc() {
@@ -13696,12 +13718,241 @@ var PLSDOC = (function() {
             }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum checklist. Os feitos no aplicativo do celular aparecem aqui, em nome do cliente.</div>';
         }
 
+
+        // ---------- Pendências dos equipamentos (itens ruins dos checklists) ----------
+        var PEND_REF_DEF = [
+          { r: 'suporte|fixacao', d: 'Reparo / substituição de suporte de fixação', mo: 150, pc: 80 },
+          { r: 'retrovisor|espelho', d: 'Fornecimento e instalação de retrovisor', mo: 80, pc: 120 },
+          { r: 'luz|farol|lanterna|pisca|alarme|buzina|sinaliz', d: 'Reparo da parte elétrica / iluminação e sinalização', mo: 150, pc: 120 },
+          { r: 'nivel.*freio|fluido de freio', d: 'Complemento do fluido de freio e verificação de vazamentos', mo: 100, pc: 60 },
+          { r: 'arrefec|radiador', d: 'Complemento do líquido de arrefecimento e verificação de vazamentos', mo: 100, pc: 80 },
+          { r: 'estacion', d: 'Regulagem / reparo do freio de estacionamento', mo: 350, pc: 150 },
+          { r: 'freio', d: 'Revisão do sistema de freio (regulagem, sangria e cilindros)', mo: 450, pc: 400 },
+          { r: 'hidraul|vazamento|inclina|cilindro|mangueira', d: 'Reparo de vazamento hidráulico (vedações e reaperto)', mo: 450, pc: 350 },
+          { r: 'bateria', d: 'Teste e/ou substituição de bateria', mo: 100, pc: 800 },
+          { r: 'pneu|roda', d: 'Substituição de pneu / roda', mo: 150, pc: 900 },
+          { r: 'correia', d: 'Substituição de correia', mo: 200, pc: 250 },
+          { r: 'oleo|filtro', d: 'Troca de óleo e filtros', mo: 250, pc: 450 }
+        ];
+        function pdRefLista() { return (M.pRef && M.pRef.length) ? M.pRef : PEND_REF_DEF; }
+        function pdSug(p) {
+          var t = norm(p.titulo || ''), tt = t + ' ' + norm(p.obs || '');
+          var l = pdRefLista(), i;
+          if (/suporte|fixacao/.test(tt)) { for (i = 0; i < l.length; i++) if (/suporte/.test(l[i].r)) return l[i]; }
+          for (i = 0; i < l.length; i++) { try { if (new RegExp(l[i].r).test(t)) return l[i]; } catch (e) {} }
+          return { d: 'Avaliação e correção: ' + p.titulo, mo: 250, pc: 0 };
+        }
+        function pdNum(v) { var n = Number(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+        function pdBadge() {
+          var n = (M.pend || M.pendRes || []).filter(function(p) { return p.status === 'aberta'; }).length, b = $('pd-badge'); if (!b) return;
+          b.textContent = n; b.style.display = n ? 'inline-block' : 'none';
+        }
+        function carregarPend() {
+          renderPend();
+          Promise.all([
+            chk(sb.from('man_pendencias').select('*').order('created_at', { ascending: false })),
+            chk(sb.from('man_pend_orcs').select('*').order('created_at', { ascending: false })),
+            chk(sb.from('man_checklists').select('id,tipo,data,hora,inspecionado_por,horimetro,condicao,fabricante_modelo').order('created_at', { ascending: false })),
+            chk(sb.from('com_config').select('valor').eq('chave', 'pend_ref_precos').maybeSingle()).catch(function() { return { data: null }; })
+          ]).then(function(r) {
+            M.pend = r[0].data || []; M.pOrcs = r[1].data || []; M.pCk = {}; (r[2].data || []).forEach(function(c) { M.pCk[c.id] = c; });
+            M.pRef = (r[3].data && r[3].data.valor && r[3].data.valor.itens) || null;
+            pdBadge(); renderPend();
+          }).catch(function(e) { M.pend = M.pend || []; renderPend(); showToast('Erro ao carregar pendências: ' + (e.message || e), 5000); });
+        }
+        function pdMarcar(ids, patch, msg) {
+          if (!ids.length) return Promise.resolve();
+          var p = Object.assign({ updated_at: new Date().toISOString() }, patch);
+          return chk(sb.from('man_pendencias').update(p).in('id', ids).select('id')).then(function() {
+            (M.pend || []).forEach(function(x) { if (ids.indexOf(x.id) >= 0) Object.assign(x, p); });
+            pdBadge(); renderPend(); if (msg) showToast(msg);
+          }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function pdSel(ck, soAbertas) {
+          var ids = Array.prototype.map.call(document.querySelectorAll('#mn-pend input.pd-cb[data-ck="' + ck + '"]:checked'), function(b) { return b.value; });
+          return (M.pend || []).filter(function(p) { return ids.indexOf(p.id) >= 0 && (!soAbertas || p.status === 'aberta' || p.status === 'orcamento'); });
+        }
+        var PD_ST = { aberta: ['sx-atraso', 'EM ABERTO'], demanda: ['sx-st-ok', 'DEMANDA CRIADA'], orcamento: ['sx-hoje', 'EM ORÇAMENTO'], laudo: ['sx-hoje', 'LAUDO EMITIDO'], resolvida: ['sx-st-ok', 'RESOLVIDO'], descartada: ['sx-st-ok', 'DESCARTADO'] };
+        function renderPend() {
+          var el = $('mn-pend'); if (!el) return;
+          if (!M.pend) { el.innerHTML = '<div class="sx-vazio">Carregando…</div>'; return; }
+          var fil = M.pFil || 'abertas', cli = M.pCli || '', fs = $('pd-fil'); if (fs) fs.value = fil;
+          var sc = $('pd-cli'); if (sc) { var nm = {}; M.pend.forEach(function(p) { nm[p.cliente] = 1; }); var cs = Object.keys(nm).sort(function(a, b) { return a.localeCompare(b, 'pt-BR'); }); sc.innerHTML = '<option value="">Todos os clientes</option>' + cs.map(function(c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join(''); sc.value = cli; }
+          var grupos = {}, ordem = [];
+          M.pend.forEach(function(p) { if (cli && p.cliente !== cli) return; if (!grupos[p.checklist_id]) { grupos[p.checklist_id] = []; ordem.push(p.checklist_id); } grupos[p.checklist_id].push(p); });
+          var html = ordem.filter(function(ck) {
+            var l = grupos[ck]; if (fil === 'abertas') return l.some(function(p) { return p.status === 'aberta'; });
+            if (fil === 'orc') return l.some(function(p) { return p.status === 'orcamento'; }); return true;
+          }).sort(function(a, b) { var ca = M.pCk && M.pCk[a], cb = M.pCk && M.pCk[b]; return String((cb && cb.data) || '').localeCompare(String((ca && ca.data) || '')); }).map(function(ck) { return pdCard(ck, grupos[ck]); }).join('');
+          el.innerHTML = html || '<div class="sx-vazio">' + (fil === 'abertas' ? 'Nenhuma pendência em aberto. 👏' : 'Nada por aqui.') + '</div>';
+        }
+        function pdCard(ck, l) {
+          var c = (M.pCk && M.pCk[ck]) || {}, p0 = l[0], pls = p0.dono === 'pls';
+          var ab = l.filter(function(p) { return p.status === 'aberta'; }).length;
+          var orcs = (M.pOrcs || []).filter(function(o) { return l.some(function(p) { return p.orc_id === o.id; }); });
+          var h = '<div class="box" style="border:1px solid #e2e8f0;border-radius:10px;padding:.7rem .9rem;margin-bottom:.8rem;background:#fff">' +
+            '<div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:.4rem"><div><b>' + esc(p0.cliente) + '</b> · ' + esc([p0.equipamento, p0.modelo || c.fabricante_modelo].filter(Boolean).join(' · ')) + ' ' +
+            '<span class="sx-pill" style="background:' + (pls ? '#ffedd5;color:#9a3412' : '#e0e7ff;color:#3730a3') + '">' + (pls ? 'EQUIPAMENTO PLS' : 'CLIENTE / PARCEIRO') + '</span><br>' +
+            '<span class="sx-muted">Checklist ' + (c.tipo || '') + ' de ' + fd(c.data) + (c.hora ? ' ' + esc(c.hora) : '') + (c.inspecionado_por ? ' · ' + esc(c.inspecionado_por) : '') + ' · <b>' + ab + ' em aberto</b> de ' + l.length + '</span></div>' +
+            '<div class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="pd-todos" data-ck="' + ck + '">☑ Marcar todos</button> ' +
+            (pls ? '<button type="button" class="btn-pls-primary" data-man="pd-dem" data-ck="' + ck + '">🛠 Criar demanda com os marcados</button> ' :
+              '<button type="button" class="btn-pls-primary" data-man="pd-orc" data-ck="' + ck + '">💲 Sugerir orçamento dos marcados</button> <button type="button" class="btn-pls-secondary" data-man="pd-dem" data-ck="' + ck + '" title="Só depois de o cliente aprovar">🛠 Criar demanda</button> <button type="button" class="btn-pls-secondary" data-man="pd-laudo" data-ck="' + ck + '" title="Documento com fotos que isenta a PLS">📄 Laudo com fotos</button> ') +
+            '<button type="button" class="btn-pls-secondary" data-man="ck-abrir" data-id="' + ck + '">Abrir checklist</button></div></div>' +
+            '<table class="table-pls"><tbody>' + l.map(function(p) {
+              var st = PD_ST[p.status] || ['', p.status], aberto = p.status === 'aberta' || p.status === 'orcamento';
+              return '<tr><td style="width:28px">' + (aberto ? '<input type="checkbox" class="pd-cb" data-ck="' + ck + '" value="' + p.id + '">' : '') + '</td>' +
+                '<td><b>' + esc(p.titulo) + '</b><br><span class="sx-muted">' + esc(p.secao || '') + '</span></td><td>' + esc(p.obs || '—') + '</td>' +
+                '<td><span class="sx-pill ' + st[0] + '">' + st[1] + '</span>' + (p.laudo_em ? '<br><span class="sx-muted">laudo em ' + fd(p.laudo_em) + '</span>' : '') + '</td>' +
+                '<td class="sx-acoes">' + (aberto ? '<button type="button" class="btn-pls-secondary" data-man="pd-res" data-id="' + p.id + '" title="Já foi resolvido / não precisa mais">✓ Resolvido</button>' : '<button type="button" class="btn-pls-secondary" data-man="pd-reab" data-id="' + p.id + '">↺ Reabrir</button>') + '</td></tr>';
+            }).join('') + '</tbody></table>';
+          orcs.forEach(function(o) {
+            var its = o.itens || [], cor = o.status === 'aprovado' ? '#16a34a' : o.status === 'recusado' ? '#dc2626' : '#d97706';
+            h += '<div style="margin-top:.6rem;padding:.5rem .7rem;border-left:4px solid ' + cor + ';background:#f8fafc;border-radius:6px"><b>💲 Sugestão de orçamento — ' + brl(o.total) + '</b> <span class="sx-pill" style="background:' + cor + ';color:#fff">' + String(o.status).toUpperCase() + '</span><br>' +
+              '<span class="sx-muted">' + its.map(function(i) { return esc(i.desc); }).join(' · ') + '</span><div class="sx-acoes" style="margin-top:.4rem">' +
+              '<button type="button" class="btn-pls-secondary" data-man="pd-orc-cp" data-oid="' + o.id + '">📋 Copiar texto</button> <button type="button" class="btn-pls-secondary" data-man="pd-orc-ed" data-ck="' + ck + '" data-oid="' + o.id + '">✏ Ajustar valores</button> ' +
+              (o.status !== 'aprovado' ? '<button type="button" class="btn-pls-primary" data-man="pd-orc-ok" data-oid="' + o.id + '">✔ Cliente aprovou → criar demanda</button> ' : '') +
+              (o.status !== 'recusado' ? '<button type="button" class="btn-pls-secondary" data-man="pd-orc-no" data-oid="' + o.id + '">✖ Cliente recusou</button> ' : '') +
+              (o.status === 'recusado' ? '<span class="sx-muted">→ marque os itens e gere o <b>Laudo com fotos</b>.</span>' : '') + '</div></div>';
+          });
+          return h + '</div>';
+        }
+        // --- demanda ---
+        function pdDemanda(ck, itensFixos, aoCriar) {
+          var sel = itensFixos || pdSel(ck, true);
+          if (!sel.length) { showToast('Marque pelo menos um item em aberto.'); return; }
+          var cliente = sel[0].cliente;
+          if (!cliPorNome(cliente)) { showToast('O cliente "' + cliente + '" não está no cadastro de clientes. Cadastre-o antes de criar a demanda.', 6000); return; }
+          var tecs = appData.tecnicos || [];
+          abrirModal('Criar demanda — ' + sel.length + ' item(ns)',
+            '<div class="sx-muted" style="margin-bottom:.5rem">' + esc(cliente) + ' · ' + esc(sel[0].equipamento || '') + '<br>' + sel.map(function(p) { return '• ' + esc(p.titulo); }).join('<br>') + '</div>' +
+            '<div class="form-grid"><div class="form-group"><label class="form-label">Técnico responsável *</label><select id="pd-tec" class="form-control"><option value="">Escolha…</option>' + tecs.map(function(t) { return '<option>' + esc(t) + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Data prevista</label><input type="date" id="pd-data" class="form-control" value="' + getTodayISO() + '"></div>' +
+            '<div class="form-group"><label class="form-label">Tipo</label><select id="pd-tipo" class="form-control"><option>Manutenção Corretiva</option><option>Manutenção Preventiva</option><option>Visita para Avaliação</option></select></div></div>' +
+            '<div class="sx-muted" style="margin-top:.4rem">Cada item vira um serviço da demanda; o que não for marcado continua em aberto aqui.</div>',
+            'Criar demanda', function() {
+              var tec = $('pd-tec').value; if (!tec) throw new Error('Escolha o técnico responsável.');
+              var data = $('pd-data').value || getTodayISO(), tipo = $('pd-tipo').value;
+              var txt = sel.map(function(p) { return p.titulo + (p.obs ? ' — ' + p.obs : ''); }).join('; ');
+              var dem = { id: 'dem_' + Date.now(), cliente: cliente, canal: 'Solicitado pelo Técnico', solicitante: nomeUsuario() || 'Checklist', tecnico: tec, tipo: tipo,
+                equipamento: [sel[0].equipamento, sel[0].modelo].filter(Boolean).join(' ') || 'Equipamento', obsTecnicas: 'Itens apontados no checklist: ' + txt, obs: 'Itens apontados no checklist: ' + txt,
+                dataCad: getTodayISO(), dataAtend: data, dataPrev: '', status: 'Em andamento', usaServicos: true, servicoUnico: false };
+              appData.demandas.unshift(dem); if (!appData.servicos) appData.servicos = [];
+              sel.forEach(function(p) { appData.servicos.push({ id: novoUUID(), demandaId: dem.id, data: data, tecnico: tec, descricao: p.titulo + (p.obs ? ' — ' + p.obs : ''), status: 'Em andamento' }); });
+              saveData();
+              return pdMarcar(sel.map(function(p) { return p.id; }), { status: 'demanda', demanda_id: dem.id }, 'Demanda criada para ' + tec + ' com ' + sel.length + ' item(ns). Os demais continuam em aberto.').then(function() { if (aoCriar) aoCriar(); });
+            });
+        }
+        // --- sugestão de orçamento ---
+        function pdOrcamento(ck, oid) {
+          var o = oid ? (M.pOrcs || []).filter(function(x) { return x.id === oid; })[0] : null, its;
+          if (o) its = (o.itens || []).map(function(i) { return Object.assign({}, i); });
+          else {
+            var sel = pdSel(ck, true).filter(function(p) { return p.status === 'aberta'; });
+            if (!sel.length) { showToast('Marque os itens em aberto que entram na sugestão.'); return; }
+            its = sel.map(function(p) { var r = pdSug(p); return { pid: p.id, tit: p.titulo, desc: r.d, mo: r.mo, pc: r.pc }; });
+          }
+          var p0 = (M.pend || []).filter(function(p) { return p.checklist_id === ck; })[0] || {};
+          var lin = function(i, k) { return '<tr data-k="' + k + '"><td style="font-size:.75rem;color:#64748b;width:18%">' + esc(i.tit || '') + '</td><td><input class="form-control od" value="' + esc(i.desc) + '"></td><td style="width:100px"><input class="form-control om" type="number" min="0" step="0.01" value="' + i.mo + '"></td><td style="width:100px"><input class="form-control op" type="number" min="0" step="0.01" value="' + i.pc + '"></td><td style="width:40px"><button type="button" class="btn-pls-secondary" onclick="this.closest(\'tr\').remove();window.__pdTot()">✕</button></td></tr>'; };
+          window.__pdTot = function() { var t = 0; document.querySelectorAll('#pd-oti tr').forEach(function(r) { t += pdNum(r.querySelector('.om').value) + pdNum(r.querySelector('.op').value); }); $('pd-ott').textContent = brl(t); };
+          abrirModal(o ? 'Ajustar sugestão de orçamento' : 'Sugestão de orçamento',
+            '<div class="sx-muted" style="margin-bottom:.5rem">Valores <b>de referência</b> (tabela em "💲 Valores de referência") — ajuste conforme o cliente. Isto <b>não</b> cria orçamento no sistema.</div>' +
+            '<table class="table-pls"><thead><tr><th>Item</th><th>Serviço a cobrar</th><th>Mão de obra</th><th>Peças</th><th></th></tr></thead><tbody id="pd-oti" oninput="window.__pdTot()">' + its.map(lin).join('') + '</tbody></table>' +
+            '<div style="text-align:right;margin-top:.5rem"><b>Total: <span id="pd-ott"></span></b></div>' +
+            '<div class="form-group" style="margin-top:.5rem"><label class="form-label">Observação (aparece no texto)</label><input id="pd-oobs" class="form-control" value="' + esc((o && o.obs) || 'Valores sujeitos a confirmação após avaliação técnica.') + '"></div>',
+            'Salvar sugestão', function() {
+              var rows = Array.prototype.map.call(document.querySelectorAll('#pd-oti tr'), function(r) { var b = its[Number(r.getAttribute('data-k'))] || {}; return { pid: b.pid || null, tit: b.tit || '', desc: r.querySelector('.od').value.trim(), mo: pdNum(r.querySelector('.om').value), pc: pdNum(r.querySelector('.op').value) }; }).filter(function(i) { return i.desc; });
+              if (!rows.length) throw new Error('A sugestão ficou sem linhas.');
+              var total = rows.reduce(function(a, i) { return a + i.mo + i.pc; }, 0), obs = $('pd-oobs').value.trim();
+              var q = o ? sb.from('man_pend_orcs').update({ itens: rows, total: total, obs: obs, updated_at: new Date().toISOString() }).eq('id', o.id).select('*') :
+                sb.from('man_pend_orcs').insert({ cliente: p0.cliente, equipamento: [p0.equipamento, p0.modelo].filter(Boolean).join(' '), equip_id: p0.equip_id || null, itens: rows, total: total, obs: obs }).select('*');
+              return chk(q).then(function(r) {
+                var n = r.data[0]; if (o) { Object.assign(o, n); return; }
+                M.pOrcs = (M.pOrcs || []).concat([n]);
+                return pdMarcar(rows.map(function(i) { return i.pid; }).filter(Boolean), { status: 'orcamento', orc_id: n.id }, 'Sugestão salva. Use "Copiar texto" para enviar ao cliente.');
+              }).then(function() { renderPend(); });
+            });
+          window.__pdTot();
+        }
+        function pdOrcTexto(o) {
+          var its = o.itens || [];
+          return '*Orçamento — PLS Empilhadeiras*\nCliente: ' + o.cliente + '\nEquipamento: ' + (o.equipamento || '') + '\n\n' +
+            its.map(function(i, k) { return (k + 1) + ') ' + i.desc + ' — ' + brl((i.mo || 0) + (i.pc || 0)) + ((i.mo && i.pc) ? ' (mão de obra ' + brl(i.mo) + ' + peças ' + brl(i.pc) + ')' : ''); }).join('\n') +
+            '\n\n*Total: ' + brl(o.total) + '*' + (o.obs ? '\n' + o.obs : '');
+        }
+        function pdOrcCopiar(oid) { var o = (M.pOrcs || []).filter(function(x) { return x.id === oid; })[0]; if (o) copiarLink(pdOrcTexto(o)); }
+        function pdOrcStatus(oid, st) {
+          return chk(sb.from('man_pend_orcs').update({ status: st, updated_at: new Date().toISOString() }).eq('id', oid).select('id')).then(function() {
+            var o = (M.pOrcs || []).filter(function(x) { return x.id === oid; })[0]; if (o) o.status = st; renderPend();
+            showToast(st === 'recusado' ? 'Orçamento recusado. Gere o laudo com fotos para resguardar a PLS.' : 'Status atualizado.', 5000);
+          }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function pdOrcAprovado(oid) {
+          var itens = (M.pend || []).filter(function(p) { return p.orc_id === oid && p.status === 'orcamento'; });
+          if (!itens.length) { pdOrcStatus(oid, 'aprovado'); return; }
+          pdDemanda(itens[0].checklist_id, itens, function() { pdOrcStatus(oid, 'aprovado'); });
+        }
+        // --- tabela de referência ---
+        function pdRef() {
+          var l = pdRefLista();
+          var lin = function(r) { return '<tr><td><input class="form-control rr" value="' + esc(r.r) + '" title="palavras do item separadas por | (ex.: freio|pedal)"></td><td><input class="form-control rd" value="' + esc(r.d) + '"></td><td style="width:95px"><input class="form-control rm" type="number" step="0.01" min="0" value="' + r.mo + '"></td><td style="width:95px"><input class="form-control rp" type="number" step="0.01" min="0" value="' + r.pc + '"></td><td style="width:40px"><button type="button" class="btn-pls-secondary" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>'; };
+          window.__pdRefAdd = function() { $('pd-ref-b').insertAdjacentHTML('beforeend', lin({ r: '', d: '', mo: 0, pc: 0 })); };
+          abrirModal('Valores de referência da sugestão de orçamento',
+            '<div class="sx-muted" style="margin-bottom:.5rem">Estimativas iniciais (não são preços da PLS): <b>ajuste aos seus valores</b>. O sistema procura as palavras da 1ª coluna no nome do item do checklist e sugere o serviço e os valores. Item sem correspondência entra como "Avaliação e correção" para você preencher.</div>' +
+            '<table class="table-pls"><thead><tr><th>Palavras do item</th><th>Serviço</th><th>Mão de obra</th><th>Peças</th><th></th></tr></thead><tbody id="pd-ref-b">' + l.map(lin).join('') + '</tbody></table>' +
+            '<button type="button" class="btn-pls-secondary" style="margin-top:.5rem" onclick="window.__pdRefAdd()">➕ Adicionar linha</button>',
+            'Salvar valores', function() {
+              var itens = Array.prototype.map.call(document.querySelectorAll('#pd-ref-b tr'), function(r) { return { r: norm(r.querySelector('.rr').value).trim(), d: r.querySelector('.rd').value.trim(), mo: pdNum(r.querySelector('.rm').value), pc: pdNum(r.querySelector('.rp').value) }; }).filter(function(i) { return i.r && i.d; });
+              return chk(sb.from('com_config').upsert({ chave: 'pend_ref_precos', valor: { itens: itens }, updated_at: new Date().toISOString() })).then(function() { M.pRef = itens; showToast('Valores de referência salvos ✔'); });
+            });
+        }
+        // --- laudo ---
+        function pdLaudo(ck) {
+          var sel = pdSel(ck, false); if (!sel.length) sel = (M.pend || []).filter(function(p) { return p.checklist_id === ck && (p.status === 'aberta' || p.status === 'orcamento' || p.status === 'laudo'); });
+          if (!sel.length) { showToast('Nenhum item em aberto neste checklist.'); return; }
+          showToast('Montando o laudo com as fotos…');
+          chk(sb.from('man_checklists').select('itens,comentarios,data,hora,inspecionado_por,horimetro,fabricante_modelo,equipamento,cliente,condicao,responsavel').eq('id', ck).maybeSingle()).then(function(r) {
+            var c = r.data; if (!c) throw new Error('Checklist não encontrado.');
+            var area = $('sx-print-area'), st = $('sx-print-page'), itens = c.itens || [];
+            var hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+            var blocos = sel.map(function(p, k) {
+              var it = itens[p.item_idx] || {}, foto = it.foto && /^data:image|^https?:/.test(it.foto) ? it.foto : '';
+              return '<div class="lz-it"><div class="lz-t">' + (k + 1) + '. ' + esc(p.titulo) + '</div><div>' + esc(p.obs || 'Item apresentou não conformidade na inspeção.') + '</div>' + (foto ? '<img class="lz-ft" src="' + foto + '" alt="">' : '<div class="lz-sf">(sem foto registrada)</div>') + '</div>';
+            }).join('');
+            area.innerHTML = '<div class="lz"><div class="lz-top"><img src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div><div class="lz-h">LAUDO TÉCNICO DE INSPEÇÃO</div><div class="lz-s">Registro de não conformidades e isenção de responsabilidade</div></div></div>' +
+              '<table class="lz-d"><tr><td><b>Cliente:</b> ' + esc(c.cliente) + '</td><td><b>Data da inspeção:</b> ' + fd(c.data) + (c.hora ? ' ' + esc(c.hora) : '') + '</td></tr><tr><td><b>Equipamento:</b> ' + esc(c.equipamento || '') + '</td><td><b>Modelo:</b> ' + esc(c.fabricante_modelo || '') + '</td></tr><tr><td><b>Horímetro:</b> ' + esc(c.horimetro || '—') + '</td><td><b>Inspecionado por:</b> ' + esc(c.inspecionado_por || '') + '</td></tr></table>' +
+              '<div class="lz-sec">Não conformidades identificadas</div>' + blocos +
+              (c.comentarios ? '<div class="lz-sec">Parecer técnico</div><div>' + esc(c.comentarios) + '</div>' : '') +
+              '<div class="lz-sec">Declaração</div><div class="lz-dec">A PLS Empilhadeiras realizou a inspeção do equipamento acima e <b>identificou as não conformidades descritas neste laudo</b>, que foram comunicadas ao cliente, juntamente com a recomendação de correção antes da operação (ou de manutenção do equipamento em condições seguras).<br><br>Enquanto as não conformidades não forem corrigidas, a <b>operação do equipamento nessas condições é de inteira responsabilidade do proprietário/usuário</b>, que declara ciência do estado do equipamento, ficando a PLS Empilhadeiras <b>isenta de responsabilidade</b> por acidentes, danos materiais, pessoais ou perdas decorrentes das não conformidades aqui registradas.</div>' +
+              '<div class="lz-ass"><div><div class="lz-l"></div>PLS Empilhadeiras<br><span>' + esc(nomeUsuario() || '') + '</span></div><div><div class="lz-l"></div>Ciente — ' + esc(c.cliente) + '<br><span>Nome / CPF / Data</span></div></div>' +
+              '<div class="lz-rod">Emitido em ' + hoje + ' · PLS Empilhadeiras</div></div>';
+            document.body.classList.add('print-sx');
+            if (st) st.textContent = '@page { size: A4 portrait; margin: 12mm; }';
+            var antes = document.title; document.title = 'Laudo - ' + c.cliente + ' - ' + (c.equipamento || '');
+            var limpar = function() { document.body.classList.remove('print-sx'); if (st) st.textContent = ''; document.title = antes; window.removeEventListener('afterprint', limpar); };
+            window.addEventListener('afterprint', limpar);
+            var ids = sel.filter(function(p) { return p.status !== 'laudo'; }).map(function(p) { return p.id; });
+            pdMarcar(ids, { status: 'laudo', laudo_em: getTodayISO() }, null);
+            setTimeout(function() { window.print(); }, 250);
+          }).catch(function(e) { showToast('Erro ao gerar o laudo: ' + (e.message || e), 6000); });
+        }
+
         // ---------- eventos da Manutenção ----------
         document.addEventListener('click', function(evt) {
           var a = evt.target.closest ? evt.target.closest('[data-man]') : null; if (!a) return;
           var k = a.getAttribute('data-man'), id = a.getAttribute('data-id');
           switch (k) {
             case 'sub': M.sub = a.getAttribute('data-v'); renderMan(); break;
+            case 'pd-todos': { var ckA = a.getAttribute('data-ck'), bs = document.querySelectorAll('#mn-pend input.pd-cb[data-ck="' + ckA + '"]'), alg = Array.prototype.some.call(bs, function(b) { return !b.checked; }); Array.prototype.forEach.call(bs, function(b) { b.checked = alg; }); break; }
+            case 'pd-dem': pdDemanda(a.getAttribute('data-ck')); break;
+            case 'pd-orc': pdOrcamento(a.getAttribute('data-ck'), null); break;
+            case 'pd-orc-ed': pdOrcamento(a.getAttribute('data-ck'), a.getAttribute('data-oid')); break;
+            case 'pd-orc-cp': pdOrcCopiar(a.getAttribute('data-oid')); break;
+            case 'pd-orc-ok': pdOrcAprovado(a.getAttribute('data-oid')); break;
+            case 'pd-orc-no': pdOrcStatus(a.getAttribute('data-oid'), 'recusado'); break;
+            case 'pd-laudo': pdLaudo(a.getAttribute('data-ck')); break;
+            case 'pd-res': pdMarcar([id], { status: 'resolvida' }, 'Item marcado como resolvido.'); break;
+            case 'pd-reab': pdMarcar([id], { status: 'aberta', demanda_id: null, orc_id: null, laudo_em: null }, 'Item reaberto.'); break;
+            case 'pd-ref': pdRef(); break;
             case 'op-ajuda': abrirModal('Operação normal ou severa?', PLSEQ.opAjuda(), 'Entendi', function() {}); break;
             case 'ci-add': { var tb = $('ci-' + a.getAttribute('data-en')); if (tb) { tb.insertAdjacentHTML('beforeend', linhaCiclo({}, true)); var ult2 = tb.lastChild.querySelector('input'); if (ult2) ult2.focus(); } break; }
             case 'ci-del': { var tr0 = a.closest('tr'); if (tr0 && confirm('Tirar este serviço da lista de ciclos?')) tr0.remove(); break; }
@@ -13780,6 +14031,8 @@ var PLSDOC = (function() {
           var t = evt.target; if (!t || !t.id) return;
           if (t.id === 'mn-r-sel') aplicarCicloRev();
           if (t.id === 'mn-e-plano') { var dl = $('mn-dl-int'); if (dl) dl.innerHTML = colsPlano(t.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); }
+          else if (t.id === 'pd-fil') { M.pFil = t.value; renderPend(); }
+          else if (t.id === 'pd-cli') { M.pCli = t.value; renderPend(); }
           else if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
           else if (t.id === 'mn-e-cli') { M.eCli = t.value; renderEquipMan(); }
           else if (t.id === 'mn-e-orig') { M.eOrig = t.value; renderEquipMan(); }
