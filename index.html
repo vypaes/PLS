@@ -2252,8 +2252,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     .lz-d { width: 100%; border-collapse: collapse; margin-bottom: 8px; } .lz-d td { border: 1px solid #cbd5e1; padding: 5px 8px; font-size: 10pt; }
     .lz-sec { background: #1e293b; color: #fff; font-weight: 700; padding: 4px 8px; margin: 12px 0 6px; font-size: 10.5pt; }
     .lz-it { border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 8px; margin-bottom: 8px; page-break-inside: avoid; }
-    .lz-t { font-weight: 700; margin-bottom: 2px; } .lz-ft { display: block; max-height: 80mm; max-width: 100%; margin-top: 6px; border: 1px solid #cbd5e1; } .lz-sf { color: #94a3b8; font-size: 9pt; margin-top: 4px; }
-    .lz-dec { text-align: justify; font-size: 10pt; } .lz-ass { display: flex; gap: 30px; margin-top: 46px; text-align: center; page-break-inside: avoid; }
+    .lz-t { font-weight: 700; margin-bottom: 2px; } .lz-fs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .lz-ft { display: block; max-height: 70mm; max-width: 48%; border: 1px solid #cbd5e1; } .lz-sf { color: #94a3b8; font-size: 9pt; margin-top: 4px; }
+    .lz-dec { text-align: justify; font-size: 10pt; } .lz p { margin: 0 0 6px; } .lz-ass { display: flex; gap: 30px; margin-top: 46px; text-align: center; page-break-inside: avoid; }
     .lz-ass > div { flex: 1; font-size: 10pt; } .lz-ass span { color: #64748b; font-size: 9pt; } .lz-l { border-top: 1px solid #111; margin-bottom: 4px; }
     .lz-rod { margin-top: 14px; color: #64748b; font-size: 8.5pt; text-align: center; }
     @media print { .lz-top, .lz-sec { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v85 — 24/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v86 — 25/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -13753,8 +13753,10 @@ var PLSDOC = (function() {
             chk(sb.from('man_pendencias').select('*').order('created_at', { ascending: false })),
             chk(sb.from('man_pend_orcs').select('*').order('created_at', { ascending: false })),
             chk(sb.from('man_checklists').select('id,tipo,data,hora,inspecionado_por,horimetro,condicao,fabricante_modelo').order('created_at', { ascending: false })),
-            chk(sb.from('com_config').select('valor').eq('chave', 'pend_ref_precos').maybeSingle()).catch(function() { return { data: null }; })
+            chk(sb.from('com_config').select('valor').eq('chave', 'pend_ref_precos').maybeSingle()).catch(function() { return { data: null }; }),
+            chk(sb.from('com_config').select('valor').eq('chave', 'pend_laudo_texto').maybeSingle()).catch(function() { return { data: null }; })
           ]).then(function(r) {
+            M.pLaudoTxt = (r[4].data && r[4].data.valor && r[4].data.valor.t) || null;
             M.pend = r[0].data || []; M.pOrcs = r[1].data || []; M.pCk = {}; (r[2].data || []).forEach(function(c) { M.pCk[c.id] = c; });
             M.pRef = (r[3].data && r[3].data.valor && r[3].data.valor.itens) || null;
             pdBadge(); renderPend();
@@ -13801,9 +13803,9 @@ var PLSDOC = (function() {
             '<table class="table-pls"><tbody>' + l.map(function(p) {
               var st = PD_ST[p.status] || ['', p.status], aberto = p.status === 'aberta' || p.status === 'orcamento';
               return '<tr><td style="width:28px">' + (aberto ? '<input type="checkbox" class="pd-cb" data-ck="' + ck + '" value="' + p.id + '">' : '') + '</td>' +
-                '<td><b>' + esc(p.titulo) + '</b><br><span class="sx-muted">' + esc(p.secao || '') + '</span></td><td>' + esc(p.obs || '—') + '</td>' +
+                '<td><b>' + esc(p.titulo) + '</b><br><span class="sx-muted">' + esc(p.secao || '') + '</span></td><td>' + esc(p.obs || '—') + pdFotosHtml(p) + '</td>' +
                 '<td><span class="sx-pill ' + st[0] + '">' + st[1] + '</span>' + (p.laudo_em ? '<br><span class="sx-muted">laudo em ' + fd(p.laudo_em) + '</span>' : '') + '</td>' +
-                '<td class="sx-acoes">' + (aberto ? '<button type="button" class="btn-pls-secondary" data-man="pd-res" data-id="' + p.id + '" title="Já foi resolvido / não precisa mais">✓ Resolvido</button>' : '<button type="button" class="btn-pls-secondary" data-man="pd-reab" data-id="' + p.id + '">↺ Reabrir</button>') + '</td></tr>';
+                '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-man="pd-foto" data-id="' + p.id + '" title="Anexar foto deste item (vai para o laudo)">📷 Foto</button><input type="file" class="pd-file" data-id="' + p.id + '" accept="image/*" multiple style="display:none"> ' + (aberto ? '<button type="button" class="btn-pls-secondary" data-man="pd-res" data-id="' + p.id + '" title="Já foi resolvido / não precisa mais">✓ Resolvido</button>' : '<button type="button" class="btn-pls-secondary" data-man="pd-reab" data-id="' + p.id + '">↺ Reabrir</button>') + '</td></tr>';
             }).join('') + '</tbody></table>';
           orcs.forEach(function(o) {
             var its = o.itens || [], cor = o.status === 'aprovado' ? '#16a34a' : o.status === 'recusado' ? '#dc2626' : '#d97706';
@@ -13905,35 +13907,86 @@ var PLSDOC = (function() {
               return chk(sb.from('com_config').upsert({ chave: 'pend_ref_precos', valor: { itens: itens }, updated_at: new Date().toISOString() })).then(function() { M.pRef = itens; showToast('Valores de referência salvos ✔'); });
             });
         }
-        // --- laudo ---
+        // --- fotos anexadas ao item ---
+        function pdFotosHtml(p) {
+          var f = p.fotos || []; if (!f.length) return '';
+          return '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + f.map(function(x, i) { return '<span style="position:relative"><img src="' + x + '" style="height:46px;border-radius:4px;border:1px solid #cbd5e1"><button type="button" data-man="pd-fx" data-id="' + p.id + '" data-i="' + i + '" title="Remover foto" style="position:absolute;top:-6px;right:-6px;border:0;background:#dc2626;color:#fff;border-radius:50%;width:16px;height:16px;line-height:14px;font-size:10px;cursor:pointer">×</button></span>'; }).join('') + '</div>';
+        }
+        function pdFotoRem(id, i) {
+          var p = (M.pend || []).filter(function(x) { return x.id === id; })[0]; if (!p) return;
+          var f = (p.fotos || []).slice(); f.splice(i, 1); pdMarcar([id], { fotos: f }, 'Foto removida.');
+        }
+        document.addEventListener('change', function(ev) {
+          var t = ev.target; if (!t || !t.classList || !t.classList.contains('pd-file') || !t.files || !t.files.length) return;
+          var id = t.getAttribute('data-id'), p = (M.pend || []).filter(function(x) { return x.id === id; })[0]; if (!p) return;
+          var arq = Array.prototype.slice.call(t.files); t.value = '';
+          showToast('Anexando ' + arq.length + ' foto(s)…');
+          Promise.all(arq.map(function(f) { return PLSU.comprimir(f, 1100, 0.72); })).then(function(novas) {
+            return pdMarcar([id], { fotos: (p.fotos || []).concat(novas) }, novas.length + ' foto(s) anexada(s) ✔');
+          }).catch(function(e) { showToast('Não consegui anexar a foto: ' + (e.message || e), 5000); });
+        });
+        // --- laudo (editável) ---
+        function pdLaudoPadrao() {
+          return M.pLaudoTxt || ('A PLS Empilhadeiras realizou a inspeção do equipamento acima e identificou as não conformidades descritas neste laudo, que foram comunicadas ao cliente, juntamente com a recomendação de correção antes da operação (ou de manutenção do equipamento em condições seguras).\n\n' +
+            'Enquanto as não conformidades não forem corrigidas, a operação do equipamento nessas condições é de inteira responsabilidade do proprietário/usuário, que declara ciência do estado do equipamento, ficando a PLS Empilhadeiras isenta de responsabilidade por acidentes, danos materiais, pessoais ou perdas decorrentes das não conformidades aqui registradas.');
+        }
         function pdLaudo(ck) {
           var sel = pdSel(ck, false); if (!sel.length) sel = (M.pend || []).filter(function(p) { return p.checklist_id === ck && (p.status === 'aberta' || p.status === 'orcamento' || p.status === 'laudo'); });
           if (!sel.length) { showToast('Nenhum item em aberto neste checklist.'); return; }
-          showToast('Montando o laudo com as fotos…');
+          showToast('Preparando o laudo…');
           chk(sb.from('man_checklists').select('itens,comentarios,data,hora,inspecionado_por,horimetro,fabricante_modelo,equipamento,cliente,condicao,responsavel').eq('id', ck).maybeSingle()).then(function(r) {
             var c = r.data; if (!c) throw new Error('Checklist não encontrado.');
-            var area = $('sx-print-area'), st = $('sx-print-page'), itens = c.itens || [];
-            var hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-            var blocos = sel.map(function(p, k) {
-              var it = itens[p.item_idx] || {}, foto = it.foto && /^data:image|^https?:/.test(it.foto) ? it.foto : '';
-              return '<div class="lz-it"><div class="lz-t">' + (k + 1) + '. ' + esc(p.titulo) + '</div><div>' + esc(p.obs || 'Item apresentou não conformidade na inspeção.') + '</div>' + (foto ? '<img class="lz-ft" src="' + foto + '" alt="">' : '<div class="lz-sf">(sem foto registrada)</div>') + '</div>';
-            }).join('');
-            area.innerHTML = '<div class="lz"><div class="lz-top"><img src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div><div class="lz-h">LAUDO TÉCNICO DE INSPEÇÃO</div><div class="lz-s">Registro de não conformidades e isenção de responsabilidade</div></div></div>' +
-              '<table class="lz-d"><tr><td><b>Cliente:</b> ' + esc(c.cliente) + '</td><td><b>Data da inspeção:</b> ' + fd(c.data) + (c.hora ? ' ' + esc(c.hora) : '') + '</td></tr><tr><td><b>Equipamento:</b> ' + esc(c.equipamento || '') + '</td><td><b>Modelo:</b> ' + esc(c.fabricante_modelo || '') + '</td></tr><tr><td><b>Horímetro:</b> ' + esc(c.horimetro || '—') + '</td><td><b>Inspecionado por:</b> ' + esc(c.inspecionado_por || '') + '</td></tr></table>' +
-              '<div class="lz-sec">Não conformidades identificadas</div>' + blocos +
-              (c.comentarios ? '<div class="lz-sec">Parecer técnico</div><div>' + esc(c.comentarios) + '</div>' : '') +
-              '<div class="lz-sec">Declaração</div><div class="lz-dec">A PLS Empilhadeiras realizou a inspeção do equipamento acima e <b>identificou as não conformidades descritas neste laudo</b>, que foram comunicadas ao cliente, juntamente com a recomendação de correção antes da operação (ou de manutenção do equipamento em condições seguras).<br><br>Enquanto as não conformidades não forem corrigidas, a <b>operação do equipamento nessas condições é de inteira responsabilidade do proprietário/usuário</b>, que declara ciência do estado do equipamento, ficando a PLS Empilhadeiras <b>isenta de responsabilidade</b> por acidentes, danos materiais, pessoais ou perdas decorrentes das não conformidades aqui registradas.</div>' +
-              '<div class="lz-ass"><div><div class="lz-l"></div>PLS Empilhadeiras<br><span>' + esc(nomeUsuario() || '') + '</span></div><div><div class="lz-l"></div>Ciente — ' + esc(c.cliente) + '<br><span>Nome / CPF / Data</span></div></div>' +
-              '<div class="lz-rod">Emitido em ' + hoje + ' · PLS Empilhadeiras</div></div>';
-            document.body.classList.add('print-sx');
-            if (st) st.textContent = '@page { size: A4 portrait; margin: 12mm; }';
-            var antes = document.title; document.title = 'Laudo - ' + c.cliente + ' - ' + (c.equipamento || '');
-            var limpar = function() { document.body.classList.remove('print-sx'); if (st) st.textContent = ''; document.title = antes; window.removeEventListener('afterprint', limpar); };
-            window.addEventListener('afterprint', limpar);
-            var ids = sel.filter(function(p) { return p.status !== 'laudo'; }).map(function(p) { return p.id; });
-            pdMarcar(ids, { status: 'laudo', laudo_em: getTodayISO() }, null);
-            setTimeout(function() { window.print(); }, 250);
-          }).catch(function(e) { showToast('Erro ao gerar o laudo: ' + (e.message || e), 6000); });
+            var itens = c.itens || [];
+            var L = sel.map(function(p) {
+              var it = itens[p.item_idx] || {}, fs = [];
+              if (it.foto && /^data:image|^https?:/.test(it.foto)) fs.push(it.foto);
+              (p.fotos || []).forEach(function(x) { fs.push(x); });
+              return { p: p, fotos: fs };
+            });
+            var ta = 'style="width:100%;min-height:54px;font-family:inherit"';
+            abrirModal('Laudo — ' + c.cliente + ' · ' + (c.equipamento || ''),
+              '<div class="sx-muted" style="margin-bottom:.5rem">Edite o que quiser antes de imprimir. Fotos novas: use <b>📷 Foto</b> na linha do item (fora deste quadro) e abra o laudo de novo.</div>' +
+              '<div class="form-group"><label class="form-label">Título do laudo</label><input id="lz-tit" class="form-control" value="LAUDO TÉCNICO DE INSPEÇÃO"></div>' +
+              '<div class="form-group"><label class="form-label">Subtítulo</label><input id="lz-sub" class="form-control" value="Registro de não conformidades e isenção de responsabilidade"></div>' +
+              L.map(function(x, i) {
+                return '<div style="border:1px solid #e2e8f0;border-radius:8px;padding:.5rem;margin:.5rem 0"><b>' + (i + 1) + '. ' + esc(x.p.titulo) + '</b>' +
+                  '<input class="form-control lz-it-t" data-i="' + i + '" style="margin:.3rem 0" value="' + esc(x.p.titulo) + '" title="Título do item no laudo">' +
+                  '<textarea ' + ta + ' class="form-control lz-it-d" data-i="' + i + '">' + esc(x.p.obs || '') + '</textarea>' +
+                  '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">' + (x.fotos.length ? x.fotos.map(function(f, j) { return '<label style="font-size:.7rem;text-align:center"><img src="' + f + '" style="height:60px;border:1px solid #cbd5e1;border-radius:4px;display:block"><input type="checkbox" class="lz-f" data-i="' + i + '" data-j="' + j + '" checked> no laudo</label>'; }).join('') : '<span class="sx-muted">sem fotos — anexe com o botão 📷 Foto da linha</span>') + '</div></div>';
+              }).join('') +
+              '<div class="form-group"><label class="form-label">Parecer técnico (opcional)</label><textarea id="lz-par" class="form-control" ' + ta + '>' + esc(c.comentarios || '') + '</textarea></div>' +
+              '<div class="form-group"><label class="form-label">Declaração (texto livre — separe parágrafos com linha em branco)</label><textarea id="lz-dec" class="form-control" ' + ta.replace('54px', '170px') + '>' + esc(pdLaudoPadrao()) + '</textarea>' +
+              '<label style="font-size:.78rem"><input type="checkbox" id="lz-save"> Usar este texto como padrão dos próximos laudos</label> <button type="button" class="btn-pls-secondary" style="margin-left:8px" onclick="document.getElementById(\'lz-dec\').value = window.__pdLzPad()">↺ Voltar ao texto original</button></div>',
+              'Gerar laudo / imprimir', function() {
+                var area = $('sx-print-area'), st = $('sx-print-page');
+                var hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+                var ped = function(t) { return esc(t).replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>'); };
+                var blocos = L.map(function(x, i) {
+                  var tit = document.querySelector('.lz-it-t[data-i="' + i + '"]').value.trim() || x.p.titulo, d = document.querySelector('.lz-it-d[data-i="' + i + '"]').value.trim();
+                  var fs = x.fotos.filter(function(f, j) { var cb = document.querySelector('.lz-f[data-i="' + i + '"][data-j="' + j + '"]'); return cb && cb.checked; });
+                  return '<div class="lz-it"><div class="lz-t">' + (i + 1) + '. ' + esc(tit) + '</div>' + (d ? '<div>' + ped(d) + '</div>' : '') + (fs.length ? '<div class="lz-fs">' + fs.map(function(f) { return '<img class="lz-ft" src="' + f + '" alt="">'; }).join('') + '</div>' : '') + '</div>';
+                }).join('');
+                var par = $('lz-par').value.trim(), dec = $('lz-dec').value.trim();
+                area.innerHTML = '<div class="lz"><div class="lz-top"><img src="Logotipo_PLS.png" alt="" onerror="this.style.display=\'none\'"><div><div class="lz-h">' + esc($('lz-tit').value) + '</div><div class="lz-s">' + esc($('lz-sub').value) + '</div></div></div>' +
+                  '<table class="lz-d"><tr><td><b>Cliente:</b> ' + esc(c.cliente) + '</td><td><b>Data da inspeção:</b> ' + fd(c.data) + (c.hora ? ' ' + esc(c.hora) : '') + '</td></tr><tr><td><b>Equipamento:</b> ' + esc(c.equipamento || '') + '</td><td><b>Modelo:</b> ' + esc(c.fabricante_modelo || '') + '</td></tr><tr><td><b>Horímetro:</b> ' + esc(c.horimetro || '—') + '</td><td><b>Inspecionado por:</b> ' + esc(c.inspecionado_por || '') + '</td></tr></table>' +
+                  '<div class="lz-sec">Não conformidades identificadas</div>' + blocos +
+                  (par ? '<div class="lz-sec">Parecer técnico</div><div><p>' + ped(par) + '</p></div>' : '') +
+                  (dec ? '<div class="lz-sec">Declaração</div><div class="lz-dec"><p>' + ped(dec) + '</p></div>' : '') +
+                  '<div class="lz-ass"><div><div class="lz-l"></div>PLS Empilhadeiras<br><span>' + esc(nomeUsuario() || '') + '</span></div><div><div class="lz-l"></div>Ciente — ' + esc(c.cliente) + '<br><span>Nome / CPF / Data</span></div></div>' +
+                  '<div class="lz-rod">Emitido em ' + hoje + ' · PLS Empilhadeiras</div></div>';
+                var salva = $('lz-save').checked ? chk(sb.from('com_config').upsert({ chave: 'pend_laudo_texto', valor: { t: dec }, updated_at: new Date().toISOString() })).then(function() { M.pLaudoTxt = dec; }) : Promise.resolve();
+                var ids = sel.filter(function(p) { return p.status !== 'laudo'; }).map(function(p) { return p.id; });
+                return salva.then(function() { return pdMarcar(ids, { status: 'laudo', laudo_em: getTodayISO() }, null); }).then(function() {
+                  document.body.classList.add('print-sx');
+                  if (st) st.textContent = '@page { size: A4 portrait; margin: 12mm; }';
+                  var antes = document.title; document.title = 'Laudo - ' + c.cliente + ' - ' + (c.equipamento || '');
+                  var limpar = function() { document.body.classList.remove('print-sx'); if (st) st.textContent = ''; document.title = antes; window.removeEventListener('afterprint', limpar); };
+                  window.addEventListener('afterprint', limpar);
+                  setTimeout(function() { window.print(); }, 250);
+                });
+              });
+            window.__pdLzPad = function() { var sv = M.pLaudoTxt; M.pLaudoTxt = null; var t = pdLaudoPadrao(); M.pLaudoTxt = sv; return t; };
+          }).catch(function(e) { showToast('Erro ao preparar o laudo: ' + (e.message || e), 6000); });
         }
 
         // ---------- eventos da Manutenção ----------
@@ -13953,6 +14006,8 @@ var PLSDOC = (function() {
             case 'pd-res': pdMarcar([id], { status: 'resolvida' }, 'Item marcado como resolvido.'); break;
             case 'pd-reab': pdMarcar([id], { status: 'aberta', demanda_id: null, orc_id: null, laudo_em: null }, 'Item reaberto.'); break;
             case 'pd-ref': pdRef(); break;
+            case 'pd-foto': { var fi = a.parentNode.querySelector('input.pd-file'); if (fi) fi.click(); break; }
+            case 'pd-fx': pdFotoRem(id, Number(a.getAttribute('data-i'))); break;
             case 'op-ajuda': abrirModal('Operação normal ou severa?', PLSEQ.opAjuda(), 'Entendi', function() {}); break;
             case 'ci-add': { var tb = $('ci-' + a.getAttribute('data-en')); if (tb) { tb.insertAdjacentHTML('beforeend', linhaCiclo({}, true)); var ult2 = tb.lastChild.querySelector('input'); if (ult2) ult2.focus(); } break; }
             case 'ci-del': { var tr0 = a.closest('tr'); if (tr0 && confirm('Tirar este serviço da lista de ciclos?')) tr0.remove(); break; }
