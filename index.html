@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v86 — 25/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v87 — 26/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -7704,6 +7704,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           if (permitido('locacoes') && setorAtual !== 'locacoes') {
             carregarLoc().then(function() { desenharRail(); avisoDoDia(); }).catch(function(e) { console.error(e); });
           }
+          setTimeout(function() { avisoAniversarios(0); }, 2500);
           if (permitido('manutencao') && setorAtual !== 'manutencao') {
             carregarMan().then(function() { desenharRail(); avisoManutencao(); }).catch(function(e) { console.error(e); });
           }
@@ -8571,6 +8572,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="ferias">🏖 Férias</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="dec">🎄 13º salário</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="resc">📝 Rescisão</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="aniv">🎂 Aniversariantes</button>' +
             '</div>' +
             '<div id="rh-p-colab" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -8582,6 +8584,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '</div>' +
               '<div id="rh-kpis" class="kpi-grid"></div>' +
               '<div class="table-container" id="rh-tabela"></div>' +
+            '</div>' +
+            '<div id="rh-p-aniv" class="sx-pane">' +
+              '<div class="sx-toolbar"><select id="rh-an-fil" class="form-control sx-w"></select>' +
+                '<button type="button" class="btn-pls-primary" data-an="novo">➕ Aniversariante sem cadastro (diarista, extra…)</button>' +
+                '<button type="button" class="btn-pls-secondary" id="rh-an-cp" data-an="listamt" data-m="1">📋 Copiar lista do mês</button>' +
+                '<button type="button" class="btn-pls-secondary" data-an="padrao">✏ Mensagem padrão</button></div>' +
+              '<div class="sx-dica">Vêm sozinhos da data de nascimento do cadastro dos colaboradores e prestadores. Quem não tem cadastro (diarista, extra) entra pelo botão verde. O sistema avisa no dia 1º, 15 dias antes (até você marcar como visto) e no dia, com a mensagem pronta.</div>' +
+              '<div id="rh-aniv"></div>' +
             '</div>' +
             '<div id="rh-p-pj" class="sx-pane">' +
               '<div class="sx-toolbar">' +
@@ -8659,9 +8669,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function renderRh() {
           montarRh();
           if (subRh === 'pj') subRh = 'colab';
-          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
+          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc', 'aniv'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
           document.querySelectorAll('#setor-rh .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === subRh); });
-          if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
+          if (subRh === 'aniv') renderAniv(); else if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
         }
 
         // ---------- férias ----------
@@ -9667,7 +9677,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           abrirModal(id ? 'Editar colaborador PJ' : 'Novo colaborador',
             (id ? '' : '<div class="form-group" style="margin-bottom:.6rem"><label class="form-label">Regime</label><select id="pj-m-regime" class="form-control"><option value="clt">CLT (colaborador)</option><option value="pj" selected>PJ (prestador de serviço)</option></select></div>') +
             '<div class="sx-sec">Prestador</div><div class="form-grid">' + f('nome', 'Nome <span class="req-star">*</span>', p.nome, 'text', true) + f('razao', 'Razão social', p.razao_social) + f('cnpj', 'CNPJ', p.cnpj) + f('cpf', 'CPF do titular', p.cpf) +
-            f('func', 'Função / especialidade', p.funcao) + f('tel', 'Telefone', p.telefone) + f('email', 'E-mail', p.email, 'email') + f('end', 'Endereço', p.endereco, 'text', true) + f('pix', 'PIX / conta para pagamento', p.pix, 'text', true) + '</div>' +
+            f('func', 'Função / especialidade', p.funcao) + f('nasc', 'Data de nascimento (aniversariante do mês)', p.nascimento, 'date') + f('tel', 'Telefone', p.telefone) + f('email', 'E-mail', p.email, 'email') + f('end', 'Endereço', p.endereco, 'text', true) + f('pix', 'PIX / conta para pagamento', p.pix, 'text', true) + '</div>' +
             '<div class="sx-sec">Contrato de prestação de serviço</div><div class="form-grid">' +
             '<div class="form-group"><label class="form-label">Contratante (empresa que paga)</label><select id="pj-m-emp" class="form-control">' + opts(R.empresas.map(function(e) { return { v: e.id, t: e.nome }; }), p.empresa_id, '— escolher —') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Forma de cobrança</label><select id="pj-m-forma" class="form-control">' + opts(FORMAS, p.forma) + '</select></div>' +
@@ -9686,7 +9696,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               });
               var d = {
                 nome: $('pj-m-nome').value.trim(), razao_social: $('pj-m-razao').value.trim() || null, cnpj: $('pj-m-cnpj').value.trim() || null, cpf: $('pj-m-cpf').value.trim() || null,
-                funcao: $('pj-m-func').value.trim() || null, telefone: $('pj-m-tel').value.trim() || null, email: $('pj-m-email').value.trim() || null, endereco: $('pj-m-end').value.trim() || null, pix: $('pj-m-pix').value.trim() || null,
+                funcao: $('pj-m-func').value.trim() || null, nascimento: $('pj-m-nasc').value || null, telefone: $('pj-m-tel').value.trim() || null, email: $('pj-m-email').value.trim() || null, endereco: $('pj-m-end').value.trim() || null, pix: $('pj-m-pix').value.trim() || null,
                 empresa_id: $('pj-m-emp').value || null, forma: $('pj-m-forma').value, inicio: $('pj-m-ini').value || null, fim: $('pj-m-fim').value || null,
                 valor_mensal: r2(parseValor($('pj-m-vm').value)), contrato_assinado: $('pj-m-ass').value === '1', exige_nf: $('pj-m-nf').value === '1', servicos: svs, obs: $('pj-m-obs').value.trim() || null
               };
@@ -13719,6 +13729,173 @@ var PLSDOC = (function() {
         }
 
 
+        // ===== Aniversariantes (módulo compartilhado desktop/app) =====
+        var PLSANIV = (function() {
+          var MSG_PAD = 'Parabéns, {nome}! 🎉🎂\n\nA PLS Empilhadeiras deseja a você um feliz aniversário, com muita saúde, paz e conquistas. Obrigado por fazer parte da nossa história! 🧡';
+          var S = { pessoas: [], acks: {}, msg: null, ok: false }, ui = { abrir: null, fechar: null, toast: null, mudou: null, quem: null }, cur = null;
+          var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+          function p2(n) { return (n < 10 ? '0' : '') + n; }
+          function hojeISO() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+          function bis(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
+          function e(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function(c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+          function proxima(nasc, h) {
+            var m = +nasc.slice(5, 7), d = +nasc.slice(8, 10), y = +h.slice(0, 4);
+            function mk(yy) { var dd = (m === 2 && d === 29 && !bis(yy)) ? 28 : d; return yy + '-' + p2(m) + '-' + p2(dd); }
+            var dt = mk(y); if (dt < h) { y++; dt = mk(y); }
+            var dias = Math.round((Date.UTC(+dt.slice(0, 4), +dt.slice(5, 7) - 1, +dt.slice(8, 10)) - Date.UTC(+h.slice(0, 4), +h.slice(5, 7) - 1, +h.slice(8, 10))) / 864e5);
+            return { data: dt, dias: dias, idade: y - (+nasc.slice(0, 4)), ano: y };
+          }
+          function fdm(nasc) { return nasc ? nasc.slice(8, 10) + '/' + nasc.slice(5, 7) : '—'; }
+          function primeiro(n) { var t = String(n || '').trim().split(/\s+/)[0] || ''; return t.charAt(0).toUpperCase() + t.slice(1).toLowerCase(); }
+          function carregar() {
+            var h = hojeISO();
+            return Promise.all([
+              chk(sb.from('rh_colaboradores').select('id,nome,nascimento,telefone,funcao,demissao')),
+              chk(sb.from('rh_prestadores').select('id,nome,nascimento,telefone,funcao,fim')).catch(function() { return { data: [] }; }),
+              chk(sb.from('rh_aniv_extras').select('*').eq('ativo', true)),
+              chk(sb.from('rh_aniv_ack').select('chave')),
+              chk(sb.from('rh_aniv_cfg').select('valor').eq('chave', 'msg').maybeSingle()).catch(function() { return { data: null }; })
+            ]).then(function(r) {
+              var l = [];
+              (r[0].data || []).forEach(function(c) { if (c.nascimento && (!c.demissao || c.demissao >= h)) l.push({ key: 'c:' + c.id, id: c.id, origem: 'colab', vinc: 'Colaborador', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.funcao }); });
+              (r[1].data || []).forEach(function(c) { if (c.nascimento && (!c.fim || c.fim >= h)) l.push({ key: 'p:' + c.id, id: c.id, origem: 'pj', vinc: 'Prestador PJ', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.funcao }); });
+              (r[2].data || []).forEach(function(c) { l.push({ key: 'x:' + c.id, id: c.id, origem: 'extra', vinc: 'Extra / freelance', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.obs }); });
+              S.pessoas = l; S.acks = {}; (r[3].data || []).forEach(function(a) { S.acks[a.chave] = 1; });
+              S.msg = r[4].data && r[4].data.valor ? r[4].data.valor : null; S.ok = true; return S;
+            });
+          }
+          function lista() { var h = hojeISO(); return S.pessoas.map(function(p) { return Object.assign({}, p, { px: proxima(p.nasc, h) }); }).sort(function(a, b) { return a.px.dias - b.px.dias; }); }
+          function pendentes() {
+            var h = hojeISO(), l = lista(), mm = h.slice(5, 7), ym = h.slice(0, 7);
+            var mes = l.filter(function(p) { return p.nasc.slice(5, 7) === mm; }).sort(function(a, b) { return a.nasc.slice(8, 10) - b.nasc.slice(8, 10); });
+            return {
+              mes: (mes.length && !S.acks['mes:' + ym]) ? { chave: 'mes:' + ym, itens: mes } : null,
+              ant: l.filter(function(p) { return p.px.dias > 0 && p.px.dias <= 15 && !S.acks['ant:' + p.key + ':' + p.px.ano]; }),
+              dia: l.filter(function(p) { return p.px.dias === 0 && !S.acks['dia:' + p.key + ':' + p.px.ano]; })
+            };
+          }
+          function marcar(chave) {
+            S.acks[chave] = 1;
+            return chk(sb.from('rh_aniv_ack').upsert({ chave: chave, por: (ui.quem && ui.quem()) || null })).catch(function(x) { delete S.acks[chave]; throw x; });
+          }
+          function mensagem(p) { return (S.msg || MSG_PAD).replace(/\{nome\}/g, primeiro(p.nome)).replace(/\{nomecompleto\}/g, p.nome); }
+          function wa(p, txt) { var d = String(p.tel || '').replace(/\D/g, ''); if (!d) return ''; if (d.length <= 11) d = '55' + d; return 'https://wa.me/' + d + '?text=' + encodeURIComponent(txt); }
+          function copiar(txt) {
+            var f = function() { var t = document.createElement('textarea'); t.value = txt; t.style.position = 'fixed'; t.style.opacity = '0'; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (x) {} document.body.removeChild(t); };
+            try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(txt).catch(f); } catch (x) {}
+            f(); return Promise.resolve();
+          }
+          function quando(p) { var d = p.px.dias; return d === 0 ? '<b style="color:#dc2626">HOJE 🎂</b>' : d === 1 ? 'amanhã' : 'em ' + d + ' dias'; }
+          // --- HTML do popup ---
+          var BT = 'style="border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:5px 10px;font-size:.8rem;cursor:pointer;margin:2px"', BTP = 'style="border:0;background:#16a34a;color:#fff;border-radius:8px;padding:5px 10px;font-size:.8rem;cursor:pointer;margin:2px"';
+          function msgBox(p) {
+            var t = mensagem(p), l = wa(p, t);
+            return '<div class="an-msgbox" style="margin-top:6px"><textarea class="an-txt" style="width:100%;min-height:110px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit">' + e(t) + '</textarea>' +
+              '<button type="button" data-an="cp" ' + BT + '>📋 Copiar mensagem</button>' + (l ? '<a href="' + l + '" target="_blank" rel="noopener" ' + BT + ' style="text-decoration:none;color:inherit;border:1px solid #cbd5e1;border-radius:8px;padding:5px 10px;font-size:.8rem;margin:2px;display:inline-block">💬 Abrir no WhatsApp</a>' : '<span style="font-size:.75rem;color:#64748b"> (sem telefone cadastrado)</span>') + '</div>';
+          }
+          function popHtml(pd) {
+            var h = '<div style="font-size:.85rem;color:#475569;margin-bottom:6px">Este aviso volta toda vez que o sistema abrir, até você marcar como visto.</div>';
+            if (pd.dia.length) h += '<h4 style="margin:.6rem 0 .3rem">🎂 Aniversário HOJE — envie os parabéns</h4>' + pd.dia.map(function(p) {
+              return '<div class="an-row" data-key="' + p.key + '" style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:6px 8px;margin-bottom:6px"><b>' + e(p.nome) + '</b> <span style="color:#64748b">· ' + e(p.vinc) + ' · faz ' + p.px.idade + ' anos</span>' + msgBox(p) +
+                '<div><button type="button" data-an="vis" data-k="dia:' + p.key + ':' + p.px.ano + '" ' + BTP + '>✔ Mensagem enviada</button></div></div>';
+            }).join('');
+            if (pd.ant.length) h += '<h4 style="margin:.6rem 0 .3rem">🎈 Aniversários nos próximos 15 dias — hora de combinar a festa</h4>' + pd.ant.map(function(p) {
+              return '<div class="an-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:5px 0"><span><b>' + e(p.nome) + '</b> <span style="color:#64748b">· ' + fdm(p.nasc) + ' (' + quando(p) + ') · faz ' + p.px.idade + ' · ' + e(p.vinc) + '</span></span>' +
+                '<button type="button" data-an="vis" data-k="ant:' + p.key + ':' + p.px.ano + '" ' + BTP + '>✔ Visto</button></div>';
+            }).join('');
+            if (pd.mes) h += '<h4 style="margin:.6rem 0 .3rem">📅 Aniversariantes de ' + MESES[+hojeISO().slice(5, 7) - 1] + '</h4><div class="an-row" style="background:#f8fafc;border-radius:8px;padding:6px 8px">' + pd.mes.itens.map(function(p) {
+              return '<div>' + fdm(p.nasc) + ' — <b>' + e(p.nome) + '</b> <span style="color:#64748b">(' + e(p.vinc) + ')</span></div>';
+            }).join('') + '<div style="margin-top:6px"><button type="button" data-an="vis" data-k="' + pd.mes.chave + '" ' + BTP + '>✔ Marcar como visto</button></div></div>';
+            return h;
+          }
+          function temPend(pd) { return !!(pd.dia.length || pd.ant.length || pd.mes); }
+          function aviso() {
+            return carregar().then(function() {
+              var pd = pendentes(); if (!temPend(pd) || !ui.abrir) return;
+              ui.abrir('🎂 Aniversariantes', popHtml(pd), 'Fechar', function() {});
+            }).catch(function(x) { console.error('aniversários:', x); });
+          }
+          // --- cadastro de extras / mensagem ---
+          function formExtra(p, depois) {
+            var v = p || {};
+            ui.abrir(p ? 'Editar aniversariante' : 'Novo aniversariante (sem cadastro de funcionário)',
+              '<div class="form-grid"><div class="form-group full-width fld"><label class="form-label">Nome *</label><input id="an-nome" class="form-control" value="' + e(v.nome) + '"></div>' +
+              '<div class="form-group fld"><label class="form-label">Data de nascimento *</label><input id="an-nasc" type="date" class="form-control" value="' + e(v.nasc) + '"></div>' +
+              '<div class="form-group fld"><label class="form-label">Telefone (WhatsApp)</label><input id="an-tel" class="form-control" value="' + e(v.tel) + '" placeholder="(22) 99999-9999"></div>' +
+              '<div class="form-group full-width fld"><label class="form-label">Observação</label><input id="an-obs" class="form-control" value="' + e(v.funcao) + '" placeholder="ex.: diarista"></div></div>',
+              'Salvar', function() {
+                var d = { nome: document.getElementById('an-nome').value.trim(), nascimento: document.getElementById('an-nasc').value, telefone: document.getElementById('an-tel').value.trim() || null, obs: document.getElementById('an-obs').value.trim() || null };
+                if (!d.nome || !d.nascimento) throw new Error('Informe o nome e a data de nascimento.');
+                var q = p ? sb.from('rh_aniv_extras').update(d).eq('id', p.id).select('id') : sb.from('rh_aniv_extras').insert(d).select('id');
+                return chk(q).then(function() { return carregar(); }).then(function() { if (depois) depois(); if (ui.mudou) ui.mudou(); });
+              });
+          }
+          function excluirExtra(id, depois) {
+            if (!confirm('Remover este aniversariante da lista?')) return;
+            chk(sb.from('rh_aniv_extras').update({ ativo: false }).eq('id', id).select('id')).then(function() { return carregar(); }).then(function() { if (ui.mudou) ui.mudou(); });
+          }
+          function formMsg() {
+            ui.abrir('Mensagem de aniversário (padrão)', '<div style="font-size:.8rem;color:#64748b;margin-bottom:6px">Use <b>{nome}</b> para o primeiro nome e <b>{nomecompleto}</b> para o nome todo.</div><textarea id="an-msgpad" style="width:100%;min-height:150px;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font:inherit">' + e(S.msg || MSG_PAD) + '</textarea>',
+              'Salvar mensagem', function() {
+                var t = document.getElementById('an-msgpad').value.trim(); if (!t) throw new Error('A mensagem não pode ficar vazia.');
+                return chk(sb.from('rh_aniv_cfg').upsert({ chave: 'msg', valor: t, updated_at: new Date().toISOString() })).then(function() { S.msg = t; if (ui.toast) ui.toast('Mensagem salva ✔'); });
+              });
+          }
+          function abrirMsg(key) {
+            var p = lista().filter(function(x) { return x.key === key; })[0]; if (!p) return;
+            ui.abrir('🎁 Mensagem para ' + p.nome, msgBox(p), 'Fechar', function() {});
+          }
+          function textoLista(l, titulo) { return '*' + titulo + '*\n' + l.map(function(p) { return fdm(p.nasc) + ' — ' + p.nome; }).join('\n'); }
+          // --- eventos ---
+          document.addEventListener('click', function(ev) {
+            var t = ev.target.closest && ev.target.closest('[data-an]'); if (!t) return;
+            var a = t.getAttribute('data-an');
+            if (a === 'cp') { var bx = t.closest('.an-msgbox'), tx = bx && bx.querySelector('.an-txt'); if (tx) copiar(tx.value).then(function() { if (ui.toast) ui.toast('Mensagem copiada ✔'); }); }
+            else if (a === 'vis') {
+              var k = t.getAttribute('data-k'); t.disabled = true;
+              marcar(k).then(function() {
+                var row = t.closest('.an-row'); if (row) row.remove();
+                var corpo = t.ownerDocument.querySelectorAll('.an-row'); // popup vazio → fecha
+                if (!corpo.length && ui.fechar) ui.fechar();
+                if (ui.mudou) ui.mudou();
+              }).catch(function(x) { t.disabled = false; alert('Não consegui marcar: ' + (x.message || x)); });
+            }
+            else if (a === 'msg') abrirMsg(t.getAttribute('data-k'));
+            else if (a === 'novo') formExtra(null);
+            else if (a === 'ed') { var pe = lista().filter(function(x) { return x.key === t.getAttribute('data-k'); })[0]; if (pe) formExtra(pe); }
+            else if (a === 'del') excluirExtra(t.getAttribute('data-k').slice(2));
+            else if (a === 'padrao') formMsg();
+            else if (a === 'listamt') { var mes = Number(t.getAttribute('data-m')); var l = lista().filter(function(p) { return +p.nasc.slice(5, 7) === mes; }).sort(function(x, y) { return x.nasc.slice(8, 10) - y.nasc.slice(8, 10); }); copiar(textoLista(l, 'Aniversariantes de ' + MESES[mes - 1])).then(function() { if (ui.toast) ui.toast('Lista copiada ✔'); }); }
+          });
+          return { S: S, ui: ui, MESES: MESES, hojeISO: hojeISO, proxima: proxima, fdm: fdm, carregar: carregar, lista: lista, pendentes: pendentes, popHtml: popHtml, temPend: temPend, aviso: aviso, quando: quando, esc: e, formExtra: formExtra, formMsg: formMsg, msgBox: msgBox, mensagem: mensagem, textoLista: textoLista };
+        })();
+        
+        PLSANIV.ui.abrir = abrirModal; PLSANIV.ui.fechar = function() { fecharModal(); };
+        PLSANIV.ui.toast = function(m) { showToast(m); };
+        PLSANIV.ui.quem = function() { return (perfilAtual && perfilAtual.nome) || null; };
+        PLSANIV.ui.mudou = function() { if (setorAtual === 'rh' && subRh === 'aniv') renderAniv(); };
+        function avisoAniversarios(tent) {
+          if (!permitido('rh')) return; tent = tent || 0;
+          var m = document.getElementById('modal-generico');
+          if (m && m.classList.contains('active') && tent < 6) { setTimeout(function() { avisoAniversarios(tent + 1); }, 4000); return; }
+          PLSANIV.aviso();
+        }
+        function renderAniv() {
+          var el = $('rh-aniv'); if (!el) return;
+          if (!PLSANIV.S.ok) { el.innerHTML = '<div class="sx-vazio">Carregando…</div>'; PLSANIV.carregar().then(renderAniv).catch(function(e) { el.innerHTML = '<div class="sx-vazio">Erro: ' + esc(e.message || e) + '</div>'; }); return; }
+          var hj = PLSANIV.hojeISO(), mAtual = +hj.slice(5, 7), fil = R.anFil || String(mAtual), sel = $('rh-an-fil');
+          if (sel && !sel.getAttribute('data-ok')) { sel.setAttribute('data-ok', '1'); sel.innerHTML = '<option value="p30">Próximos 30 dias</option>' + PLSANIV.MESES.map(function(n, i) { return '<option value="' + (i + 1) + '">' + n.charAt(0).toUpperCase() + n.slice(1) + (i + 1 === mAtual ? ' (mês atual)' : '') + '</option>'; }).join('') + '<option value="ano">Ano todo (a partir de hoje)</option>'; }
+          if (sel) sel.value = fil;
+          var l = PLSANIV.lista();
+          if (fil === 'p30') l = l.filter(function(p) { return p.px.dias <= 30; });
+          else if (fil !== 'ano') l = l.filter(function(p) { return +p.nasc.slice(5, 7) === Number(fil); }).sort(function(a, b) { return a.nasc.slice(8, 10) - b.nasc.slice(8, 10); });
+          var mesLista = fil === 'p30' || fil === 'ano' ? mAtual : Number(fil), cp = $('rh-an-cp'); if (cp) cp.setAttribute('data-m', mesLista);
+          el.innerHTML = l.length ? '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Nome</th><th>Vínculo</th><th>Faz</th><th>Quando</th><th>Telefone</th><th></th></tr></thead><tbody>' + l.map(function(p) {
+            return '<tr' + (p.px.dias === 0 ? ' style="background:#fffbeb"' : '') + '><td><b>' + PLSANIV.fdm(p.nasc) + '</b></td><td>' + esc(p.nome) + (p.funcao ? '<br><span class="sx-muted">' + esc(p.funcao) + '</span>' : '') + '</td><td>' + esc(p.vinc) + '</td><td>' + p.px.idade + ' anos</td><td>' + PLSANIV.quando(p) + '</td><td>' + esc(p.tel || '—') + '</td>' +
+              '<td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-an="msg" data-k="' + p.key + '">🎁 Mensagem</button>' + (p.origem === 'extra' ? ' <button type="button" class="btn-pls-secondary" data-an="ed" data-k="' + p.key + '">✏</button> <button type="button" class="btn-pls-secondary" data-an="del" data-k="' + p.key + '">✕</button>' : '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>' : '<div class="sx-vazio">Ninguém faz aniversário neste período.</div>';
+        }
+
         // ---------- Pendências dos equipamentos (itens ruins dos checklists) ----------
         var PEND_REF_DEF = [
           { r: 'suporte|fixacao', d: 'Reparo / substituição de suporte de fixação', mo: 150, pc: 80 },
@@ -14086,6 +14263,7 @@ var PLSDOC = (function() {
           var t = evt.target; if (!t || !t.id) return;
           if (t.id === 'mn-r-sel') aplicarCicloRev();
           if (t.id === 'mn-e-plano') { var dl = $('mn-dl-int'); if (dl) dl.innerHTML = colsPlano(t.value).map(function(c) { return '<option value="' + esc(c) + '">'; }).join(''); }
+          else if (t.id === 'rh-an-fil') { R.anFil = t.value; renderAniv(); }
           else if (t.id === 'pd-fil') { M.pFil = t.value; renderPend(); }
           else if (t.id === 'pd-cli') { M.pCli = t.value; renderPend(); }
           else if (t.id === 'mn-f-sit') { M.fSit = t.value; renderVenc(); }
