@@ -1293,7 +1293,7 @@ function verEqP(id){
 // ===== Aniversariantes (módulo compartilhado desktop/app) =====
 var PLSANIV = (function() {
   var MSG_PAD = 'Parabéns, {nome}! 🎉🎂\n\nA PLS Empilhadeiras deseja a você um feliz aniversário, com muita saúde, paz e conquistas. Obrigado por fazer parte da nossa história! 🧡';
-  var S = { pessoas: [], acks: {}, msg: null, ok: false }, ui = { abrir: null, fechar: null, toast: null, mudou: null, quem: null }, cur = null;
+  var S = { pessoas: [], acks: {}, msg: null, dias: 15, ok: false }, ui = { abrir: null, fechar: null, toast: null, mudou: null, quem: null }, cur = null;
   var MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
   function p2(n) { return (n < 10 ? '0' : '') + n; }
   function hojeISO() { var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
@@ -1315,14 +1315,15 @@ var PLSANIV = (function() {
       chk(sb.from('rh_prestadores').select('id,nome,nascimento,telefone,funcao,fim')).catch(function() { return { data: [] }; }),
       chk(sb.from('rh_aniv_extras').select('*').eq('ativo', true)),
       chk(sb.from('rh_aniv_ack').select('chave')),
-      chk(sb.from('rh_aniv_cfg').select('valor').eq('chave', 'msg').maybeSingle()).catch(function() { return { data: null }; })
+      chk(sb.from('rh_aniv_cfg').select('chave,valor').in('chave', ['msg', 'dias_antes'])).catch(function() { return { data: [] }; })
     ]).then(function(r) {
       var l = [];
       (r[0].data || []).forEach(function(c) { if (c.nascimento && (!c.demissao || c.demissao >= h)) l.push({ key: 'c:' + c.id, id: c.id, origem: 'colab', vinc: 'Colaborador', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.funcao }); });
       (r[1].data || []).forEach(function(c) { if (c.nascimento && (!c.fim || c.fim >= h)) l.push({ key: 'p:' + c.id, id: c.id, origem: 'pj', vinc: 'Prestador PJ', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.funcao }); });
       (r[2].data || []).forEach(function(c) { l.push({ key: 'x:' + c.id, id: c.id, origem: 'extra', vinc: 'Extra / freelance', nome: c.nome, nasc: c.nascimento, tel: c.telefone, funcao: c.obs }); });
       S.pessoas = l; S.acks = {}; (r[3].data || []).forEach(function(a) { S.acks[a.chave] = 1; });
-      S.msg = r[4].data && r[4].data.valor ? r[4].data.valor : null; S.ok = true; return S;
+      S.msg = null; S.dias = 15; (r[4].data || []).forEach(function(c) { if (c.chave === 'msg' && c.valor) S.msg = c.valor; if (c.chave === 'dias_antes' && Number(c.valor) > 0) S.dias = Number(c.valor); });
+      S.ok = true; preencherDias(); return S;
     });
   }
   function lista() { var h = hojeISO(); return S.pessoas.map(function(p) { return Object.assign({}, p, { px: proxima(p.nasc, h) }); }).sort(function(a, b) { return a.px.dias - b.px.dias; }); }
@@ -1331,7 +1332,7 @@ var PLSANIV = (function() {
     var mes = l.filter(function(p) { return p.nasc.slice(5, 7) === mm; }).sort(function(a, b) { return a.nasc.slice(8, 10) - b.nasc.slice(8, 10); });
     return {
       mes: (mes.length && !S.acks['mes:' + ym]) ? { chave: 'mes:' + ym, itens: mes } : null,
-      ant: l.filter(function(p) { return p.px.dias > 0 && p.px.dias <= 15 && !S.acks['ant:' + p.key + ':' + p.px.ano]; }),
+      ant: l.filter(function(p) { return p.px.dias > 0 && p.px.dias <= S.dias && !S.acks['ant:' + p.key + ':' + p.px.ano]; }),
       dia: l.filter(function(p) { return p.px.dias === 0 && !S.acks['dia:' + p.key + ':' + p.px.ano]; })
     };
   }
@@ -1360,16 +1361,27 @@ var PLSANIV = (function() {
       return '<div class="an-row" data-key="' + p.key + '" style="border:1px solid #fde68a;background:#fffbeb;border-radius:8px;padding:6px 8px;margin-bottom:6px"><b>' + e(p.nome) + '</b> <span style="color:#64748b">· ' + e(p.vinc) + ' · faz ' + p.px.idade + ' anos</span>' + msgBox(p) +
         '<div><button type="button" data-an="vis" data-k="dia:' + p.key + ':' + p.px.ano + '" ' + BTP + '>✔ Mensagem enviada</button></div></div>';
     }).join('');
-    if (pd.ant.length) h += '<h4 style="margin:.6rem 0 .3rem">🎈 Aniversários nos próximos 15 dias — hora de combinar a festa</h4>' + pd.ant.map(function(p) {
+    if (pd.ant.length) h += '<h4 style="margin:.6rem 0 .3rem">🎈 Aniversários nos próximos ' + S.dias + ' dias — hora de combinar a festa</h4>' + pd.ant.map(function(p) {
       return '<div class="an-row" style="display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:5px 0"><span><b>' + e(p.nome) + '</b> <span style="color:#64748b">· ' + fdm(p.nasc) + ' (' + quando(p) + ') · faz ' + p.px.idade + ' · ' + e(p.vinc) + '</span></span>' +
         '<button type="button" data-an="vis" data-k="ant:' + p.key + ':' + p.px.ano + '" ' + BTP + '>✔ Visto</button></div>';
     }).join('');
     if (pd.mes) h += '<h4 style="margin:.6rem 0 .3rem">📅 Aniversariantes de ' + MESES[+hojeISO().slice(5, 7) - 1] + '</h4><div class="an-row" style="background:#f8fafc;border-radius:8px;padding:6px 8px">' + pd.mes.itens.map(function(p) {
-      return '<div>' + fdm(p.nasc) + ' — <b>' + e(p.nome) + '</b> <span style="color:#64748b">(' + e(p.vinc) + ')</span></div>';
+      return '<div>' + fdm(p.nasc) + ' — <b>' + e(p.nome) + '</b> <span style="color:#64748b">(' + e(p.vinc) + ')' + idadeMes(p) + '</span></div>';
     }).join('') + '<div style="margin-top:6px"><button type="button" data-an="vis" data-k="' + pd.mes.chave + '" ' + BTP + '>✔ Marcar como visto</button></div></div>';
     return h;
   }
-  function temPend(pd) { return !!(pd.dia.length || pd.ant.length || pd.mes); }
+    function idadeMes(p) {
+    var h = hojeISO(), a = +h.slice(0, 4) - (+p.nasc.slice(0, 4)); if (a <= 0 || a > 120) return '';
+    var c = p.nasc.slice(5, 10), hj = h.slice(5, 10);
+    return ' · ' + (c < hj ? 'fez ' : c === hj ? 'faz hoje ' : 'faz ') + a + ' anos';
+  }
+  function preencherDias() { var i = document.getElementById('an-dias'); if (i) i.value = S.dias; }
+  function salvarDias() {
+    var i = document.getElementById('an-dias'), n = Math.round(Number(i && i.value));
+    if (!(n >= 1 && n <= 60)) { alert('Informe de 1 a 60 dias.'); return; }
+    chk(sb.from('rh_aniv_cfg').upsert({ chave: 'dias_antes', valor: String(n), updated_at: new Date().toISOString() })).then(function() { S.dias = n; if (ui.toast) ui.toast('Aviso de aniversário: ' + n + ' dias antes ✔'); }).catch(function(x) { alert('Não consegui salvar: ' + (x.message || x)); });
+  }
+function temPend(pd) { return !!(pd.dia.length || pd.ant.length || pd.mes); }
   function aviso() {
     return carregar().then(function() {
       var pd = pendentes(); if (!temPend(pd) || !ui.abrir) return;
@@ -1426,8 +1438,10 @@ var PLSANIV = (function() {
     else if (a === 'ed') { var pe = lista().filter(function(x) { return x.key === t.getAttribute('data-k'); })[0]; if (pe) formExtra(pe); }
     else if (a === 'del') excluirExtra(t.getAttribute('data-k').slice(2));
     else if (a === 'padrao') formMsg();
+    else if (a === 'salvar-dias') salvarDias();
     else if (a === 'listamt') { var mes = Number(t.getAttribute('data-m')); var l = lista().filter(function(p) { return +p.nasc.slice(5, 7) === mes; }).sort(function(x, y) { return x.nasc.slice(8, 10) - y.nasc.slice(8, 10); }); copiar(textoLista(l, 'Aniversariantes de ' + MESES[mes - 1])).then(function() { if (ui.toast) ui.toast('Lista copiada ✔'); }); }
   });
+  document.addEventListener('click', function(ev) { var t = ev.target.closest && ev.target.closest('[data-tab="config"],[data-setor="gerencial"]'); if (!t) return; if (S.ok) preencherDias(); else carregar().catch(function() {}); });
   return { S: S, ui: ui, MESES: MESES, hojeISO: hojeISO, proxima: proxima, fdm: fdm, carregar: carregar, lista: lista, pendentes: pendentes, popHtml: popHtml, temPend: temPend, aviso: aviso, quando: quando, esc: e, formExtra: formExtra, formMsg: formMsg, msgBox: msgBox, mensagem: mensagem, textoLista: textoLista };
 })();
 
