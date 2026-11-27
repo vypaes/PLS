@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v88 — 27/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v89 — 27/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -8554,8 +8554,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             buscarTudo('rh_pj_pagamentos', function(q) { return q.order('competencia', { ascending: false }); }),
             buscarTudo('rh_arquivos', function(q) { return q.order('created_at', { ascending: false }); }),
             chk(sb.from('rh_decimo').select('*')),
-            chk(sb.from('rh_rescisoes').select('*').order('created_at', { ascending: false })).catch(function() { return { data: [] }; })
+            chk(sb.from('rh_rescisoes').select('*').order('created_at', { ascending: false })).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_escalas').select('*')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_ocorrencias').select('*').order('inicio')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_feriados').select('*')).catch(function() { return { data: [] }; })
           ]).then(function(r) {
+            R.esc = {}; (r[10].data || []).forEach(function(e) { R.esc[e.colaborador_id] = e; }); R.ocor = r[11].data || []; R.fer = r[12].data || [];
             R.resc = (r[9].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); x.total_vencimentos = Number(x.total_vencimentos || 0); x.total_descontos = Number(x.total_descontos || 0); return x; });
             R.arq = r[7] || [];
             R.dec = (r[8].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); return x; });
@@ -8581,6 +8585,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="ferias">🏖 Férias</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="dec">🎄 13º salário</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="resc">📝 Rescisão</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="freq">🕒 Frequência</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="aniv">🎂 Aniversariantes</button>' +
             '</div>' +
             '<div id="rh-p-colab" class="sx-pane">' +
@@ -8593,6 +8598,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '</div>' +
               '<div id="rh-kpis" class="kpi-grid"></div>' +
               '<div class="table-container" id="rh-tabela"></div>' +
+            '</div>' +
+            '<div id="rh-p-freq" class="sx-pane">' +
+              '<div class="sx-toolbar"><select id="fq-col" class="form-control sx-w2"></select><input id="fq-mes" type="month" class="form-control sx-w">' +
+                '<button type="button" class="btn-pls-primary" data-fq="nova">➕ Lançar atestado / falta</button>' +
+                '<button type="button" class="btn-pls-secondary" data-fq="esc">⏰ Escala de trabalho</button>' +
+                '<button type="button" class="btn-pls-secondary" data-fq="fer">🎌 Feriados extras</button></div>' +
+              '<div class="sx-dica">Cadastre a <b>escala</b> do colaborador e lance os <b>atestados</b> (de dia X até dia Y) e <b>faltas</b>. O mês mostra dias trabalhados, faltas, atestados e horas — e as <b>faltas + DSR</b> já saem descontadas no recibo. Atestado e falta abonada não descontam.</div>' +
+              '<div id="rh-freq"></div>' +
             '</div>' +
             '<div id="rh-p-aniv" class="sx-pane">' +
               '<div class="sx-toolbar"><select id="rh-an-fil" class="form-control sx-w"></select>' +
@@ -8678,9 +8691,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function renderRh() {
           montarRh();
           if (subRh === 'pj') subRh = 'colab';
-          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc', 'aniv'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
+          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc', 'freq', 'aniv'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
           document.querySelectorAll('#setor-rh .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === subRh); });
-          if (subRh === 'aniv') renderAniv(); else if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
+          if (subRh === 'freq') renderFreq(); else if (subRh === 'aniv') renderAniv(); else if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
         }
 
         // ---------- férias ----------
@@ -8954,7 +8967,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               if (l.natureza === 'provento') trib += l.valor;
             }
           });
-          var bInss = r2(base + trib), inss = calcInss(bInss), ir = calcIrrf(bInss, inss);
+          var fqIt = itensFreq(c, comp), fqDesc = 0; fqIt.forEach(function(x) { it.push(x); fqDesc += x.dsc; });
+          var bInss = r2(base - fqDesc + trib), inss = calcInss(bInss), ir = calcIrrf(bInss, inss);
           if (inss > 0) it.push({ cod: 903, desc: 'INSS Folha', ref: null, venc: 0, dsc: inss });
           if (ir.imposto > 0) it.push({ cod: 904, desc: 'IRRF Folha', ref: null, venc: 0, dsc: ir.imposto });
           it = it.filter(function(x) { return x.venc > 0; }).concat(it.filter(function(x) { return !(x.venc > 0); }));
@@ -9005,6 +9019,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           R.lanc.forEach(function(l) {
             if (l.colaborador_id === c.id && l.competencia === comp && !l.desc_destino) it.push({ cod: l.codigo || 199, desc: l.descricao, ref: null, venc: l.natureza === 'provento' ? l.valor : 0, dsc: l.natureza === 'desconto' ? l.valor : 0 });
           });
+          itensFreq(c, comp).forEach(function(x) { it.push(x); });
           return it.sort(function(a, b) { return a.cod - b.cod; });
         }
         function itensRecibo(c, comp) { return R.over[c.id + '|' + comp] || itensCalc(c, comp); }
@@ -9826,6 +9841,154 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           imprimirArea('print-rh', 'portrait');
         }
 
+
+        // ---------- Frequência: escala, faltas, atestados (integra com o recibo) ----------
+        var DOWN = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+        var ESC_PAD = { 0: { t: 0, e: '08:00', s: '17:00', i: 60 }, 1: { t: 1, e: '08:00', s: '17:00', i: 60 }, 2: { t: 1, e: '08:00', s: '17:00', i: 60 }, 3: { t: 1, e: '08:00', s: '17:00', i: 60 }, 4: { t: 1, e: '08:00', s: '17:00', i: 60 }, 5: { t: 1, e: '08:00', s: '17:00', i: 60 }, 6: { t: 0, e: '08:00', s: '12:00', i: 0 } };
+        var FQ_TIPOS = { atestado: ['Atestado médico', '#2563eb', 'Abonado: não desconta'], falta: ['Falta injustificada', '#dc2626', 'Desconta o dia e o DSR da semana'], abonada: ['Falta abonada', '#7c3aed', 'Justificada: não desconta'], folga: ['Folga / compensação', '#0891b2', 'Não desconta'] };
+        function hmMin(t) { var p = String(t || '0:0').split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
+        function fmtHm(min) { return Math.floor(min / 60) + 'h' + (min % 60 ? String(min % 60).padStart(2, '0') : ''); }
+        function isoAdd(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+        function dowIso(iso) { return new Date(iso + 'T00:00:00Z').getUTCDay(); }
+        function escDe(c) {
+          var e = R.esc && R.esc[c.id], sem = {};
+          for (var d = 0; d < 7; d++) sem[d] = (e && e.semana && e.semana[d]) || ESC_PAD[d];
+          return { semana: sem, dsr: e ? e.dsr_dow : 0, custom: !!e };
+        }
+        function minDia(x) { return (x && x.t) ? Math.max(0, hmMin(x.s) - hmMin(x.e) - (Number(x.i) || 0)) : 0; }
+        var FER_CACHE = {};
+        function feriadosNac(y) {
+          if (FER_CACHE[y]) return FER_CACHE[y];
+          var a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+          var mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1, pas = y + '-' + String(mes).padStart(2, '0') + '-' + String(dia).padStart(2, '0');
+          var o = {}; o[y + '-01-01'] = 'Confraternização Universal'; o[isoAdd(pas, -2)] = 'Sexta-feira Santa'; o[y + '-04-21'] = 'Tiradentes'; o[y + '-05-01'] = 'Dia do Trabalho'; o[y + '-09-07'] = 'Independência'; o[y + '-10-12'] = 'N. Sra. Aparecida'; o[y + '-11-02'] = 'Finados'; o[y + '-11-15'] = 'Proclamação da República'; if (y >= 2024) o[y + '-11-20'] = 'Consciência Negra'; o[y + '-12-25'] = 'Natal';
+          return (FER_CACHE[y] = o);
+        }
+        function nomeFeriado(iso) { var x = (R.fer || []).filter(function(f) { return f.data === iso; })[0]; return x ? x.nome : (feriadosNac(+iso.slice(0, 4))[iso] || ''); }
+        function ocorDe(c) { return (R.ocor || []).filter(function(o) { return o.colaborador_id === c.id; }); }
+        function ocorEm(oc, iso) { for (var i = 0; i < oc.length; i++) if (oc[i].inicio <= iso && oc[i].fim >= iso) return oc[i]; return null; }
+        function feriasEm(c, iso) { return (R.ferias || []).some(function(f) { return f.colaborador_id === c.id && f.inicio && f.fim && f.inicio <= iso && f.fim >= iso; }); }
+        function statusDia(c, esc, oc, iso) {
+          if (c.admissao && iso < c.admissao) return { st: 'fora' };
+          if (c.demissao && iso > c.demissao) return { st: 'fora' };
+          var dow = dowIso(iso), x = esc.semana[dow], fer = nomeFeriado(iso);
+          if (feriasEm(c, iso)) return { st: 'ferias' };
+          if (fer) return { st: 'feriado', txt: fer };
+          if (!x.t) return { st: dow === esc.dsr ? 'dsr' : 'folgaesc' };
+          var o = ocorEm(oc, iso);
+          if (o) return { st: o.tipo === 'folga' ? 'folgacomp' : o.tipo, min: minDia(x), o: o };
+          return { st: 'trab', min: minDia(x) };
+        }
+        function rhFreq(c, comp) {
+          var esc = escDe(c), oc = ocorDe(c), n = diasNoMes(comp), dias = [], t = { prev: 0, trab: 0, faltas: 0, atestado: 0, abonada: 0, folgacomp: 0, feriado: 0, ferias: 0, minPrev: 0, minTrab: 0, dsrPerd: 0 };
+          for (var d = 1; d <= n; d++) {
+            var iso = comp + '-' + String(d).padStart(2, '0'), s = statusDia(c, esc, oc, iso); s.d = iso; s.dow = dowIso(iso); dias.push(s);
+            if (s.st === 'feriado') t.feriado++; else if (s.st === 'ferias') t.ferias++;
+            if (['trab', 'falta', 'atestado', 'abonada', 'folgacomp'].indexOf(s.st) >= 0) { t.prev++; t.minPrev += s.min; }
+            if (s.st === 'trab') { t.trab++; t.minTrab += s.min; } else if (s.st === 'falta') t.faltas++; else if (s.st === 'atestado') t.atestado++; else if (s.st === 'abonada') t.abonada++; else if (s.st === 'folgacomp') t.folgacomp++;
+          }
+          // DSR perdido: 1 por semana (até o DSR) com falta injustificada; vale no mês em que cai o DSR
+          var vistos = {};
+          oc.filter(function(o) { return o.tipo === 'falta'; }).forEach(function(o) {
+            for (var iso = o.inicio, g = 0; iso <= o.fim && g < 400; iso = isoAdd(iso, 1), g++) {
+              if (statusDia(c, esc, oc, iso).st !== 'falta') continue;
+              var dsr = isoAdd(iso, (esc.dsr - dowIso(iso) + 7) % 7);
+              if (dsr.slice(0, 7) === comp) vistos[dsr] = 1;
+            }
+          });
+          t.dsrPerd = Object.keys(vistos).length; t.dsrDatas = Object.keys(vistos).sort();
+          var dia = c.salario ? r2(c.salario / 30) : 0; t.valDia = dia; t.descFaltas = r2(dia * t.faltas); t.descDsr = r2(dia * t.dsrPerd);
+          return { dias: dias, t: t, esc: esc };
+        }
+        function itensFreq(c, comp) {
+          if (!c.salario) return [];
+          if (R.lanc.some(function(l) { return l.colaborador_id === c.id && l.competencia === comp && l.categoria === 'falta'; })) return [];
+          var f = rhFreq(c, comp).t, it = [];
+          if (f.faltas) it.push({ cod: 120, desc: 'Faltas', ref: f.faltas, venc: 0, dsc: f.descFaltas });
+          if (f.dsrPerd) it.push({ cod: 121, desc: 'DSR sobre faltas', ref: f.dsrPerd, venc: 0, dsc: f.descDsr });
+          return it;
+        }
+        var FQ = { col: '', mes: '' };
+        function colabAtivos() { return R.colab.filter(function(c) { return !c.demissao || c.demissao.slice(0, 7) >= (FQ.mes || compPadraoRh()); }); }
+        function renderFreq() {
+          var el = $('rh-freq'); if (!el) return;
+          if (!FQ.mes) FQ.mes = compPadraoRh();
+          var lista = colabAtivos(); if (!FQ.col || !lista.some(function(c) { return c.id === FQ.col; })) FQ.col = lista.length ? lista[0].id : '';
+          var sc = $('fq-col'); if (sc) { sc.innerHTML = lista.map(function(c) { return '<option value="' + c.id + '">' + esc(c.nome) + '</option>'; }).join(''); sc.value = FQ.col; }
+          var sm = $('fq-mes'); if (sm) sm.value = FQ.mes;
+          var c = R.colab.filter(function(x) { return x.id === FQ.col; })[0];
+          var geral = '<div class="sx-sec" style="margin-top:1rem">Resumo de todos — ' + esc(nomeMes(FQ.mes)) + '</div><div class="table-container"><table class="table-pls"><thead><tr><th>Colaborador</th><th>Dias de escala</th><th>Trabalhou</th><th>Faltas</th><th>Atestado (dias)</th><th>Horas trabalhadas</th><th>Desconto previsto</th></tr></thead><tbody>' +
+            lista.map(function(x) { var t = rhFreq(x, FQ.mes).t; return '<tr><td><a href="#" data-fq="ver" data-id="' + x.id + '">' + esc(x.nome) + '</a></td><td>' + t.prev + '</td><td>' + t.trab + '</td><td>' + (t.faltas ? '<b style="color:#dc2626">' + t.faltas + '</b>' : 0) + '</td><td>' + t.atestado + '</td><td>' + fmtHm(t.minTrab) + ' / ' + fmtHm(t.minPrev) + '</td><td>' + (t.descFaltas + t.descDsr ? brl(t.descFaltas + t.descDsr) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+          if (!c) { $('rh-freq').innerHTML = '<div class="sx-vazio">Nenhum colaborador.</div>'; return; }
+          var f = rhFreq(c, FQ.mes), t = f.t, cor = { trab: '#16a34a', falta: '#dc2626', atestado: '#2563eb', abonada: '#7c3aed', folgacomp: '#0891b2', dsr: '#94a3b8', folgaesc: '#94a3b8', feriado: '#d97706', ferias: '#0d9488', fora: '#cbd5e1' }, nm = { trab: 'Trabalhou', falta: 'FALTA', atestado: 'Atestado', abonada: 'Falta abonada', folgacomp: 'Folga/compensação', dsr: 'DSR', folgaesc: 'Folga (escala)', feriado: 'Feriado', ferias: 'Férias', fora: '—' };
+          var card = function(v, l, k) { return '<div style="flex:1;min-width:120px;border:1px solid #e2e8f0;border-radius:10px;padding:.5rem .7rem;background:#fff"><div style="font-size:1.25rem;font-weight:800;color:' + (k || '#0f172a') + '">' + v + '</div><div class="sx-muted">' + l + '</div></div>'; };
+          var ocs = ocorDe(c).filter(function(o) { return o.inicio.slice(0, 7) <= FQ.mes && o.fim.slice(0, 7) >= FQ.mes; });
+          el.innerHTML = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">' +
+            card(t.prev, 'dias de escala') + card(t.trab, 'dias trabalhados', '#16a34a') + card(t.faltas, 'faltas', t.faltas ? '#dc2626' : '') + card(t.atestado, 'dias de atestado', '#2563eb') + card(t.abonada + t.folgacomp, 'abonadas / folgas') +
+            card(fmtHm(t.minTrab), 'horas trabalhadas (de ' + fmtHm(t.minPrev) + ' previstas)') + card((t.descFaltas + t.descDsr) ? brl(t.descFaltas + t.descDsr) : '—', 'desconto no recibo' + (t.dsrPerd ? ' (faltas ' + brl(t.descFaltas) + ' + DSR ' + brl(t.descDsr) + ')' : ''), (t.descFaltas + t.descDsr) ? '#dc2626' : '') + '</div>' +
+            '<div class="sx-muted" style="margin-bottom:.4rem">Escala: ' + [1, 2, 3, 4, 5, 6, 0].filter(function(d) { return f.esc.semana[d].t; }).map(function(d) { var x = f.esc.semana[d]; return DOWN[d] + ' ' + x.e + '–' + x.s; }).join(' · ') + ' · DSR: ' + DOWN[f.esc.dsr] + (f.esc.custom ? '' : ' <b>(escala padrão — ajuste em "Escala")</b>') + '. As horas são as da escala (o sistema não registra ponto).</div>' +
+            '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Situação</th><th>Horas</th><th>Obs.</th></tr></thead><tbody>' + f.dias.map(function(s) {
+              return '<tr><td>' + fd(s.d) + ' <span class="sx-muted">' + DOWN[s.dow] + '</span></td><td><span class="sx-pill" style="background:' + cor[s.st] + ';color:#fff">' + nm[s.st] + '</span></td><td>' + (s.st === 'trab' ? fmtHm(s.min) : '') + '</td><td class="sx-muted">' + esc(s.txt || (s.o && s.o.obs) || '') + (f.t.dsrDatas.indexOf(s.d) >= 0 ? ' <b style="color:#dc2626">DSR perdido (descontado)</b>' : '') + '</td></tr>';
+            }).join('') + '</tbody></table></div>' +
+            '<div class="sx-sec" style="margin-top:.8rem">Ocorrências do mês</div>' + (ocs.length ? '<div class="table-container"><table class="table-pls"><tbody>' + ocs.map(function(o) {
+              return '<tr><td><span class="sx-pill" style="background:' + FQ_TIPOS[o.tipo][1] + ';color:#fff">' + FQ_TIPOS[o.tipo][0] + '</span></td><td>' + fd(o.inicio) + (o.fim !== o.inicio ? ' a ' + fd(o.fim) : '') + '</td><td class="sx-muted">' + esc(o.obs || '') + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary sx-del" data-fq="del" data-id="' + o.id + '">✕</button></td></tr>';
+            }).join('') + '</tbody></table></div>' : '<div class="sx-vazio">Nenhuma ocorrência neste mês.</div>') + geral;
+        }
+        function fqOcorForm(c) {
+          var hj = hoje();
+          abrirModal('Lançar ocorrência — ' + c.nome,
+            '<div class="form-grid"><div class="form-group full-width"><label class="form-label">Tipo</label><select id="fq-tipo" class="form-control">' + Object.keys(FQ_TIPOS).map(function(k) { return '<option value="' + k + '">' + FQ_TIPOS[k][0] + ' — ' + FQ_TIPOS[k][2] + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">De</label><input id="fq-ini" type="date" class="form-control" value="' + hj + '"></div><div class="form-group"><label class="form-label">Até</label><input id="fq-fim" type="date" class="form-control" value="' + hj + '"></div>' +
+            '<div class="form-group full-width"><label class="form-label">Observação</label><input id="fq-obs" class="form-control" placeholder="ex.: gripe, CID, consulta…"></div></div>' +
+            '<div class="sx-muted">Só contam os dias de trabalho da escala (fins de semana, DSR e feriados dentro do período são ignorados). Para guardar a foto do atestado, use a pasta do colaborador (📁).</div>',
+            'Lançar', function() {
+              var ini = $('fq-ini').value, fim = $('fq-fim').value || ini, tipo = $('fq-tipo').value;
+              if (!ini) throw new Error('Informe a data.'); if (fim < ini) throw new Error('A data final é anterior à inicial.');
+              return chk(sb.from('rh_ocorrencias').insert({ colaborador_id: c.id, tipo: tipo, inicio: ini, fim: fim, obs: $('fq-obs').value.trim() || null, criado_por: (perfilAtual && perfilAtual.nome) || null }).select('*')).then(function(r) {
+                R.ocor.push(r.data[0]); FQ.mes = ini.slice(0, 7); FQ.col = c.id; showToast('Ocorrência lançada ✔'); renderFreq();
+              });
+            });
+        }
+        function fqEscForm(c) {
+          var e = escDe(c);
+          abrirModal('Escala de trabalho — ' + c.nome,
+            '<table class="table-pls"><thead><tr><th>Dia</th><th>Trabalha?</th><th>Entrada</th><th>Saída</th><th>Intervalo (min)</th></tr></thead><tbody>' + [1, 2, 3, 4, 5, 6, 0].map(function(d) { var x = e.semana[d];
+              return '<tr><td><b>' + DOWN[d] + '</b></td><td><input type="checkbox" id="es-t' + d + '"' + (x.t ? ' checked' : '') + '></td><td><input type="time" id="es-e' + d + '" class="form-control" value="' + x.e + '"></td><td><input type="time" id="es-s' + d + '" class="form-control" value="' + x.s + '"></td><td><input type="number" id="es-i' + d + '" class="form-control" min="0" step="5" value="' + (x.i || 0) + '" style="max-width:90px"></td></tr>'; }).join('') + '</tbody></table>' +
+            '<div class="form-group" style="margin-top:.5rem"><label class="form-label">Dia do descanso semanal remunerado (DSR)</label><select id="es-dsr" class="form-control">' + [0, 6, 1, 2, 3, 4, 5].map(function(d) { return '<option value="' + d + '"' + (d === e.dsr ? ' selected' : '') + '>' + ({ 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' })[d] + '</option>'; }).join('') + '</select></div>',
+            'Salvar escala', function() {
+              var sem = {}; for (var d = 0; d < 7; d++) sem[d] = { t: $('es-t' + d).checked ? 1 : 0, e: $('es-e' + d).value || '08:00', s: $('es-s' + d).value || '17:00', i: Number($('es-i' + d).value) || 0 };
+              var dsr = Number($('es-dsr').value);
+              return chk(sb.from('rh_escalas').upsert({ colaborador_id: c.id, semana: sem, dsr_dow: dsr, updated_at: new Date().toISOString() })).then(function() { R.esc[c.id] = { colaborador_id: c.id, semana: sem, dsr_dow: dsr }; showToast('Escala salva ✔'); renderFreq(); });
+            });
+        }
+        function fqFeriados() {
+          var l = (R.fer || []).slice().sort(function(a, b) { return a.data.localeCompare(b.data); });
+          abrirModal('Feriados extras (municipais, pontes…)',
+            '<div class="sx-muted" style="margin-bottom:.5rem">Os feriados nacionais já vêm no sistema. Aqui entram os que faltam (municipal, ponte, carnaval…). Feriado não conta como falta nem como dia trabalhado.</div>' +
+            (l.length ? '<table class="table-pls"><tbody>' + l.map(function(f) { return '<tr><td>' + fd(f.data) + '</td><td>' + esc(f.nome) + '</td><td><button type="button" class="btn-pls-secondary sx-del" data-fq="ferdel" data-d="' + f.data + '">✕</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhum feriado extra.</div>') +
+            '<div class="form-grid" style="margin-top:.6rem"><div class="form-group"><label class="form-label">Data</label><input id="fer-data" type="date" class="form-control"></div><div class="form-group"><label class="form-label">Nome</label><input id="fer-nome" class="form-control" placeholder="ex.: Aniversário da cidade"></div></div>',
+            'Adicionar feriado', function() {
+              var d = $('fer-data').value, n = $('fer-nome').value.trim(); if (!d || !n) throw new Error('Informe a data e o nome.');
+              return chk(sb.from('rh_feriados').upsert({ data: d, nome: n })).then(function() { R.fer = (R.fer || []).filter(function(f) { return f.data !== d; }).concat([{ data: d, nome: n }]); renderFreq(); setTimeout(fqFeriados, 50); });
+            });
+        }
+        document.addEventListener('click', function(ev) {
+          var t = ev.target.closest && ev.target.closest('[data-fq]'); if (!t) return;
+          var a = t.getAttribute('data-fq'), c = R.colab.filter(function(x) { return x.id === FQ.col; })[0];
+          if (a === 'ver') { ev.preventDefault(); FQ.col = t.getAttribute('data-id'); renderFreq(); window.scrollTo(0, 0); }
+          else if (a === 'nova' && c) fqOcorForm(c);
+          else if (a === 'esc' && c) fqEscForm(c);
+          else if (a === 'fer') fqFeriados();
+          else if (a === 'del') { if (!confirm('Remover esta ocorrência?')) return; var id = t.getAttribute('data-id'); chk(sb.from('rh_ocorrencias').delete().eq('id', id).select('id')).then(function() { R.ocor = R.ocor.filter(function(o) { return o.id !== id; }); renderFreq(); showToast('Ocorrência removida.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
+          else if (a === 'ferdel') { var d = t.getAttribute('data-d'); chk(sb.from('rh_feriados').delete().eq('data', d).select('data')).then(function() { R.fer = R.fer.filter(function(f) { return f.data !== d; }); renderFreq(); fqFeriados(); }); }
+        });
+        document.addEventListener('change', function(ev) {
+          var t = ev.target; if (!t) return;
+          if (t.id === 'fq-col') { FQ.col = t.value; renderFreq(); }
+          else if (t.id === 'fq-mes' && t.value) { FQ.mes = t.value; renderFreq(); }
+          else if (t.id === 'arq-cat') { var p = $('arq-per'); if (p) p.style.display = (t.value === 'atestado' && pastaCtx && pastaCtx.ent === 'colaborador') ? '' : 'none'; }
+        });
+
         // =================================================================
         // PASTA DIGITAL (arquivos de colaboradores e prestadores)
         // =================================================================
@@ -9866,6 +10029,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div class="form-group"><label class="form-label">Tipo</label><select id="arq-cat" class="form-control">' + opts(CATS[ent], cat || CATS[ent][0].v) + '</select></div>' +
             '<div class="form-group"><label class="form-label">Mês de referência (opcional)</label><input id="arq-comp" type="month" class="form-control" value="' + esc(comp || '') + '"></div>' +
             '<div class="form-group full-width"><label class="form-label">Descrição (opcional)</label><input id="arq-desc" class="form-control" placeholder="ex.: atestado de 2 dias — gripe"></div>' +
+            '<div id="arq-per" class="form-group full-width" style="display:' + (((cat || CATS[ent][0].v) === 'atestado' && ent === 'colaborador') ? '' : 'none') + '"><label class="form-label">Período do atestado * (do dia … ao dia …)</label><div style="display:flex;gap:.5rem;align-items:center"><input id="arq-de" type="date" class="form-control"> <span>até</span> <input id="arq-ate" type="date" class="form-control"></div><div class="sx-muted">Vira ocorrência na aba 🕒 Frequência (atestado não desconta no recibo).</div></div>' +
             '<div class="form-group full-width"><label class="form-label">Arquivo(s) — foto, scanner ou PDF</label><input id="arq-file" type="file" class="form-control" accept="image/*,application/pdf" multiple></div></div>' +
             '<div class="sx-sec">Arquivos guardados</div>' +
             '<div class="sx-toolbar" style="margin-bottom:0.6rem"><select id="arq-f-cat" class="form-control sx-w"></select>' +
@@ -9876,6 +10040,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               var fs = $('arq-file').files;
               if (!fs || !fs.length) throw new Error('Escolha um ou mais arquivos.');
               var cx = pastaCtx, tipo = $('arq-cat').value, c = $('arq-comp').value || null, desc = $('arq-desc').value.trim() || null;
+              var ehAt = tipo === 'atestado' && cx.ent === 'colaborador', perDe = ($('arq-de') || {}).value, perAte = ($('arq-ate') || {}).value || perDe, primArq = null;
+              if (ehAt) { if (!perDe) throw new Error('Informe o período do atestado (de / até).'); if (perAte < perDe) throw new Error('A data final do atestado é anterior à inicial.'); if (!c) c = perDe.slice(0, 7); }
               var lista = Array.prototype.slice.call(fs), feitos = 0;
               function proximo() {
                 if (!lista.length) return Promise.resolve();
@@ -9887,10 +10053,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   return chk(sb.storage.from('rh-arquivos').upload(caminho, o.blob, { contentType: o.mime || 'application/octet-stream', upsert: false }))
                     .then(function() {
                       return chk(sb.from('rh_arquivos').insert({ entidade: cx.ent, entidade_id: cx.id, categoria: tipo, descricao: desc, competencia: c, nome_arquivo: o.nome, caminho: caminho, mime: o.mime, tamanho: o.blob.size, enviado_por: nomeUsuario() }).select());
-                    }).then(function(r) { R.arq.unshift(r.data[0]); feitos++; });
+                    }).then(function(r) { R.arq.unshift(r.data[0]); feitos++; if (!primArq) primArq = r.data[0].id; });
                 }).then(proximo);
               }
               return proximo().then(function() {
+                if (!ehAt || !feitos) return;
+                return chk(sb.from('rh_ocorrencias').insert({ colaborador_id: cx.id, tipo: 'atestado', inicio: perDe, fim: perAte, obs: desc, arquivo_id: primArq, criado_por: (perfilAtual && perfilAtual.nome) || null }).select('*')).then(function(r2_) { R.ocor.push(r2_.data[0]); });
+              }).then(function() {
                 showToast(feitos + ' arquivo(s) guardado(s) ✔'); $('arq-file').value = ''; $('arq-desc').value = '';
                 desenharPasta(); renderRh(); return false;
               });

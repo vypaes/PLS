@@ -1460,7 +1460,8 @@ document.addEventListener('click',function(ev){
   t.disabled=true;
   Promise.resolve().then(anFn).then(function(r){if(r!==false)fecharSheet();}).catch(function(e){toast('⚠ '+(e.message||e),4000);}).then(function(){t.disabled=false;});
 });
-document.addEventListener('change',function(ev){if(ev.target&&ev.target.id==='an-fil'){anFil=ev.target.value;render();}});
+document.addEventListener('change',function(ev){if(ev.target&&ev.target.id==='an-fil'){anFil=ev.target.value;render();}
+  if(ev.target&&ev.target.id==='rh-cat'){var p=$('rh-per');if(p)p.style.display=(ev.target.value==='atestado'&&rhCtx&&rhCtx.ent==='colaborador')?'':'none';}});
 function telaAniv(){
   if(!PLSANIV.S.ok){PLSANIV.carregar().then(function(){if(tab==='rh'&&rhV==='aniv'&&!document.querySelector('#sheet-bg.on'))render();}).catch(function(e){toast('⚠ '+erro(e),4000);});return '<div class="empty">Carregando…</div>';}
   var hj=PLSANIV.hojeISO(),mA=+hj.slice(5,7),fil=anFil||String(mA),l=PLSANIV.lista();
@@ -1544,6 +1545,7 @@ function abrirPastaRh(ent,id){
   var h='<h2>📁 '+esc(dono.nome)+'</h2><div class="hint" style="margin:2px 0 12px">Escolha o tipo e tire a foto (ou escolha da galeria / PDF).</div>'
    +'<button class="btn sec2" data-rhed="1" style="width:100%;margin-bottom:12px">✏ Ver / editar cadastro</button><div class="fld"><label>Tipo do documento</label><select id="rh-cat">'+CATS_RH[ent].map(function(c){return '<option value="'+c[0]+'">'+c[1]+'</option>';}).join('')+'</select></div>'
    +'<div class="row2"><div class="fld"><label>Mês (opcional)</label><input type="month" id="rh-comp"></div><div class="fld"><label>Descrição (opcional)</label><input id="rh-desc" placeholder="ex.: 2 dias"></div></div>'
+   +'<div id="rh-per" style="display:none"><div class="row2"><div class="fld"><label>Atestado: do dia *</label><input type="date" id="rh-de"></div><div class="fld"><label>até o dia *</label><input type="date" id="rh-ate"></div></div><div class="hint" style="margin:-4px 0 10px">Vira falta justificada no controle de frequência (não desconta no recibo).</div></div>'
    +'<label class="btn" style="display:block;text-align:center">📷 Tirar foto<input id="rh-cam" type="file" accept="image/*" capture="environment" hidden></label>'
    +'<label class="btn sec2" style="display:block;text-align:center;margin-top:8px">🖼 Galeria / PDF<input id="rh-gal" type="file" accept="image/*,application/pdf" multiple hidden></label>'
    +'<div class="sec">Arquivos <span class="n" id="rh-n">0</span></div><div id="rh-arqs"></div>'
@@ -1571,7 +1573,13 @@ function nomeSeg(n){return String(n||'arquivo').normalize('NFD').replace(/[̀-ͯ
 function subirRh(fileList){
   var cx=rhCtx;if(!cx)return;
   var lista=[].slice.call(fileList);if(!lista.length)return;
-  var tipo=$('rh-cat').value,comp=$('rh-comp').value||null,desc=$('rh-desc').value.trim()||null,feitos=0;
+  var tipo=$('rh-cat').value,comp=$('rh-comp').value||null,desc=$('rh-desc').value.trim()||null,feitos=0,primeiro=null;
+  var ehAt=tipo==='atestado'&&cx.ent==='colaborador',de=$('rh-de').value,ate=$('rh-ate').value||de;
+  if(ehAt){
+    if(!de){toast('⚠ Informe o período do atestado (de / até) antes de enviar.',4500);var fi=$('rh-cam'),fg=$('rh-gal');if(fi)fi.value='';if(fg)fg.value='';return;}
+    if(ate<de){toast('⚠ A data final é anterior à inicial.',4000);return;}
+    if(!comp)comp=de.slice(0,7);
+  }
   toast('Enviando…',60000);
   function prox(){
     if(!lista.length)return Promise.resolve();
@@ -1581,10 +1589,10 @@ function subirRh(fileList){
       var caminho=cx.ent+'/'+cx.id+'/'+uuid()+'-'+nomeSeg(o.nome);
       return chk(sb.storage.from('rh-arquivos').upload(caminho,o.blob,{contentType:o.mime||'application/octet-stream',upsert:false})).then(function(){
         return chk(sb.from('rh_arquivos').insert({entidade:cx.ent,entidade_id:cx.id,categoria:tipo,descricao:desc,competencia:comp,nome_arquivo:o.nome,caminho:caminho,mime:o.mime,tamanho:o.blob.size,enviado_por:perfil?perfil.nome:null}).select());
-      }).then(function(r){RH.arq.unshift(r.data[0]);feitos++;if(rhCtx&&$('rh-arqs'))$('rh-arqs').innerHTML=arqsRhHtml();});
+      }).then(function(r){RH.arq.unshift(r.data[0]);feitos++;if(!primeiro)primeiro=r.data[0].id;if(rhCtx&&$('rh-arqs'))$('rh-arqs').innerHTML=arqsRhHtml();});
     }).then(prox);
   }
-  prox().then(function(){toast('✔ '+feitos+' arquivo(s) guardado(s)');}).catch(function(e){toast('⚠ '+erro(e),5000);});
+  prox().then(function(){if(!ehAt||!feitos)return;return chk(sb.from('rh_ocorrencias').insert({colaborador_id:cx.id,tipo:'atestado',inicio:de,fim:ate,obs:desc,arquivo_id:primeiro,criado_por:perfil?perfil.nome:null}).select('id'));}).then(function(){toast('✔ '+feitos+' arquivo(s) guardado(s)'+(ehAt?' · atestado lançado na frequência':''));}).catch(function(e){toast('⚠ '+erro(e),5000);});
 }
 function abrirArqRh(id){
   var a=RH.arq.filter(function(x){return x.id===id;})[0];if(!a)return;
