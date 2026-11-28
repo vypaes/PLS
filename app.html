@@ -151,6 +151,7 @@ input.q{margin-bottom:8px}
     <button data-t="checklist" id="nav-ck"><span class="i">🔧</span>Manutenção</button>
     <button data-t="parceiros" id="nav-parc" style="display:none"><span class="i">🤝</span>Parceiros</button>
     <button data-t="rh" id="nav-rh" style="display:none"><span class="i">👥</span>RH</button>
+    <button data-t="ponto" id="nav-ponto" style="display:none"><span class="i">🕘</span>Ponto</button>
   </nav>
 </div>
 
@@ -995,12 +996,12 @@ function telaCal(){
   return h;
 }
 
-var TITULOS={parceiros:'Parceiros',painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH',checklist:'Manutenção',comercial:'Comercial'};
+var TITULOS={parceiros:'Parceiros',painel:'Painel',demandas:'Demandas',lancar:'Lançar demanda',calendario:'Calendário',rh:'RH',checklist:'Manutenção',comercial:'Comercial',ponto:'Ponto'};
 function render(){
   var m=$('main'),sc=m.scrollTop,foco=document.activeElement&&document.activeElement.id;
   $('h-title').childNodes[0].nodeValue=TITULOS[tab];
   $('h-sub').textContent=perfil?perfil.nome:'';
-  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh,checklist:telaChecklist,parceiros:telaParc,comercial:PLSCOM.tela}[tab];
+  var fn={painel:telaPainel,demandas:telaDemandas,lancar:telaLancar,calendario:telaCal,rh:telaRh,checklist:telaChecklist,parceiros:telaParc,comercial:PLSCOM.tela,ponto:telaPonto}[tab];
   if(tab==='lancar'&&document.getElementById('f-lanc'))return; /* não apaga o formulário em edição */
   m.innerHTML=(tab==='painel'&&pode('lancar')?'<button type="button" class="btn" data-golancar="1" style="margin-bottom:10px">＋ Lançar demanda</button>':'')+fn();m.scrollTop=sc;
   if(foco==='busca'){var b=$('busca');if(b){b.focus();var v=b.value;b.value='';b.value=v;}}
@@ -1134,7 +1135,47 @@ function delAus(id){
     D.ausencias=D.ausencias.filter(function(x){return x.id!==id;});if(a)abrirAus(a.tec);render();
   }).catch(function(e){toast('⚠ '+erro(e),5000);});
 }
-function fecharSheet(){$('sheet-bg').classList.remove('on');if(rhCtx){rhCtx=null;if(tab==='rh')render();}}
+/* ---------- Ponto (bater ponto pelo aplicativo — só para quem o RH liberou) ---------- */
+var PONTO={lib:false,nome:'',bat:[],stream:null,busy:false,stop:function(){try{if(PONTO.stream){PONTO.stream.getTracks().forEach(function(t){t.stop();});}}catch(e){}PONTO.stream=null;}};
+function pontoInit(){
+  PONTO.lib=false;
+  if(ehParc()){return Promise.resolve();}
+  return sb.rpc('rh_meu_ponto').then(function(r){
+    if(r.error)throw r.error;var d=r.data||{};PONTO.lib=!!d.liberado;PONTO.nome=d.nome||'';PONTO.bat=d.batidas||[];aplicarSetores();
+  }).catch(function(e){console.error(e);});
+}
+function pHora(iso){var d=new Date(iso);return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+function telaPonto(){
+  if(!PONTO.lib)return '<div class="empty">Ponto não liberado para o seu usuário. Fale com o RH.</div>';
+  var bs=PONTO.bat,prox=bs.length%2===0?'ENTRADA':'SAÍDA';
+  var h='<div class="card" style="text-align:center"><div style="font-size:15px;color:var(--mut,#64748b)">Olá, '+esc((PONTO.nome||'').split(' ')[0])+'</div>'+
+    '<div id="p-rel" style="font-size:54px;font-weight:800;margin:6px 0">'+pHora(new Date().toISOString())+'</div>'+
+    '<button type="button" class="btn" id="p-bater" style="width:100%;font-size:19px;padding:16px">📸 Bater ponto — '+prox+'</button>'+
+    '<div style="font-size:12px;color:var(--mut,#64748b);margin-top:8px">Tira uma selfie e registra o horário e o local.</div></div>';
+  h+='<div class="card"><b>Hoje</b>'+(bs.length?bs.map(function(b){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0"><span>'+(b.tipo==='entrada'?'🟢 Entrada':'🟠 Saída')+'</span><b>'+pHora(b.hora)+'</b></div>';}).join(''):'<div style="color:#64748b;padding-top:6px">Nenhuma batida hoje.</div>')+'</div>';
+  setTimeout(function(){var b=$('p-bater');if(b)b.onclick=pontoAbrir;},0);
+  return h;
+}
+function pontoAbrir(){
+  var sh=$('sheet');sh.innerHTML='<h3 style="margin:0 0 8px">Registrar ponto</h3><div style="position:relative;border-radius:14px;overflow:hidden;background:#000"><video id="p-v" autoplay playsinline muted style="width:100%;display:block;transform:scaleX(-1)"></video></div>'+
+    '<div id="p-st" style="margin:8px 0;font-size:14px;color:#64748b">Ligando a câmera…</div>'+
+    '<button type="button" class="btn" id="p-ok" style="width:100%" disabled>Registrar agora</button><button type="button" class="btn sec2" id="p-x" style="width:100%;margin-top:8px">Cancelar</button>';
+  sh.setAttribute('data-id','');sh.setAttribute('data-cur','ponto');$('sheet-bg').classList.add('on');
+  $('p-x').onclick=function(){fecharSheet();};
+  var pos=null;
+  try{navigator.geolocation&&navigator.geolocation.getCurrentPosition(function(p){pos={lat:p.coords.latitude,lng:p.coords.longitude};},function(){},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});}catch(e){}
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640}},audio:false}).then(function(s){
+    PONTO.stream=s;var v=$('p-v');v.srcObject=s;$('p-st').textContent='Centralize o rosto e toque em Registrar.';$('p-ok').disabled=false;
+  }).catch(function(){$('p-st').textContent='Autorize o uso da câmera para bater o ponto.';});
+  $('p-ok').onclick=function(){
+    if(PONTO.busy)return;var v=$('p-v');if(!v||!v.videoWidth)return;PONTO.busy=true;$('p-ok').disabled=true;$('p-st').textContent='Registrando…';
+    var c=document.createElement('canvas');c.width=240;c.height=Math.round(240*v.videoHeight/v.videoWidth);c.getContext('2d').drawImage(v,0,0,c.width,c.height);var foto=c.toDataURL('image/jpeg',0.55);
+    sb.rpc('rh_bater_ponto',{p_pessoa:null,p_tp:null,p_origem:'app',p_foto:foto,p_lat:pos?pos.lat:null,p_lng:pos?pos.lng:null}).then(function(r){
+      if(r.error)throw r.error;var x=r.data;PONTO.bat.push({hora:x.hora,tipo:x.tipo,origem:'app'});fecharSheet();toast((x.tipo==='entrada'?'✔ Entrada registrada às ':'✔ Saída registrada às ')+pHora(x.hora),4000);if(tab==='ponto')render();
+    }).catch(function(e){PONTO.busy=false;$('p-ok').disabled=false;$('p-st').textContent='⚠ '+erro(e);}).then(function(){PONTO.busy=false;});
+  };
+}
+function fecharSheet(){PONTO.stop();$('sheet-bg').classList.remove('on');if(rhCtx){rhCtx=null;if(tab==='rh')render();}}
 function setStatusDem(id,st){
   var btns=[].slice.call(document.querySelectorAll('#sheet .btn'));btns.forEach(function(b){b.disabled=true;});
   chk(sb.from('demandas').update({status:st}).eq('id',id).select('id')).then(function(r){
@@ -1498,7 +1539,7 @@ function temDem(){return ehAdmin()||!(perfil&&perfil.permissoes&&perfil.permisso
 function aplicarSetores(){
   [].forEach.call(document.querySelectorAll('#nav button'),function(b){
     var t=b.getAttribute('data-t');if(ehParc()){b.style.display=t==='parceiros'?'':'none';return;}
-    b.style.display=(t==='parceiros'?temParc():t==='rh'?temRh():t==='comercial'?pode('setor_comercial'):t==='checklist'?(temDem()||pode('setor_manutencao')):temDem())?'':'none';
+    b.style.display=(t==='parceiros'?temParc():t==='ponto'?PONTO.lib:t==='rh'?temRh():t==='comercial'?pode('setor_comercial'):t==='checklist'?(temDem()||pode('setor_manutencao')):temDem())?'':'none';
   });
   if(!temDem()&&temRh())tab='rh';
   if(ehParc()||(!temDem()&&!temRh()&&temParc()))tab='parceiros';
@@ -1670,7 +1711,7 @@ function entrar(session){
     if(!r.data.ativo)throw new Error('Seu acesso está desativado. Fale com o administrador.');
     perfil=r.data;return ehParc()?null:carregar();
   }).then(function(){
-    aplicarSetores();if(temParc())return carregarParc().catch(function(e){console.error(e);});return temRh()?carregarRh().catch(function(e){console.error(e);}):null;
+    aplicarSetores();pontoInit();if(temParc())return carregarParc().catch(function(e){console.error(e);});return temRh()?carregarRh().catch(function(e){console.error(e);}):null;
   }).then(function(){
     $('login').classList.add('off');$('app').classList.add('on');render();ligarTempoReal();if(!ehParc()&&temRh())setTimeout(function(){PLSANIV.aviso();},2500);
   });

@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v90 — 28/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v91 — 28/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -8590,6 +8590,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="dec">🎄 13º salário</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="resc">📝 Rescisão</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="freq">🕒 Frequência</button>' +
+              '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="ponto">🕘 Ponto</button>' +
               '<button type="button" class="sx-subbtn" data-sx="rh-sub" data-v="aniv">🎂 Aniversariantes</button>' +
             '</div>' +
             '<div id="rh-p-colab" class="sx-pane">' +
@@ -8611,6 +8612,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<div class="sx-dica">Cadastre a <b>escala</b> do colaborador e lance os <b>atestados</b> (de dia X até dia Y) e <b>faltas</b>. O mês mostra dias trabalhados, faltas, atestados e horas — e as <b>faltas + DSR</b> já saem descontadas no recibo. Atestado e falta abonada não descontam.</div>' +
               '<div id="rh-freq"></div>' +
             '</div>' +
+            '<div id="rh-p-ponto" class="sx-pane"><div id="rh-ponto"></div></div>' +
             '<div id="rh-p-aniv" class="sx-pane">' +
               '<div class="sx-toolbar"><select id="rh-an-fil" class="form-control sx-w"></select>' +
                 '<button type="button" class="btn-pls-primary" data-an="novo">➕ Aniversariante sem cadastro (diarista, extra…)</button>' +
@@ -8695,9 +8697,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function renderRh() {
           montarRh();
           if (subRh === 'pj') subRh = 'colab';
-          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc', 'freq', 'aniv'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
+          ['colab', 'pj', 'lanc', 'recibos', 'ferias', 'dec', 'resc', 'freq', 'ponto', 'aniv'].forEach(function(v) { var p = $('rh-p-' + v); if (p) p.style.display = v === subRh ? 'block' : 'none'; });
           document.querySelectorAll('#setor-rh .sx-subbtn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-v') === subRh); });
-          if (subRh === 'freq') renderFreq(); else if (subRh === 'aniv') renderAniv(); else if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
+          if (subRh === 'freq') renderFreq(); else if (subRh === 'ponto') renderPonto(); else if (subRh === 'aniv') renderAniv(); else if (subRh === 'colab') renderColab(); else if (subRh === 'pj') renderPj(); else if (subRh === 'lanc') renderLanc(); else if (subRh === 'recibos') renderRecibos(); else if (subRh === 'dec') renderDecimo(); else if (subRh === 'resc') renderRescisao(); else renderFerias();
         }
 
         // ---------- férias ----------
@@ -9983,7 +9985,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var lista = colabAtivos(); if (!FQ.col || !lista.some(function(c) { return c.id === FQ.col; })) FQ.col = lista.length ? lista[0].id : '';
           var sc = $('fq-col'); if (sc) { sc.innerHTML = lista.map(function(c) { return '<option value="' + c.id + '">' + esc(c.nome) + '</option>'; }).join(''); sc.value = FQ.col; }
           var sm = $('fq-mes'); if (sm) sm.value = FQ.mes;
-          var c = R.colab.filter(function(x) { return x.id === FQ.col; })[0];
+          var c = R.colab.filter(function(x) { return x.id === FQ.col; })[0]; if (c) fqCarregarPonto(c);
           var geral = '<div class="sx-sec" style="margin-top:1rem">Resumo de todos — ' + esc(nomeMes(FQ.mes)) + '</div><div class="table-container"><table class="table-pls"><thead><tr><th>Colaborador</th><th>Jornada</th><th>Dias de escala</th><th>Trabalhou</th><th>Faltas</th><th>Atestado (dias)</th><th>Horas trabalhadas</th><th>Desconto previsto</th></tr></thead><tbody>' +
             lista.map(function(x) { var t = rhFreq(x, FQ.mes).t; return '<tr><td><a href="#" data-fq="ver" data-id="' + x.id + '">' + esc(x.nome) + '</a></td><td>' + esc(jornNomeHoje(x)) + '</td><td>' + t.prev + '</td><td>' + t.trab + '</td><td>' + (t.faltas ? '<b style="color:#dc2626">' + t.faltas + '</b>' : 0) + '</td><td>' + t.atestado + '</td><td>' + fmtHm(t.minTrab) + ' / ' + fmtHm(t.minPrev) + '</td><td>' + (t.descFaltas + t.descDsr ? brl(t.descFaltas + t.descDsr) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>';
           if (!c) { $('rh-freq').innerHTML = '<div class="sx-vazio">Nenhum colaborador.</div>'; return; }
@@ -9994,8 +9996,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             card(t.prev, 'dias de escala') + card(t.trab, 'dias trabalhados', '#16a34a') + card(t.faltas, 'faltas', t.faltas ? '#dc2626' : '') + card(t.atestado, 'dias de atestado', '#2563eb') + card(t.abonada + t.folgacomp, 'abonadas / folgas') +
             card(fmtHm(t.minTrab), 'horas trabalhadas (de ' + fmtHm(t.minPrev) + ' previstas)') + card((t.descFaltas + t.descDsr) ? brl(t.descFaltas + t.descDsr) : '—', 'desconto no recibo' + (t.dsrPerd ? ' (faltas ' + brl(t.descFaltas) + ' + DSR ' + brl(t.descDsr) + ')' : ''), (t.descFaltas + t.descDsr) ? '#dc2626' : '') + '</div>' +
             '<div class="sx-muted" style="margin-bottom:.4rem;line-height:1.6"><b>Jornada:</b> ' + jornTxt(c) + '<br>As horas são as da jornada (o sistema ainda não registra ponto).</div>' +
-            '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Situação</th><th>Horas</th><th>Obs.</th></tr></thead><tbody>' + f.dias.map(function(s) {
-              return '<tr><td>' + fd(s.d) + ' <span class="sx-muted">' + DOWN[s.dow] + '</span></td><td><span class="sx-pill" style="background:' + cor[s.st] + ';color:#fff">' + nm[s.st] + '</span></td><td>' + (s.st === 'trab' ? fmtHm(s.min) : '') + '</td><td class="sx-muted">' + esc(s.txt || (s.o && s.o.obs) || '') + (f.t.dsrDatas.indexOf(s.d) >= 0 ? ' <b style="color:#dc2626">DSR perdido (descontado)</b>' : '') + '</td></tr>';
+            '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Situação</th><th>Horas</th><th>Ponto batido</th><th>Obs.</th></tr></thead><tbody>' + f.dias.map(function(s) {
+              return '<tr><td>' + fd(s.d) + ' <span class="sx-muted">' + DOWN[s.dow] + '</span></td><td><span class="sx-pill" style="background:' + cor[s.st] + ';color:#fff">' + nm[s.st] + '</span></td><td>' + (s.st === 'trab' ? fmtHm(s.min) : '') + '</td><td>' + pontoDia(s.d) + '</td><td class="sx-muted">' + esc(s.txt || (s.o && s.o.obs) || '') + (f.t.dsrDatas.indexOf(s.d) >= 0 ? ' <b style="color:#dc2626">DSR perdido (descontado)</b>' : '') + '</td></tr>';
             }).join('') + '</tbody></table></div>' +
             '<div class="sx-sec" style="margin-top:.8rem">Ocorrências do mês</div>' + (ocs.length ? '<div class="table-container"><table class="table-pls"><tbody>' + ocs.map(function(o) {
               return '<tr><td><span class="sx-pill" style="background:' + FQ_TIPOS[o.tipo][1] + ';color:#fff">' + FQ_TIPOS[o.tipo][0] + '</span></td><td>' + fd(o.inicio) + (o.fim !== o.inicio ? ' a ' + fd(o.fim) : '') + '</td><td class="sx-muted">' + esc(o.obs || '') + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary sx-del" data-fq="del" data-id="' + o.id + '">✕</button></td></tr>';
@@ -10128,6 +10130,84 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         // =================================================================
         // PASTA DIGITAL (arquivos de colaboradores e prestadores)
         // =================================================================
+        // ---------- Ponto (relógio de ponto: tablet com rosto + aplicativo) ----------
+        var PT = { dia: '', pp: {}, perfis: [], bat: [], pin: '', ok: false };
+        function ptPessoas() { return R.colab.filter(ativo).map(function(c) { return { id: c.id, tp: 'c', nome: c.nome }; }).concat(R.prest.filter(prestAtivo).map(function(p) { return { id: p.id, tp: 'p', nome: p.nome }; })).sort(function(a, b) { return norm(a.nome).localeCompare(norm(b.nome)); }); }
+        function ptNomeDe(b) { var x = b.colaborador_id ? colabPorId(b.colaborador_id) : prestPorId(b.prestador_id); return x ? x.nome : '?'; }
+        function ptHora(iso) { var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+        function ptMin(bs) { var tot = 0, ent = null; bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }).forEach(function(b) { if (b.tipo === 'entrada') ent = b; else if (ent) { tot += Math.max(0, Math.round((new Date(b.hora) - new Date(ent.hora)) / 60000)); ent = null; } }); return { min: tot, aberto: !!ent }; }
+        function ptTxt(bs) { var sorted = bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }), out = [], ent = null; sorted.forEach(function(b) { if (b.tipo === 'entrada') { if (ent) out.push(ptHora(ent.hora) + ' →…'); ent = b; } else { out.push((ent ? ptHora(ent.hora) : '?') + ' → ' + ptHora(b.hora)); ent = null; } }); if (ent) out.push(ptHora(ent.hora) + ' → <b style="color:#d97706">em aberto</b>'); return out.join(' · '); }
+        function ptCarregar() {
+          if (!PT.dia) PT.dia = hoje();
+          return Promise.all([
+            chk(sb.from('rh_ponto_pessoa').select('pessoa_id,tipo,app,perfil_id,face_em')).catch(function() { return { data: [] }; }),
+            chk(sb.from('perfis').select('id,nome,ativo').order('nome')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_ponto').select('*').eq('dia', PT.dia).order('hora')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_ponto_cfg').select('pin').eq('id', 1).maybeSingle()).catch(function() { return { data: null }; })
+          ]).then(function(r) {
+            PT.pp = {}; (r[0].data || []).forEach(function(x) { PT.pp[x.pessoa_id] = x; });
+            PT.perfis = (r[1].data || []).filter(function(u) { return u.ativo !== false; }); PT.bat = r[2].data || []; PT.pin = (r[3].data && r[3].data.pin) || ''; PT.ok = true;
+          });
+        }
+        function renderPonto() { var el = $('rh-ponto'); if (!el) return; if (!PT.ok) el.innerHTML = '<div class="sx-vazio">Carregando…</div>'; ptCarregar().then(ptDesenhar); }
+        function ptDesenhar() {
+          var el = $('rh-ponto'); if (!el) return; var pes = ptPessoas();
+          var linhas = pes.map(function(x) {
+            var pp = PT.pp[x.id] || {}, op = '<option value="">— nenhum —</option>' + PT.perfis.map(function(u) { return '<option value="' + u.id + '"' + (pp.perfil_id === u.id ? ' selected' : '') + '>' + esc(u.nome) + '</option>'; }).join('');
+            return '<tr><td><b>' + esc(x.nome) + '</b> <span class="sx-pill ' + (x.tp === 'c' ? 'sx-ok' : 'sx-hoje') + '">' + (x.tp === 'c' ? 'CLT' : 'PJ') + '</span></td>' +
+              '<td>' + (pp.face_em ? '✔ <span class="sx-muted">' + fd(String(pp.face_em).slice(0, 10)) + '</span> <button type="button" class="btn-pls-secondary" data-pt="facedel" data-id="' + x.id + '" data-tp="' + x.tp + '">remover</button>' : '<span class="sx-muted">não cadastrado</span>') + '</td>' +
+              '<td style="text-align:center"><input type="checkbox" class="pt-app" data-id="' + x.id + '" data-tp="' + x.tp + '"' + (pp.app ? ' checked' : '') + '></td>' +
+              '<td><select class="form-control pt-perfil" data-id="' + x.id + '" data-tp="' + x.tp + '"' + (pp.app ? '' : ' disabled') + '>' + op + '</select></td></tr>';
+          }).join('');
+          var porP = {}; PT.bat.forEach(function(b) { var k = b.colaborador_id || b.prestador_id; (porP[k] = porP[k] || []).push(b); });
+          var resumo = Object.keys(porP).map(function(k) { var m = ptMin(porP[k]), b0 = porP[k][0], nome = ptNomeDe(b0); return '<tr><td><b>' + esc(nome) + '</b></td><td>' + ptTxt(porP[k]) + '</td><td>' + fmtHm(m.min) + '</td></tr>'; }).join('');
+          var lista = PT.bat.slice().reverse().map(function(b) {
+            return '<tr><td>' + ptHora(b.hora) + '</td><td>' + esc(ptNomeDe(b)) + '</td><td><span class="sx-pill ' + (b.tipo === 'entrada' ? 'sx-ok' : 'sx-espera') + '">' + (b.tipo === 'entrada' ? 'Entrada' : 'Saída') + '</span></td><td>' + ({ tablet: '📟 Tablet', app: '📱 Aplicativo', manual: '✍ Manual' }[b.origem] || b.origem) + (b.lat ? ' <a href="https://www.google.com/maps?q=' + b.lat + ',' + b.lng + '" target="_blank" rel="noopener">📍</a>' : '') + '</td>' +
+              '<td>' + (b.foto ? '<img src="' + b.foto + '" alt="" style="height:38px;border-radius:6px;cursor:pointer;transform:scaleX(-1)" data-pt="foto" data-id="' + b.id + '">' : '') + '</td><td class="sx-muted">' + esc(b.obs || '') + '</td><td><button type="button" class="btn-pls-secondary sx-del" data-pt="del" data-id="' + b.id + '">✕</button></td></tr>';
+          }).join('');
+          el.innerHTML = '<div class="sx-dica" style="margin-top:0">O <b>relógio de ponto</b> fica num tablet da empresa: a pessoa chega, olha a câmera e o sistema reconhece, registra <b>entrada/saída</b> e fala <i>“Bom dia, Fulano. Entrada liberada”</i>. Quem você marcar abaixo também bate ponto <b>pelo aplicativo</b> (com selfie e localização).</div>' +
+            '<div class="sx-sec">1) Tablet da empresa</div><div class="sx-toolbar"><a class="btn-pls-primary" href="ponto.html" target="_blank" rel="noopener" style="text-decoration:none">📟 Abrir tela do relógio de ponto</a>' +
+            '<input id="pt-pin" class="form-control sx-w" inputmode="numeric" placeholder="PIN do administrador" value="' + esc(PT.pin) + '"><button type="button" class="btn-pls-secondary" data-pt="pin">Salvar PIN</button></div>' +
+            '<div class="sx-muted">No tablet: abra o endereço <b>…/ponto.html</b>, entre com um usuário do RH, toque em <b>Iniciar</b> e deixe a tela aberta. O PIN protege o botão ⚙ (canto da tela) usado para <b>cadastrar o rosto</b> de cada pessoa. Todos os colaboradores e PJ cadastrados podem bater ponto no tablet.</div>' +
+            '<div class="sx-sec">2) Pessoas — rosto e aplicativo</div><div class="table-container"><table class="table-pls"><thead><tr><th>Pessoa</th><th>Rosto no tablet</th><th style="text-align:center">Pode bater ponto no app</th><th>Usuário do sistema (login dela no app)</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
+            '<div class="sx-muted">Para liberar no aplicativo: marque a caixa e escolha o <b>usuário</b> com que a pessoa entra no app.</div>' +
+            '<div class="sx-sec">3) Batidas do dia</div><div class="sx-toolbar"><input id="pt-dia" type="date" class="form-control sx-w" value="' + PT.dia + '"><button type="button" class="btn-pls-secondary" data-pt="manual">✍ Lançar batida manual (esqueceu de bater)</button></div>' +
+            (resumo ? '<div class="table-container"><table class="table-pls"><thead><tr><th>Pessoa</th><th>Batidas</th><th>Total</th></tr></thead><tbody>' + resumo + '</tbody></table></div><div class="sx-sec" style="font-size:.8rem">Detalhe</div><div class="table-container"><table class="table-pls"><thead><tr><th>Hora</th><th>Pessoa</th><th>Tipo</th><th>Origem</th><th>Foto</th><th>Obs.</th><th></th></tr></thead><tbody>' + lista + '</tbody></table></div>' : '<div class="sx-vazio">Nenhuma batida neste dia.</div>');
+        }
+        function ptManual() {
+          var pes = ptPessoas();
+          abrirModal('Lançar batida manual', '<div class="form-grid"><div class="form-group full-width"><label class="form-label">Pessoa</label><select id="pm-p" class="form-control">' + pes.map(function(x, i) { return '<option value="' + i + '">' + esc(x.nome) + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Data</label><input id="pm-d" type="date" class="form-control" value="' + PT.dia + '"></div><div class="form-group"><label class="form-label">Hora</label><input id="pm-h" type="time" class="form-control"></div>' +
+            '<div class="form-group"><label class="form-label">Tipo</label><select id="pm-t" class="form-control"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>' +
+            '<div class="form-group full-width"><label class="form-label">Motivo</label><input id="pm-o" class="form-control" placeholder="ex.: esqueceu de bater a saída"></div></div>', 'Lançar', function() {
+              var x = pes[+$('pm-p').value], d = $('pm-d').value, h = $('pm-h').value; if (!x || !d || !h) throw new Error('Informe pessoa, data e hora.');
+              var row = { dia: d, hora: new Date(d + 'T' + h + ':00').toISOString(), tipo: $('pm-t').value, origem: 'manual', obs: $('pm-o').value.trim() || null, criado_por: (perfilAtual && perfilAtual.nome) || null };
+              row[x.tp === 'c' ? 'colaborador_id' : 'prestador_id'] = x.id;
+              return chk(sb.from('rh_ponto').insert(row).select('id')).then(function() { PT.dia = d; FQ.ptKey = ''; showToast('Batida lançada ✔'); renderPonto(); });
+            });
+        }
+        function ptUp(id, tp, campos) { var row = { pessoa_id: id, tipo: tp }; Object.keys(campos).forEach(function(k) { row[k] = campos[k]; }); return chk(sb.from('rh_ponto_pessoa').upsert(row, { onConflict: 'pessoa_id' })).then(function() { var o = PT.pp[id] || { pessoa_id: id, tipo: tp }; Object.keys(campos).forEach(function(k) { o[k] = campos[k]; }); PT.pp[id] = o; }); }
+        function fqCarregarPonto(c) {
+          var key = c.id + '|' + FQ.mes; if (FQ.ptKey === key) return; FQ.ptKey = key; FQ.pt = {};
+          chk(sb.from('rh_ponto').select('dia,hora,tipo').eq('colaborador_id', c.id).gte('dia', FQ.mes + '-01').lte('dia', FQ.mes + '-31').order('hora')).then(function(r) { if (FQ.ptKey !== key) return; (r.data || []).forEach(function(b) { (FQ.pt[b.dia] = FQ.pt[b.dia] || []).push(b); }); renderFreq(); }).catch(function() {});
+        }
+        function pontoDia(iso) { var bs = (FQ.pt || {})[iso]; if (!bs || !bs.length) return ''; var m = ptMin(bs); return ptTxt(bs) + ' <span class="sx-muted">(' + fmtHm(m.min) + ')</span>'; }
+        document.addEventListener('click', function(ev) {
+          var t = ev.target.closest && ev.target.closest('[data-pt]'); if (!t) return;
+          var a = t.getAttribute('data-pt'), id = t.getAttribute('data-id');
+          if (a === 'pin') { var v = ($('pt-pin').value || '').trim(); chk(sb.from('rh_ponto_cfg').upsert({ id: 1, pin: v || null })).then(function() { PT.pin = v; showToast('PIN salvo ✔'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
+          else if (a === 'manual') ptManual();
+          else if (a === 'facedel') { if (confirm('Remover o rosto cadastrado? A pessoa precisará cadastrar de novo no tablet.')) ptUp(id, t.getAttribute('data-tp'), { face: null, face_em: null }).then(function() { ptDesenhar(); showToast('Rosto removido.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
+          else if (a === 'del') { if (confirm('Excluir esta batida?')) chk(sb.from('rh_ponto').delete().eq('id', id).select('id')).then(function() { PT.bat = PT.bat.filter(function(b) { return b.id !== id; }); FQ.ptKey = ''; ptDesenhar(); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
+          else if (a === 'foto') { var b = PT.bat.filter(function(x) { return x.id === id; })[0]; if (b) abrirModal('Foto da batida — ' + ptNomeDe(b) + ' ' + ptHora(b.hora), '<img src="' + b.foto + '" alt="" style="width:100%;border-radius:10px;transform:scaleX(-1)">', 'Fechar', function() {}); }
+        });
+        document.addEventListener('change', function(ev) {
+          var t = ev.target; if (!t) return;
+          if (t.id === 'pt-dia' && t.value) { PT.dia = t.value; renderPonto(); }
+          else if (t.classList && t.classList.contains('pt-app')) { var chkd = t.checked; ptUp(t.getAttribute('data-id'), t.getAttribute('data-tp'), { app: chkd }).then(ptDesenhar).catch(function(e) { t.checked = !chkd; showToast('Erro: ' + (e.message || e), 5000); }); }
+          else if (t.classList && t.classList.contains('pt-perfil')) { ptUp(t.getAttribute('data-id'), t.getAttribute('data-tp'), { perfil_id: t.value || null }).then(function() { showToast('Usuário vinculado ✔'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
+        });
+
         var CATS = {
           colaborador: [{ v: 'atestado', t: 'Atestado médico' }, { v: 'recibo', t: 'Recibo de pagamento assinado' }, { v: 'contrato', t: 'Contrato / admissão' }, { v: 'documento', t: 'Documento pessoal' }, { v: 'aso', t: 'Exame / ASO' }, { v: 'ferias', t: 'Férias (aviso / recibo)' }, { v: 'outros', t: 'Outros' }],
           prestador: [{ v: 'contrato', t: 'Contrato assinado' }, { v: 'nf', t: 'Nota fiscal' }, { v: 'recibo', t: 'Recibo assinado' }, { v: 'documento', t: 'Documento (CNPJ, etc.)' }, { v: 'outros', t: 'Outros' }]
