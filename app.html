@@ -1147,12 +1147,12 @@ function pontoInit(){
 function pHora(iso){var d=new Date(iso);return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
 function telaPonto(){
   if(!PONTO.lib)return '<div class="empty">Ponto não liberado para o seu usuário. Fale com o RH.</div>';
-  var bs=PONTO.bat,prox=bs.length%2===0?'ENTRADA':'SAÍDA';
+  var bs=PONTO.bat,prox=['ENTRADA','SAÍDA PARA O INTERVALO','RETORNO DO INTERVALO','SAÍDA'][bs.length%4];
   var h='<div class="card" style="text-align:center"><div style="font-size:15px;color:var(--mut,#64748b)">Olá, '+esc((PONTO.nome||'').split(' ')[0])+'</div>'+
     '<div id="p-rel" style="font-size:54px;font-weight:800;margin:6px 0">'+pHora(new Date().toISOString())+'</div>'+
     '<button type="button" class="btn" id="p-bater" style="width:100%;font-size:19px;padding:16px">📸 Bater ponto — '+prox+'</button>'+
     '<div style="font-size:12px;color:var(--mut,#64748b);margin-top:8px">Tira uma selfie e registra o horário e o local.</div></div>';
-  h+='<div class="card"><b>Hoje</b>'+(bs.length?bs.map(function(b){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0"><span>'+(b.tipo==='entrada'?'🟢 Entrada':'🟠 Saída')+'</span><b>'+pHora(b.hora)+'</b></div>';}).join(''):'<div style="color:#64748b;padding-top:6px">Nenhuma batida hoje.</div>')+'</div>';
+  h+='<div class="card"><b>Hoje</b>'+(bs.length?bs.map(function(b){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #e2e8f0"><span>'+({entrada:'🟢 Entrada',saida_int:'🟠 Saída intervalo',retorno:'🟢 Retorno',saida:'🟠 Saída'}[b.tipo]||b.tipo)+'</span><b>'+pHora(b.hora)+'</b></div>';}).join(''):'<div style="color:#64748b;padding-top:6px">Nenhuma batida hoje.</div>')+'</div>';
   setTimeout(function(){var b=$('p-bater');if(b)b.onclick=pontoAbrir;},0);
   return h;
 }
@@ -1171,7 +1171,7 @@ function pontoAbrir(){
     if(PONTO.busy)return;var v=$('p-v');if(!v||!v.videoWidth)return;PONTO.busy=true;$('p-ok').disabled=true;$('p-st').textContent='Registrando…';
     var c=document.createElement('canvas');c.width=240;c.height=Math.round(240*v.videoHeight/v.videoWidth);c.getContext('2d').drawImage(v,0,0,c.width,c.height);var foto=c.toDataURL('image/jpeg',0.55);
     sb.rpc('rh_bater_ponto',{p_pessoa:null,p_tp:null,p_origem:'app',p_foto:foto,p_lat:pos?pos.lat:null,p_lng:pos?pos.lng:null}).then(function(r){
-      if(r.error)throw r.error;var x=r.data;PONTO.bat.push({hora:x.hora,tipo:x.tipo,origem:'app'});fecharSheet();toast((x.tipo==='entrada'?'✔ Entrada registrada às ':'✔ Saída registrada às ')+pHora(x.hora),4000);if(tab==='ponto')render();
+      if(r.error)throw r.error;var x=r.data;PONTO.bat.push({hora:x.hora,tipo:x.tipo,origem:'app'});fecharSheet();toast('✔ '+({entrada:'Entrada',saida_int:'Saída para o intervalo',retorno:'Retorno do intervalo',saida:'Saída'}[x.tipo]||'Ponto')+' registrada às '+pHora(x.hora),4000);if(tab==='ponto')render();
     }).catch(function(e){PONTO.busy=false;$('p-ok').disabled=false;$('p-st').textContent='⚠ '+erro(e);}).then(function(){PONTO.busy=false;});
   };
 }

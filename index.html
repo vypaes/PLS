@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v91 — 28/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v92 — 28/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -9995,7 +9995,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           el.innerHTML = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">' +
             card(t.prev, 'dias de escala') + card(t.trab, 'dias trabalhados', '#16a34a') + card(t.faltas, 'faltas', t.faltas ? '#dc2626' : '') + card(t.atestado, 'dias de atestado', '#2563eb') + card(t.abonada + t.folgacomp, 'abonadas / folgas') +
             card(fmtHm(t.minTrab), 'horas trabalhadas (de ' + fmtHm(t.minPrev) + ' previstas)') + card((t.descFaltas + t.descDsr) ? brl(t.descFaltas + t.descDsr) : '—', 'desconto no recibo' + (t.dsrPerd ? ' (faltas ' + brl(t.descFaltas) + ' + DSR ' + brl(t.descDsr) + ')' : ''), (t.descFaltas + t.descDsr) ? '#dc2626' : '') + '</div>' +
-            '<div class="sx-muted" style="margin-bottom:.4rem;line-height:1.6"><b>Jornada:</b> ' + jornTxt(c) + '<br>As horas são as da jornada (o sistema ainda não registra ponto).</div>' +
+            '<div class="sx-muted" style="margin-bottom:.4rem;line-height:1.6"><b>Jornada:</b> ' + jornTxt(c) + pontoMes(c) + '<br>As horas acima são as da jornada; a coluna “Ponto batido” mostra o que realmente foi trabalhado (horas extras e atrasos aparecem ali).</div>' +
             '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Situação</th><th>Horas</th><th>Ponto batido</th><th>Obs.</th></tr></thead><tbody>' + f.dias.map(function(s) {
               return '<tr><td>' + fd(s.d) + ' <span class="sx-muted">' + DOWN[s.dow] + '</span></td><td><span class="sx-pill" style="background:' + cor[s.st] + ';color:#fff">' + nm[s.st] + '</span></td><td>' + (s.st === 'trab' ? fmtHm(s.min) : '') + '</td><td>' + pontoDia(s.d) + '</td><td class="sx-muted">' + esc(s.txt || (s.o && s.o.obs) || '') + (f.t.dsrDatas.indexOf(s.d) >= 0 ? ' <b style="color:#dc2626">DSR perdido (descontado)</b>' : '') + '</td></tr>';
             }).join('') + '</tbody></table></div>' +
@@ -10135,8 +10135,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function ptPessoas() { return R.colab.filter(ativo).map(function(c) { return { id: c.id, tp: 'c', nome: c.nome }; }).concat(R.prest.filter(prestAtivo).map(function(p) { return { id: p.id, tp: 'p', nome: p.nome }; })).sort(function(a, b) { return norm(a.nome).localeCompare(norm(b.nome)); }); }
         function ptNomeDe(b) { var x = b.colaborador_id ? colabPorId(b.colaborador_id) : prestPorId(b.prestador_id); return x ? x.nome : '?'; }
         function ptHora(iso) { var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
-        function ptMin(bs) { var tot = 0, ent = null; bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }).forEach(function(b) { if (b.tipo === 'entrada') ent = b; else if (ent) { tot += Math.max(0, Math.round((new Date(b.hora) - new Date(ent.hora)) / 60000)); ent = null; } }); return { min: tot, aberto: !!ent }; }
-        function ptTxt(bs) { var sorted = bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }), out = [], ent = null; sorted.forEach(function(b) { if (b.tipo === 'entrada') { if (ent) out.push(ptHora(ent.hora) + ' →…'); ent = b; } else { out.push((ent ? ptHora(ent.hora) : '?') + ' → ' + ptHora(b.hora)); ent = null; } }); if (ent) out.push(ptHora(ent.hora) + ' → <b style="color:#d97706">em aberto</b>'); return out.join(' · '); }
+        function ptPares(bs) { var so = bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }), out = [], ab = null; so.forEach(function(b) { if (b.tipo === 'entrada' || b.tipo === 'retorno') { if (ab) out.push({ a: ab, b: null }); ab = b; } else { out.push({ a: ab, b: b }); ab = null; } }); if (ab) out.push({ a: ab, b: null }); return out; }
+        function ptMin(bs) { var pr = ptPares(bs), tot = 0, ab = false; pr.forEach(function(x) { if (x.a && x.b) tot += Math.max(0, Math.round((new Date(x.b.hora) - new Date(x.a.hora)) / 60000)); else ab = true; }); return { min: tot, aberto: ab, sem: pr.length === 1 && !!pr[0].a && !!pr[0].b && pr[0].a.tipo === 'entrada' && pr[0].b.tipo === 'saida' }; }
+        function ptApura(c, iso, bs) {
+          var m = ptMin(bs), trab = m.min, e = escEm(c, iso), x = e.semana[dowIso(iso)], st = statusDia(c, e, ocorDe(c), iso).st, ult = bs.slice().sort(function(a, b) { return a.hora.localeCompare(b.hora); }).pop();
+          if (m.sem && x && x.t && trab > 360) trab = Math.max(0, trab - (Number(x.i) || 0));
+          var prev = st === 'trab' ? minDia(x) : 0, dif = trab - prev;
+          return { trab: trab, prev: prev, extra: (!m.aberto && dif > 10) ? dif : 0, falta: (!m.aberto && prev && -dif > 10 && iso < hoje()) ? -dif : 0, aberto: m.aberto, st: st, saiu: ult && ult.tipo === 'saida' ? ptHora(ult.hora) : '', fimJ: (st === 'trab' && x) ? x.s : '' };
+        }
+        function ptTags(a) { return (a.extra ? ' <b style="color:#16a34a">+' + fmtHm(a.extra) + ' extra</b>' + (a.fimJ && a.saiu ? ' <span class="sx-muted">(saiu ' + a.saiu + '; jornada até ' + a.fimJ + ')</span>' : (a.st !== 'trab' ? ' <span class="sx-muted">(dia sem jornada)</span>' : '')) : '') + (a.falta ? ' <b style="color:#dc2626">−' + fmtHm(a.falta) + ' a menos</b>' : '') + (a.aberto ? ' <b style="color:#d97706">em aberto</b>' : ''); }
+        var PT_TIPO = { entrada: 'Entrada', saida_int: 'Saída intervalo', retorno: 'Retorno', saida: 'Saída' };
+        function ptTxt(bs) { return ptPares(bs).map(function(x) { return (x.a ? ptHora(x.a.hora) : '?') + ' → ' + (x.b ? ptHora(x.b.hora) : '…'); }).join(' · '); }
         function ptCarregar() {
           if (!PT.dia) PT.dia = hoje();
           return Promise.all([
@@ -10160,25 +10169,25 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               '<td><select class="form-control pt-perfil" data-id="' + x.id + '" data-tp="' + x.tp + '"' + (pp.app ? '' : ' disabled') + '>' + op + '</select></td></tr>';
           }).join('');
           var porP = {}; PT.bat.forEach(function(b) { var k = b.colaborador_id || b.prestador_id; (porP[k] = porP[k] || []).push(b); });
-          var resumo = Object.keys(porP).map(function(k) { var m = ptMin(porP[k]), b0 = porP[k][0], nome = ptNomeDe(b0); return '<tr><td><b>' + esc(nome) + '</b></td><td>' + ptTxt(porP[k]) + '</td><td>' + fmtHm(m.min) + '</td></tr>'; }).join('');
+          var resumo = Object.keys(porP).map(function(k) { var m = ptMin(porP[k]), b0 = porP[k][0], nome = ptNomeDe(b0), cc = b0.colaborador_id ? colabPorId(b0.colaborador_id) : null, a = cc ? ptApura(cc, PT.dia, porP[k]) : null; return '<tr><td><b>' + esc(nome) + '</b></td><td>' + ptTxt(porP[k]) + '</td><td>' + fmtHm(a ? a.trab : m.min) + '</td><td>' + (a ? (a.prev ? fmtHm(a.prev) : '—') : '') + '</td><td>' + (a ? (ptTags(a) || '<span class="sx-muted">ok</span>') : (m.aberto ? '<b style="color:#d97706">em aberto</b>' : '')) + '</td></tr>'; }).join('');
           var lista = PT.bat.slice().reverse().map(function(b) {
-            return '<tr><td>' + ptHora(b.hora) + '</td><td>' + esc(ptNomeDe(b)) + '</td><td><span class="sx-pill ' + (b.tipo === 'entrada' ? 'sx-ok' : 'sx-espera') + '">' + (b.tipo === 'entrada' ? 'Entrada' : 'Saída') + '</span></td><td>' + ({ tablet: '📟 Tablet', app: '📱 Aplicativo', manual: '✍ Manual' }[b.origem] || b.origem) + (b.lat ? ' <a href="https://www.google.com/maps?q=' + b.lat + ',' + b.lng + '" target="_blank" rel="noopener">📍</a>' : '') + '</td>' +
+            return '<tr><td>' + ptHora(b.hora) + '</td><td>' + esc(ptNomeDe(b)) + '</td><td><span class="sx-pill ' + ((b.tipo === 'entrada' || b.tipo === 'retorno') ? 'sx-ok' : 'sx-espera') + '">' + (PT_TIPO[b.tipo] || b.tipo) + '</span></td><td>' + ({ tablet: '📟 Tablet', app: '📱 Aplicativo', manual: '✍ Manual' }[b.origem] || b.origem) + (b.lat ? ' <a href="https://www.google.com/maps?q=' + b.lat + ',' + b.lng + '" target="_blank" rel="noopener">📍</a>' : '') + '</td>' +
               '<td>' + (b.foto ? '<img src="' + b.foto + '" alt="" style="height:38px;border-radius:6px;cursor:pointer;transform:scaleX(-1)" data-pt="foto" data-id="' + b.id + '">' : '') + '</td><td class="sx-muted">' + esc(b.obs || '') + '</td><td><button type="button" class="btn-pls-secondary sx-del" data-pt="del" data-id="' + b.id + '">✕</button></td></tr>';
           }).join('');
-          el.innerHTML = '<div class="sx-dica" style="margin-top:0">O <b>relógio de ponto</b> fica num tablet da empresa: a pessoa chega, olha a câmera e o sistema reconhece, registra <b>entrada/saída</b> e fala <i>“Bom dia, Fulano. Entrada liberada”</i>. Quem você marcar abaixo também bate ponto <b>pelo aplicativo</b> (com selfie e localização).</div>' +
+          el.innerHTML = '<div class="sx-dica" style="margin-top:0">O <b>relógio de ponto</b> fica num tablet da empresa: a pessoa toca na tela, olha a câmera e o sistema reconhece e registra, na ordem: <b>1ª entrada · 2ª saída para o intervalo · 3ª retorno · 4ª saída</b> (o que passar da jornada vira <b>hora extra</b>). Ele fala <i>“Bom dia, Fulano. Entrada liberada”</i>. Quem você marcar abaixo também bate ponto <b>pelo aplicativo</b> (com selfie e localização).</div>' +
             '<div class="sx-sec">1) Tablet da empresa</div><div class="sx-toolbar"><a class="btn-pls-primary" href="ponto.html" target="_blank" rel="noopener" style="text-decoration:none">📟 Abrir tela do relógio de ponto</a>' +
             '<input id="pt-pin" class="form-control sx-w" inputmode="numeric" placeholder="PIN do administrador" value="' + esc(PT.pin) + '"><button type="button" class="btn-pls-secondary" data-pt="pin">Salvar PIN</button></div>' +
-            '<div class="sx-muted">No tablet: abra o endereço <b>…/ponto.html</b>, entre com um usuário do RH, toque em <b>Iniciar</b> e deixe a tela aberta. O PIN protege o botão ⚙ (canto da tela) usado para <b>cadastrar o rosto</b> de cada pessoa. Todos os colaboradores e PJ cadastrados podem bater ponto no tablet.</div>' +
+            '<div class="sx-muted">No tablet: abra o endereço <b>…/ponto.html</b>, entre com um usuário do RH, toque em <b>Iniciar</b> e deixe a tela aberta. O PIN protege o botão ⚙ (canto da tela): lá aparece a lista de todos, com <b>“sem rosto” / “cadastrado”</b> e o botão <b>Cadastrar</b> de cada um. Todos os colaboradores e PJ cadastrados podem bater ponto no tablet.</div>' +
             '<div class="sx-sec">2) Pessoas — rosto e aplicativo</div><div class="table-container"><table class="table-pls"><thead><tr><th>Pessoa</th><th>Rosto no tablet</th><th style="text-align:center">Pode bater ponto no app</th><th>Usuário do sistema (login dela no app)</th></tr></thead><tbody>' + linhas + '</tbody></table></div>' +
             '<div class="sx-muted">Para liberar no aplicativo: marque a caixa e escolha o <b>usuário</b> com que a pessoa entra no app.</div>' +
             '<div class="sx-sec">3) Batidas do dia</div><div class="sx-toolbar"><input id="pt-dia" type="date" class="form-control sx-w" value="' + PT.dia + '"><button type="button" class="btn-pls-secondary" data-pt="manual">✍ Lançar batida manual (esqueceu de bater)</button></div>' +
-            (resumo ? '<div class="table-container"><table class="table-pls"><thead><tr><th>Pessoa</th><th>Batidas</th><th>Total</th></tr></thead><tbody>' + resumo + '</tbody></table></div><div class="sx-sec" style="font-size:.8rem">Detalhe</div><div class="table-container"><table class="table-pls"><thead><tr><th>Hora</th><th>Pessoa</th><th>Tipo</th><th>Origem</th><th>Foto</th><th>Obs.</th><th></th></tr></thead><tbody>' + lista + '</tbody></table></div>' : '<div class="sx-vazio">Nenhuma batida neste dia.</div>');
+            (resumo ? '<div class="table-container"><table class="table-pls"><thead><tr><th>Pessoa</th><th>Batidas</th><th>Trabalhado</th><th>Previsto (jornada)</th><th>Horas extras / a menos</th></tr></thead><tbody>' + resumo + '</tbody></table></div><div class="sx-sec" style="font-size:.8rem">Detalhe</div><div class="table-container"><table class="table-pls"><thead><tr><th>Hora</th><th>Pessoa</th><th>Tipo</th><th>Origem</th><th>Foto</th><th>Obs.</th><th></th></tr></thead><tbody>' + lista + '</tbody></table></div>' : '<div class="sx-vazio">Nenhuma batida neste dia.</div>');
         }
         function ptManual() {
           var pes = ptPessoas();
           abrirModal('Lançar batida manual', '<div class="form-grid"><div class="form-group full-width"><label class="form-label">Pessoa</label><select id="pm-p" class="form-control">' + pes.map(function(x, i) { return '<option value="' + i + '">' + esc(x.nome) + '</option>'; }).join('') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Data</label><input id="pm-d" type="date" class="form-control" value="' + PT.dia + '"></div><div class="form-group"><label class="form-label">Hora</label><input id="pm-h" type="time" class="form-control"></div>' +
-            '<div class="form-group"><label class="form-label">Tipo</label><select id="pm-t" class="form-control"><option value="entrada">Entrada</option><option value="saida">Saída</option></select></div>' +
+            '<div class="form-group"><label class="form-label">Tipo</label><select id="pm-t" class="form-control"><option value="entrada">Entrada</option><option value="saida_int">Saída para o intervalo</option><option value="retorno">Retorno do intervalo</option><option value="saida">Saída</option></select></div>' +
             '<div class="form-group full-width"><label class="form-label">Motivo</label><input id="pm-o" class="form-control" placeholder="ex.: esqueceu de bater a saída"></div></div>', 'Lançar', function() {
               var x = pes[+$('pm-p').value], d = $('pm-d').value, h = $('pm-h').value; if (!x || !d || !h) throw new Error('Informe pessoa, data e hora.');
               var row = { dia: d, hora: new Date(d + 'T' + h + ':00').toISOString(), tipo: $('pm-t').value, origem: 'manual', obs: $('pm-o').value.trim() || null, criado_por: (perfilAtual && perfilAtual.nome) || null };
@@ -10191,7 +10200,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var key = c.id + '|' + FQ.mes; if (FQ.ptKey === key) return; FQ.ptKey = key; FQ.pt = {};
           chk(sb.from('rh_ponto').select('dia,hora,tipo').eq('colaborador_id', c.id).gte('dia', FQ.mes + '-01').lte('dia', FQ.mes + '-31').order('hora')).then(function(r) { if (FQ.ptKey !== key) return; (r.data || []).forEach(function(b) { (FQ.pt[b.dia] = FQ.pt[b.dia] || []).push(b); }); renderFreq(); }).catch(function() {});
         }
-        function pontoDia(iso) { var bs = (FQ.pt || {})[iso]; if (!bs || !bs.length) return ''; var m = ptMin(bs); return ptTxt(bs) + ' <span class="sx-muted">(' + fmtHm(m.min) + ')</span>'; }
+        function pontoDia(iso) { var bs = (FQ.pt || {})[iso]; if (!bs || !bs.length) return ''; var c = R.colab.filter(function(x) { return x.id === FQ.col; })[0], a = c ? ptApura(c, iso, bs) : null; return ptTxt(bs) + ' <span class="sx-muted">(' + fmtHm(a ? a.trab : ptMin(bs).min) + ')</span>' + (a ? ptTags(a) : ''); }
+        function pontoMes(c) {
+          var ds = Object.keys(FQ.pt || {}).sort(); if (!ds.length) return ''; var ex = 0, fa = 0;
+          ds.forEach(function(d) { var a = ptApura(c, d, FQ.pt[d]); ex += a.extra; fa += a.falta; });
+          return '<br><b>Ponto do mês:</b> ' + ds.length + ' dia(s) com batida · <b style="color:#16a34a">horas extras: ' + fmtHm(ex) + '</b> · horas a menos: ' + fmtHm(fa);
+        }
         document.addEventListener('click', function(ev) {
           var t = ev.target.closest && ev.target.closest('[data-pt]'); if (!t) return;
           var a = t.getAttribute('data-pt'), id = t.getAttribute('data-id');

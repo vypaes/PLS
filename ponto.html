@@ -4,63 +4,98 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b1220">
 <title>Ponto — PLS Empilhadeiras</title>
+<link rel="icon" href="favicon-32.png">
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#0b1220;color:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
-#app{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;text-align:center}
-#relogio{font-size:min(16vw,120px);font-weight:800;letter-spacing:2px;line-height:1}
-#data{font-size:min(4vw,26px);color:#94a3b8;text-transform:capitalize}
-#cam{position:relative;width:min(88vw,520px);aspect-ratio:4/3;border-radius:20px;overflow:hidden;background:#000;border:4px solid #334155;transition:border-color .2s}
+html,body{margin:0;height:100%;background:#0b1220;color:#f1f5f9;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;user-select:none}
+#bg{position:fixed;inset:0;z-index:0;background:radial-gradient(1200px 700px at 80% 100%,#7c2d12 0%,#1e293b 45%,#0b1220 100%)}
+#bg svg{position:absolute}
+#fork{right:-40px;bottom:34px;width:min(78vw,820px);opacity:.2;color:#f59e0b}
+#wr{left:-30px;top:10%;width:min(34vw,360px);opacity:.09;color:#e2e8f0}
+#hz{position:absolute;left:0;right:0;bottom:0;height:26px;background:repeating-linear-gradient(-45deg,#f59e0b 0 22px,#111827 22px 44px);opacity:.9}
+#app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 16px 40px;gap:12px;text-align:center}
+#brand{display:flex;align-items:center;gap:14px}
+#brand img{height:min(10vw,64px);background:#fff;border-radius:12px;padding:6px 10px}
+#brand .t{font-weight:900;letter-spacing:3px;font-size:min(5.5vw,30px);line-height:1;text-align:left}
+#brand .t small{display:block;color:#f59e0b;font-size:.55em;letter-spacing:6px;margin-top:4px;font-weight:700}
+#relogio{font-size:min(20vw,150px);font-weight:900;letter-spacing:2px;line-height:1;text-shadow:0 4px 30px #0008}
+#data{font-size:min(4.2vw,26px);color:#cbd5e1;text-transform:capitalize}
+#btn-bater{margin-top:10px;background:linear-gradient(180deg,#fbbf24,#f59e0b);color:#111;border:0;border-radius:26px;padding:min(5vw,28px) min(8vw,60px);font-size:min(6vw,38px);font-weight:900;cursor:pointer;box-shadow:0 10px 40px #f59e0b55,inset 0 -6px 0 #b45309;animation:pulse 2.2s infinite}
+#btn-bater:active{transform:translateY(3px)}
+@keyframes pulse{0%,100%{box-shadow:0 10px 40px #f59e0b55,inset 0 -6px 0 #b45309}50%{box-shadow:0 10px 60px #f59e0bbb,inset 0 -6px 0 #b45309}}
+#cam-wrap{display:none;flex-direction:column;align-items:center;gap:10px}
+#cam-wrap.on{display:flex}
+#idle.off{display:none}
+#cam{position:relative;width:min(88vw,520px);aspect-ratio:4/3;border-radius:22px;overflow:hidden;background:#000;border:5px solid #475569;transition:border-color .2s;box-shadow:0 10px 50px #000a}
 #cam.ok{border-color:#22c55e}#cam.bad{border-color:#ef4444}#cam.busy{border-color:#f59e0b}
 video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-#msg{font-size:min(6vw,34px);font-weight:700;min-height:1.4em}
-#sub{font-size:min(4vw,22px);color:#94a3b8;min-height:1.3em}
-.btn{background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:12px;padding:12px 18px;font-size:18px;cursor:pointer}
-.btn.pri{background:#f59e0b;color:#111;border-color:#f59e0b;font-weight:700}
-#adm{position:fixed;right:10px;bottom:10px;opacity:.35;font-size:14px;padding:8px 12px}
+#msg{font-size:min(6vw,34px);font-weight:800;min-height:1.3em}
+#sub{font-size:min(4vw,21px);color:#cbd5e1;min-height:1.3em}
+.btn{background:#1e293bcc;color:#e2e8f0;border:1px solid #64748b;border-radius:14px;padding:13px 20px;font-size:18px;cursor:pointer}
+.btn.pri{background:#f59e0b;color:#111;border-color:#f59e0b;font-weight:800}
+#adm{position:fixed;right:10px;bottom:36px;opacity:.4;font-size:15px;padding:8px 12px;z-index:5}
 #res{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;padding:20px}
-#res.on{display:flex}#res.entrada{background:#14532d}#res.saida{background:#7c2d12}
-#res .nome{font-size:min(10vw,72px);font-weight:800}#res .tipo{font-size:min(8vw,56px);font-weight:700}#res .hora{font-size:min(14vw,110px);font-weight:800}
-#res img{width:160px;height:120px;object-fit:cover;border-radius:12px;transform:scaleX(-1)}
+#res.on{display:flex}#res.verde{background:linear-gradient(160deg,#14532d,#166534)}#res.laranja{background:linear-gradient(160deg,#7c2d12,#c2410c)}
+#res .nome{font-size:min(10vw,72px);font-weight:900}#res .tipo{font-size:min(7vw,48px);font-weight:800}#res .hora{font-size:min(16vw,120px);font-weight:900}#res .extra{font-size:min(4.4vw,26px);opacity:.9}
+#res img{width:160px;height:120px;object-fit:cover;border-radius:14px;transform:scaleX(-1);border:3px solid #fff5}
 .ov{position:fixed;inset:0;background:#0b1220ee;display:none;align-items:center;justify-content:center;z-index:30;padding:16px}
 .ov.on{display:flex}
-.box{background:#111c30;border:1px solid #334155;border-radius:16px;padding:20px;width:min(94vw,560px);max-height:92vh;overflow:auto;text-align:left}
+.box{background:#111c30;border:1px solid #334155;border-radius:18px;padding:20px;width:min(94vw,600px);max-height:92vh;overflow:auto;text-align:left}
 .box h2{margin:0 0 12px;font-size:22px}
-input,select{width:100%;padding:12px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:#f1f5f9;font-size:18px;margin:6px 0 12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+input{width:100%;padding:13px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:#f1f5f9;font-size:18px;margin:6px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
 .grid .btn{padding:14px 8px;font-size:16px}
 .err{color:#fca5a5;min-height:1.2em}
+.li{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #263449}
+.li .n{flex:1;font-size:18px}.li .st{font-size:14px;color:#94a3b8}.li .st.ok{color:#86efac}.li .st.no{color:#fbbf24}
 </style>
 </head>
 <body>
+<div id="bg">
+  <svg id="wr" viewBox="0 0 400 400" fill="currentColor"><g transform="translate(200 200) rotate(-40)"><rect x="-190" y="-14" width="380" height="28" rx="14"/><circle cx="-180" cy="0" r="46"/><rect x="-232" y="-16" width="60" height="32" fill="#0b1220"/><circle cx="180" cy="0" r="46"/><rect x="172" y="-16" width="60" height="32" fill="#0b1220"/></g><g transform="translate(200 200) rotate(40)"><rect x="-190" y="-14" width="380" height="28" rx="14"/><circle cx="-180" cy="0" r="46"/><rect x="-232" y="-16" width="60" height="32" fill="#0b1220"/><circle cx="180" cy="0" r="46"/><rect x="172" y="-16" width="60" height="32" fill="#0b1220"/></g></svg>
+  <svg id="fork" viewBox="0 0 620 400" fill="currentColor"><rect x="412" y="40" width="16" height="290" rx="4"/><rect x="446" y="40" width="16" height="290" rx="4"/><rect x="408" y="70" width="60" height="10"/><rect x="408" y="200" width="60" height="10"/><rect x="436" y="230" width="16" height="96" rx="3"/><rect x="452" y="312" width="150" height="14" rx="4"/><path d="M120 214h292v96H92a30 30 0 0 1-30-30v-24a42 42 0 0 1 42-42z"/><path d="M196 214 232 112h12l-30 102zM336 214V112h12v102z"/><rect x="214" y="100" width="150" height="14" rx="6"/><rect x="236" y="176" width="60" height="38" rx="8"/><rect x="330" y="150" width="8" height="64"/><circle cx="130" cy="328" r="36"/><circle cx="360" cy="334" r="42"/><circle cx="130" cy="328" r="14" fill="#0b1220"/><circle cx="360" cy="334" r="16" fill="#0b1220"/></svg>
+  <div id="hz"></div>
+</div>
+
 <div id="app">
-  <div id="relogio">--:--</div>
-  <div id="data"></div>
-  <div id="cam"><video id="video" autoplay playsinline muted></video></div>
-  <div id="msg">Carregando…</div>
-  <div id="sub"></div>
-  <button class="btn" id="btn-nome" style="display:none">Não reconheceu? Escolher meu nome</button>
+  <div id="brand"><img src="Logotipo_PLS.png" alt="PLS" onerror="this.style.display='none'"><div class="t">PLS<small>EMPILHADEIRAS</small></div></div>
+  <div id="idle">
+    <div id="relogio">--:--</div>
+    <div id="data"></div>
+    <button class="btn" id="btn-bater" style="display:none">👆 TOQUE PARA BATER O PONTO</button>
+    <div id="idle-msg" style="margin-top:10px;color:#cbd5e1;font-size:20px"></div>
+  </div>
+  <div id="cam-wrap">
+    <div id="cam"><video id="video" autoplay playsinline muted></video></div>
+    <div id="msg">Abrindo a câmera…</div>
+    <div id="sub"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <button class="btn" id="btn-nome" style="display:none">Escolher meu nome</button>
+      <button class="btn" id="btn-cad" style="display:none">Rosto não cadastrado? Cadastrar</button>
+      <button class="btn" id="btn-cancel">Cancelar</button>
+    </div>
+  </div>
 </div>
 <button class="btn" id="adm">⚙</button>
 <div id="res"></div>
 
 <div class="ov on" id="ov-login"><div class="box"><h2>Ponto — entrar</h2>
-  <div class="sub" style="color:#94a3b8;margin-bottom:8px">Entre uma vez com um usuário do sistema que tenha acesso ao RH. O tablet fica conectado.</div>
+  <div style="color:#94a3b8;margin-bottom:8px">Entre uma vez com um usuário do sistema que tenha acesso ao RH. O tablet fica conectado.</div>
   <input id="l-email" type="email" placeholder="E-mail" autocomplete="username"><input id="l-senha" type="password" placeholder="Senha" autocomplete="current-password">
   <div class="err" id="l-err"></div><button class="btn pri" id="l-ok" style="width:100%">Entrar</button></div></div>
 
 <div class="ov" id="ov-start"><div class="box" style="text-align:center"><h2>Registro de ponto</h2>
-  <p style="color:#94a3b8">Toque para ligar a câmera e o som.</p><button class="btn pri" id="s-ok" style="width:100%;font-size:24px;padding:20px">Iniciar</button></div></div>
+  <p style="color:#94a3b8">Toque para ligar o som e preparar o reconhecimento. A câmera só abre quando alguém toca para bater o ponto.</p><button class="btn pri" id="s-ok" style="width:100%;font-size:24px;padding:20px">Iniciar</button></div></div>
 
 <div class="ov" id="ov-nome"><div class="box"><h2>Quem é você?</h2><div class="grid" id="g-nomes"></div><br><button class="btn" id="n-cancel">Cancelar</button></div></div>
 
 <div class="ov" id="ov-adm"><div class="box"><h2>Administração</h2>
   <div id="a-pin"><input id="a-pin-in" type="password" inputmode="numeric" placeholder="PIN do administrador"><div class="err" id="a-err"></div>
     <button class="btn pri" id="a-pin-ok">Entrar</button> <button class="btn" id="a-fechar1">Voltar</button></div>
-  <div id="a-menu" style="display:none"><h2 style="font-size:18px">Cadastrar rosto</h2>
-    <select id="a-pessoa"></select><div class="err" id="a-msg" style="color:#86efac"></div>
-    <button class="btn pri" id="a-cad">📷 Cadastrar rosto agora</button><br><br>
+  <div id="a-menu" style="display:none"><div style="color:#94a3b8;margin-bottom:6px">Cadastro de rosto — toque em <b>Cadastrar</b> ao lado de quem vai cadastrar e peça para olhar a câmera.</div>
+    <div id="a-lista"></div><div class="err" id="a-msg"></div><br>
     <button class="btn" id="a-sair">Sair da conta deste tablet</button> <button class="btn" id="a-fechar2">Fechar</button></div></div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
@@ -72,37 +107,23 @@ var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI
 var sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'pls-ponto-auth'}});
 var $=function(i){return document.getElementById(i);};
 var MODELS='https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
-var pessoas=[],faces=[],pin='',ocupado=false,adminAberto=false,modeloOk=false,stream=null,ultimo=null,seq=0,semFace=0;
+var pessoas=[],faces=[],pin='',modo='idle',modeloOk=false,modeloP=null,stream=null,ultimo=null,semFace=0,sessao=0,tmo=null,ocupado=false;
 function chk(p){return p.then(function(r){if(r.error)throw r.error;return r;});}
 function pad(n){return String(n).padStart(2,'0');}
 function primeiro(n){return String(n||'').split(' ')[0];}
+function esc(t){return String(t).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
-/* relógio */
 function tick(){var d=new Date();$('relogio').textContent=pad(d.getHours())+':'+pad(d.getMinutes());$('data').textContent=d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});}
 setInterval(tick,1000);tick();
 
-/* voz */
-function falar(t){try{var u=new SpeechSynthesisUtterance(t);u.lang='pt-BR';var vs=speechSynthesis.getVoices().filter(function(v){return /pt-BR/i.test(v.lang);});if(vs[0])u.voice=vs[0];u.rate=1;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+function falar(t){try{var u=new SpeechSynthesisUtterance(t);u.lang='pt-BR';var vs=speechSynthesis.getVoices().filter(function(v){return /pt-BR/i.test(v.lang);});if(vs[0])u.voice=vs[0];speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 function saudacao(){var h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';}
-
 function msg(t,s,cls){$('msg').textContent=t;$('sub').textContent=s||'';$('cam').className=cls||'';}
 
 /* login */
-function iniciar(){
-  sb.auth.getSession().then(function(r){
-    if(r.data&&r.data.session){$('ov-login').classList.remove('on');$('ov-start').classList.add('on');carregar();}
-    else{$('ov-login').classList.add('on');}
-  });
-}
-$('l-ok').onclick=function(){
-  $('l-err').textContent='';
-  sb.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-senha').value}).then(function(r){
-    if(r.error){$('l-err').textContent='E-mail ou senha incorretos.';return;}
-    $('ov-login').classList.remove('on');$('ov-start').classList.add('on');carregar();
-  });
-};
+function iniciar(){sb.auth.getSession().then(function(r){if(r.data&&r.data.session){$('ov-login').classList.remove('on');$('ov-start').classList.add('on');carregar();}else{$('ov-login').classList.add('on');}});}
+$('l-ok').onclick=function(){$('l-err').textContent='';sb.auth.signInWithPassword({email:$('l-email').value.trim(),password:$('l-senha').value}).then(function(r){if(r.error){$('l-err').textContent='E-mail ou senha incorretos.';return;}$('ov-login').classList.remove('on');$('ov-start').classList.add('on');carregar();});};
 
-/* dados */
 function carregar(){
   return Promise.all([
     chk(sb.from('rh_colaboradores').select('id,nome,demissao').order('nome')),
@@ -110,103 +131,136 @@ function carregar(){
     chk(sb.from('rh_ponto_pessoa').select('pessoa_id,tipo,face')),
     chk(sb.from('rh_ponto_cfg').select('pin').eq('id',1).maybeSingle())
   ]).then(function(r){
-    var hj=new Date().toISOString().slice(0,10);
-    pessoas=[];
+    var hj=new Date().toISOString().slice(0,10);pessoas=[];
     (r[0].data||[]).forEach(function(c){if(!c.demissao||c.demissao>=hj)pessoas.push({id:c.id,tp:'c',nome:c.nome});});
     (r[1].data||[]).forEach(function(p){if(!p.fim||p.fim>=hj)pessoas.push({id:p.id,tp:'p',nome:p.nome});});
     var fm={};(r[2].data||[]).forEach(function(f){fm[f.pessoa_id]=f;});
-    faces=[];pessoas.forEach(function(p){var f=fm[p.id];p.face=!!(f&&f.face&&f.face.length);if(p.face){var ds=f.face.map(function(a){return new Float32Array(a);});faces.push({p:p,ds:ds});}});
+    faces=[];pessoas.forEach(function(p){var f=fm[p.id];p.face=!!(f&&f.face&&f.face.length);if(p.face){faces.push({p:p,ds:f.face.map(function(a){return new Float32Array(a);})});}});
     pin=(r[3].data&&r[3].data.pin)||'';
-  }).catch(function(e){msg('Sem acesso aos dados','Esse usuário precisa ter acesso ao RH. '+(e.message||''),'bad');});
+  }).catch(function(e){$('idle-msg').textContent='Sem acesso aos dados. Esse usuário precisa ter acesso ao RH. '+(e.message||'');});
 }
+
+/* início: som + modelos em segundo plano (a câmera NÃO liga) */
 $('s-ok').onclick=function(){
   $('ov-start').classList.remove('on');falar('Registro de ponto ligado.');
   try{navigator.wakeLock&&navigator.wakeLock.request('screen').catch(function(){});}catch(e){}
-  ligarCamera().then(carregarModelos).then(function(){modeloOk=true;msg('Olhe para a câmera','Sem precisar tocar em nada');loop();}).catch(function(e){msg('Câmera indisponível','Autorize o uso da câmera e recarregue a página. '+(e.message||''),'bad');});
+  $('idle-msg').textContent='Preparando reconhecimento facial…';
+  modeloP=carregarModelos().then(function(){modeloOk=true;$('btn-bater').style.display='';$('idle-msg').textContent='';}).catch(function(e){$('idle-msg').textContent='Não consegui carregar o reconhecimento facial. Verifique a internet e recarregue. '+(e.message||'');});
 };
-function ligarCamera(){return navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false}).then(function(s){stream=s;$('video').srcObject=s;return new Promise(function(ok){$('video').onloadedmetadata=function(){$('video').play();ok();};});});}
-function carregarModelos(){msg('Carregando reconhecimento facial…','Só na primeira vez demora um pouco','busy');return Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODELS),faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS),faceapi.nets.faceRecognitionNet.loadFromUri(MODELS)]);}
+function carregarModelos(){return Promise.all([faceapi.nets.tinyFaceDetector.loadFromUri(MODELS),faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODELS),faceapi.nets.faceRecognitionNet.loadFromUri(MODELS)]);}
+
+/* câmera sob demanda */
+function abrirCamera(){
+  return navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false}).then(function(s){stream=s;$('video').srcObject=s;return new Promise(function(ok){$('video').onloadedmetadata=function(){$('video').play();ok();};});});
+}
+function fecharCamera(){try{if(stream)stream.getTracks().forEach(function(t){t.stop();});}catch(e){}stream=null;$('video').srcObject=null;}
+function irIdle(txt){
+  sessao++;modo='idle';clearTimeout(tmo);fecharCamera();ultimo=null;semFace=0;
+  $('cam-wrap').classList.remove('on');$('idle').classList.remove('off');$('btn-nome').style.display='none';$('btn-cad').style.display='none';
+  $('idle-msg').textContent=txt||'';if(txt)setTimeout(function(){if(modo==='idle')$('idle-msg').textContent='';},5000);
+}
+function irCamera(){
+  if(modo!=='idle'||!modeloOk)return;
+  modo='cam';var my=++sessao;ultimo=null;semFace=0;
+  $('idle').classList.add('off');$('cam-wrap').classList.add('on');msg('Abrindo a câmera…','','busy');
+  abrirCamera().then(function(){
+    if(my!==sessao)return fecharCamera();
+    msg('Olhe para a câmera','Sem precisar tocar em nada');
+    tmo=setTimeout(function(){if(my===sessao&&modo==='cam'&&!ocupado)irIdle('Tempo esgotado. Toque para tentar de novo.');},30000);
+    loop(my);
+  }).catch(function(){irIdle('Câmera indisponível. Autorize o uso da câmera no navegador.');});
+}
+$('btn-bater').onclick=irCamera;
+$('btn-cancel').onclick=function(){irIdle('');};
+
 function opt(){return new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5});}
 function descritor(){return faceapi.detectSingleFace($('video'),opt()).withFaceLandmarks(true).withFaceDescriptor();}
 function foto(){var v=$('video'),c=document.createElement('canvas');c.width=240;c.height=Math.round(240*(v.videoHeight||480)/(v.videoWidth||640));c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',0.55);}
-
-/* reconhecimento */
 function melhor(d){var best=null,bd=9;faces.forEach(function(f){f.ds.forEach(function(x){var s=0;for(var i=0;i<128;i++){var t=x[i]-d[i];s+=t*t;}s=Math.sqrt(s);if(s<bd){bd=s;best=f.p;}});});return {p:best,d:bd};}
-function loop(){
-  if(adminAberto||ocupado||document.hidden){return setTimeout(loop,600);}
+
+function loop(my){
+  if(my!==sessao||modo!=='cam')return;
+  if(ocupado)return setTimeout(function(){loop(my);},400);
   descritor().then(function(r){
-    if(!r){ultimo=null;semFace=0;$('btn-nome').style.display='none';if($('msg').textContent!=='Olhe para a câmera')msg('Olhe para a câmera','Sem precisar tocar em nada');return;}
+    if(my!==sessao||modo!=='cam'||ocupado)return;
+    if(!r){ultimo=null;semFace=0;return;}
     var m=faces.length?melhor(r.descriptor):{p:null,d:9};
     if(m.p&&m.d<0.5){
-      semFace=0;
-      if(ultimo&&ultimo.id===m.p.id){ultimo.n++;}else{ultimo={id:m.p.id,n:1};}
-      if(ultimo.n>=2){ultimo=null;bater(m.p);}
-      else msg('Reconhecendo…',primeiro(m.p.nome),'busy');
+      semFace=0;ultimo=(ultimo&&ultimo.id===m.p.id)?{id:m.p.id,n:ultimo.n+1}:{id:m.p.id,n:1};
+      if(ultimo.n>=2){ultimo=null;bater(m.p,my);}else msg('Reconhecendo…',primeiro(m.p.nome),'busy');
     }else{
       ultimo=null;semFace++;
-      if(semFace>=4){msg('Rosto não reconhecido','Tente de frente, com boa luz — ou escolha seu nome','bad');$('btn-nome').style.display='';}
+      if(semFace>=4){msg('Rosto não reconhecido','Tente de frente, com boa luz — ou escolha seu nome / cadastre seu rosto','bad');$('btn-nome').style.display='';$('btn-cad').style.display='';}
     }
-  }).catch(function(){}).then(function(){setTimeout(loop,450);});
+  }).catch(function(){}).then(function(){if(my===sessao)setTimeout(function(){loop(my);},450);});
 }
 
-/* bater ponto */
-function bater(p,viaNome){
-  ocupado=true;msg('Registrando…',primeiro(p.nome),'busy');
-  var f=foto();
-  sb.rpc('rh_bater_ponto',{p_pessoa:p.id,p_tp:p.tp,p_origem:'tablet',p_foto:f}).then(function(r){
-    if(r.error)throw r.error;var x=r.data;mostrar(x,f);
-  }).catch(function(e){
+var TIPOS={
+  entrada:{t:'ENTRADA LIBERADA',cor:'verde',fala:function(n){return saudacao()+', '+n+'. Entrada liberada.';}},
+  saida_int:{t:'SAÍDA PARA O INTERVALO',cor:'laranja',fala:function(n){return n+', saída para o intervalo registrada. Bom almoço.';}},
+  retorno:{t:'RETORNO DO INTERVALO',cor:'verde',fala:function(n){return 'Bem-vindo de volta, '+n+'. Retorno registrado.';}},
+  saida:{t:'SAÍDA REGISTRADA',cor:'laranja',fala:function(n){return 'Até logo, '+n+'. Saída registrada.';}}
+};
+function bater(p,my){
+  ocupado=true;msg('Registrando…',primeiro(p.nome),'busy');var f=foto();
+  sb.rpc('rh_bater_ponto',{p_pessoa:p.id,p_tp:p.tp,p_origem:'tablet',p_foto:f}).then(function(r){if(r.error)throw r.error;mostrar(r.data,f);}).catch(function(e){
     var t=e.message||String(e);msg(t,'','bad');falar(/menos de 1 minuto/.test(t)?primeiro(p.nome)+', seu ponto já foi registrado.':'Não foi possível registrar o ponto.');
-    setTimeout(function(){ocupado=false;msg('Olhe para a câmera','Sem precisar tocar em nada');},3500);
+    setTimeout(function(){ocupado=false;irIdle('');},3500);
   });
 }
 function mostrar(x,f){
-  var d=new Date(x.hora),hh=pad(d.getHours())+':'+pad(d.getMinutes()),ent=x.tipo==='entrada',n=primeiro(x.nome);
-  var el=$('res');el.className='on '+(ent?'entrada':'saida');
-  el.innerHTML='<img src="'+f+'" alt=""><div class="nome">'+n.replace(/</g,'&lt;')+'</div><div class="tipo">'+(ent?'ENTRADA LIBERADA':'SAÍDA REGISTRADA')+'</div><div class="hora">'+hh+'</div>';
-  falar(ent?saudacao()+', '+n+'. Entrada liberada.':'Até logo, '+n+'. Saída registrada.');
-  setTimeout(function(){el.className='';ocupado=false;ultimo=null;msg('Olhe para a câmera','Sem precisar tocar em nada');$('btn-nome').style.display='none';},4500);
+  var d=new Date(x.hora),hh=pad(d.getHours())+':'+pad(d.getMinutes()),n=primeiro(x.nome),T=TIPOS[x.tipo]||TIPOS.entrada;
+  var el=$('res');el.className='on '+T.cor;
+  el.innerHTML='<img src="'+f+'" alt=""><div class="nome">'+esc(n)+'</div><div class="tipo">'+T.t+'</div><div class="hora">'+hh+'</div>';
+  falar(T.fala(n));fecharCamera();
+  setTimeout(function(){el.className='';ocupado=false;irIdle('');},4500);
 }
 
-/* escolher nome */
+/* escolher nome (sem reconhecer) */
 $('btn-nome').onclick=function(){
-  adminAberto=true;
-  $('g-nomes').innerHTML=pessoas.map(function(p,i){return '<button class="btn" data-i="'+i+'">'+p.nome.replace(/</g,'&lt;')+'</button>';}).join('');
+  $('g-nomes').innerHTML=pessoas.map(function(p,i){return '<button class="btn" data-i="'+i+'">'+esc(p.nome)+'</button>';}).join('');
   $('ov-nome').classList.add('on');
 };
-$('g-nomes').onclick=function(e){var b=e.target.closest('button');if(!b)return;var p=pessoas[+b.getAttribute('data-i')];$('ov-nome').classList.remove('on');adminAberto=false;bater(p,true);};
-$('n-cancel').onclick=function(){$('ov-nome').classList.remove('on');adminAberto=false;};
+$('g-nomes').onclick=function(e){var b=e.target.closest('button');if(!b)return;var p=pessoas[+b.getAttribute('data-i')];$('ov-nome').classList.remove('on');bater(p,sessao);};
+$('n-cancel').onclick=function(){$('ov-nome').classList.remove('on');};
 
-/* administração */
-$('adm').onclick=function(){adminAberto=true;$('ov-adm').classList.add('on');$('a-pin').style.display='';$('a-menu').style.display='none';$('a-pin-in').value='';$('a-err').textContent='';$('a-msg').textContent='';};
-function fecharAdm(){$('ov-adm').classList.remove('on');adminAberto=false;}
+/* administração: cadastro de rosto */
+function abrirAdm(){clearTimeout(tmo);$('ov-adm').classList.add('on');$('a-pin').style.display='';$('a-menu').style.display='none';$('a-pin-in').value='';$('a-err').textContent='';$('a-msg').textContent='';}
+$('adm').onclick=function(){if(modo==='cam')irIdle('');abrirAdm();};
+$('btn-cad').onclick=function(){irIdle('');abrirAdm();};
+function fecharAdm(){$('ov-adm').classList.remove('on');}
 $('a-fechar1').onclick=fecharAdm;$('a-fechar2').onclick=fecharAdm;
+function listaAdm(){
+  $('a-lista').innerHTML=pessoas.map(function(p,i){return '<div class="li"><div class="n">'+esc(p.nome)+' <span style="font-size:12px;color:#64748b">'+(p.tp==='c'?'CLT':'PJ')+'</span></div><div class="st '+(p.face?'ok':'no')+'">'+(p.face?'✔ cadastrado':'sem rosto')+'</div><button class="btn '+(p.face?'':'pri')+'" data-i="'+i+'">'+(p.face?'Refazer':'Cadastrar')+'</button></div>';}).join('')||'<div class="err">Nenhuma pessoa cadastrada.</div>';
+}
 $('a-pin-ok').onclick=function(){
   if(!pin){$('a-err').textContent='Defina o PIN no sistema (RH > Ponto) antes.';return;}
   if($('a-pin-in').value!==pin){$('a-err').textContent='PIN incorreto.';return;}
-  $('a-pin').style.display='none';$('a-menu').style.display='';
-  $('a-pessoa').innerHTML=pessoas.map(function(p,i){return '<option value="'+i+'">'+p.nome.replace(/</g,'&lt;')+(p.face?' ✔':'')+'</option>';}).join('');
+  $('a-pin').style.display='none';$('a-menu').style.display='';listaAdm();
 };
 $('a-sair').onclick=function(){sb.auth.signOut().then(function(){location.reload();});};
-$('a-cad').onclick=function(){
-  var p=pessoas[+$('a-pessoa').value];if(!p)return;
-  if(!modeloOk){$('a-msg').textContent='Aguarde o reconhecimento carregar.';return;}
-  fecharAdm();adminAberto=true;ocupado=true;
-  var amostras=[],tent=0;
-  msg('Cadastrando '+primeiro(p.nome),'Olhe para a câmera e mexa levemente a cabeça','busy');falar('Olhe para a câmera.');
-  (function colher(){
-    if(amostras.length>=5||tent>40){
-      if(amostras.length<3){msg('Não consegui ver o rosto','Tente de novo com mais luz','bad');adminAberto=false;ocupado=false;return;}
-      chk(sb.from('rh_ponto_pessoa').upsert({pessoa_id:p.id,tipo:p.tp,face:amostras,face_em:new Date().toISOString()})).then(function(){
-        p.face=true;faces=faces.filter(function(f){return f.p.id!==p.id;});faces.push({p:p,ds:amostras.map(function(a){return new Float32Array(a);})});
-        msg('Rosto de '+primeiro(p.nome)+' cadastrado ✔','','ok');falar('Rosto cadastrado.');
-      }).catch(function(e){msg('Erro ao salvar: '+(e.message||e),'','bad');}).then(function(){setTimeout(function(){adminAberto=false;ocupado=false;msg('Olhe para a câmera','Sem precisar tocar em nada');},2500);});
-      return;
-    }
-    tent++;
-    descritor().then(function(r){if(r)amostras.push(Array.prototype.slice.call(r.descriptor));msg('Cadastrando '+primeiro(p.nome)+' ('+amostras.length+'/5)','Olhe para a câmera e mexa levemente a cabeça','busy');}).catch(function(){}).then(function(){setTimeout(colher,600);});
-  })();
-};
+$('a-lista').onclick=function(e){var b=e.target.closest('button');if(!b)return;cadastrar(pessoas[+b.getAttribute('data-i')]);};
+function cadastrar(p){
+  if(!modeloOk){$('a-msg').textContent='Aguarde o reconhecimento carregar e tente de novo.';return;}
+  fecharAdm();modo='cad';var my=++sessao;ocupado=true;$('idle').classList.add('off');$('cam-wrap').classList.add('on');$('btn-nome').style.display='none';$('btn-cad').style.display='none';
+  msg('Abrindo a câmera…','','busy');
+  abrirCamera().then(function(){
+    var amostras=[],tent=0;msg('Cadastrando '+primeiro(p.nome),'Olhe para a câmera e mexa levemente a cabeça','busy');falar('Olhe para a câmera.');
+    (function colher(){
+      if(my!==sessao)return;
+      if(amostras.length>=5||tent>40){
+        if(amostras.length<3){msg('Não consegui ver o rosto','Tente de novo com mais luz','bad');setTimeout(function(){ocupado=false;irIdle('');},2500);return;}
+        chk(sb.from('rh_ponto_pessoa').upsert({pessoa_id:p.id,tipo:p.tp,face:amostras,face_em:new Date().toISOString()},{onConflict:'pessoa_id'})).then(function(){
+          p.face=true;faces=faces.filter(function(f){return f.p.id!==p.id;});faces.push({p:p,ds:amostras.map(function(a){return new Float32Array(a);})});
+          msg('Rosto de '+primeiro(p.nome)+' cadastrado ✔','','ok');falar('Rosto cadastrado.');
+        }).catch(function(e){msg('Erro ao salvar: '+(e.message||e),'','bad');}).then(function(){setTimeout(function(){ocupado=false;irIdle('');},2500);});
+        return;
+      }
+      tent++;
+      descritor().then(function(r){if(r)amostras.push(Array.prototype.slice.call(r.descriptor));msg('Cadastrando '+primeiro(p.nome)+' ('+amostras.length+'/5)','Olhe para a câmera e mexa levemente a cabeça','busy');}).catch(function(){}).then(function(){setTimeout(colher,600);});
+    })();
+  }).catch(function(){ocupado=false;irIdle('Câmera indisponível.');});
+}
 
 iniciar();
 })();
