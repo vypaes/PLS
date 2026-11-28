@@ -2628,7 +2628,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       </div>
 
       <div class="pls-top-actions">
-        <span class="pls-version-badge" title="Versão atual do sistema">v89 — 27/11/2026</span>
+        <span class="pls-version-badge" title="Versão atual do sistema">v90 — 28/11/2026</span>
         <span class="pls-sync" id="pls-sync" title="Situação da gravação no banco"></span>
         <span class="pls-user-chip" id="pls-user-chip"></span>
         <button type="button" class="btn-top" data-action="trocar-senha" title="Trocar a minha senha"><span>🔑 Senha</span></button>
@@ -8557,8 +8557,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             chk(sb.from('rh_rescisoes').select('*').order('created_at', { ascending: false })).catch(function() { return { data: [] }; }),
             chk(sb.from('rh_escalas').select('*')).catch(function() { return { data: [] }; }),
             chk(sb.from('rh_ocorrencias').select('*').order('inicio')).catch(function() { return { data: [] }; }),
-            chk(sb.from('rh_feriados').select('*')).catch(function() { return { data: [] }; })
+            chk(sb.from('rh_feriados').select('*')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_jornadas').select('*').order('created_at')).catch(function() { return { data: [] }; }),
+            chk(sb.from('rh_escala_vig').select('*')).catch(function() { return { data: [] }; }),
+            chk(sb.from('tecnicos').select('nome,ativo').order('nome')).catch(function() { return { data: [] }; })
           ]).then(function(r) {
+            R.jorn = r[13].data || []; R.vig = r[14].data || []; R.tecs = (r[15].data || []).filter(function(t) { return ['Sem técnico', 'Técnico Externo'].indexOf(t.nome) < 0; });
             R.esc = {}; (r[10].data || []).forEach(function(e) { R.esc[e.colaborador_id] = e; }); R.ocor = r[11].data || []; R.fer = r[12].data || [];
             R.resc = (r[9].data || []).map(function(x) { x.liquido = Number(x.liquido || 0); x.total_vencimentos = Number(x.total_vencimentos || 0); x.total_descontos = Number(x.total_descontos || 0); return x; });
             R.arq = r[7] || [];
@@ -8602,7 +8606,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<div id="rh-p-freq" class="sx-pane">' +
               '<div class="sx-toolbar"><select id="fq-col" class="form-control sx-w2"></select><input id="fq-mes" type="month" class="form-control sx-w">' +
                 '<button type="button" class="btn-pls-primary" data-fq="nova">➕ Lançar atestado / falta</button>' +
-                '<button type="button" class="btn-pls-secondary" data-fq="esc">⏰ Escala de trabalho</button>' +
+                '<button type="button" class="btn-pls-secondary" data-fq="esc">⏰ Jornadas / escala</button>' +
                 '<button type="button" class="btn-pls-secondary" data-fq="fer">🎌 Feriados extras</button></div>' +
               '<div class="sx-dica">Cadastre a <b>escala</b> do colaborador e lance os <b>atestados</b> (de dia X até dia Y) e <b>faltas</b>. O mês mostra dias trabalhados, faltas, atestados e horas — e as <b>faltas + DSR</b> já saem descontadas no recibo. Atestado e falta abonada não descontam.</div>' +
               '<div id="rh-freq"></div>' +
@@ -8763,14 +8767,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             return { nome: c.nome, h: '<tr' + (ativo(c) ? '' : ' class="sx-row-enc"') + '><td><b>' + esc(c.nome) + '</b> <span class="sx-pill sx-ok">CLT</span><br><span class="sx-muted">' + esc(c.cpf || '') + '</span></td><td>' + esc(c.funcao || '—') + '</td><td>' + esc(e ? e.nome.split(' ').slice(0, 2).join(' ') : '—') + '</td>' +
               '<td>' + fd(c.admissao) + '</td><td>' + tempoCasa(c) + '</td><td style="text-align:right;font-weight:700">' + brl(c.salario) + '</td>' +
               '<td>' + (ativo(c) ? '<span class="sx-pill sx-st-ok">ATIVO</span>' : '<span class="sx-pill sx-st-enc">DESLIGADO ' + fd(c.demissao) + '</span>') + '</td>' +
-              '<td class="sx-acoes">' + btnPasta('colaborador', c.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-editar" data-id="' + c.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-excluir" data-id="' + c.id + '">Excluir</button></td></tr>' };
+              '<td class="sx-acoes">' + btnPasta('colaborador', c.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-editar" data-id="' + c.id + '">Editar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-vinc" data-ent="c" data-id="' + c.id + '" title="Mudar de CLT para PJ">⇄ Vínculo</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-excluir" data-id="' + c.id + '">Excluir</button></td></tr>' };
           });
           var rowsP = listaPj.map(function(p) {
             var e = empPorId(p.empresa_id);
             return { nome: p.nome, h: '<tr' + (prestAtivo(p) ? '' : ' class="sx-row-enc"') + '><td><b>' + esc(p.nome) + '</b> <span class="sx-pill sx-hoje">PJ</span><br><span class="sx-muted">' + esc(p.cnpj ? 'CNPJ ' + p.cnpj : p.cpf ? 'CPF ' + p.cpf : '') + '</span></td><td>' + esc(p.funcao || '—') + '</td><td>' + esc(e ? e.nome.split(' ').slice(0, 2).join(' ') : '—') + '</td>' +
               '<td>' + fd(p.inicio) + '</td><td>' + (p.contrato_assinado ? 'Contrato assinado' : '<span class="sx-muted">Sem contrato</span>') + '</td><td style="text-align:right;font-weight:700">' + brl(pjValor(p)) + '</td>' +
               '<td>' + (prestAtivo(p) ? '<span class="sx-pill sx-st-ok">ATIVO</span>' : '<span class="sx-pill sx-st-enc">ENCERRADO ' + fd(p.fim) + '</span>') + '</td>' +
-              '<td class="sx-acoes">' + btnPasta('prestador', p.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-editar" data-id="' + p.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pj-excluir" data-id="' + p.id + '">Excluir</button></td></tr>' };
+              '<td class="sx-acoes">' + btnPasta('prestador', p.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-editar" data-id="' + p.id + '">Editar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-vinc" data-ent="p" data-id="' + p.id + '" title="Mudar de PJ para CLT">⇄ Vínculo</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pj-excluir" data-id="' + p.id + '">Excluir</button></td></tr>' };
           });
           var todasL = rowsC.concat(rowsP).sort(function(a, b) { return norm(a.nome).localeCompare(norm(b.nome)); });
           $('rh-tabela').innerHTML = todasL.length ? '<table class="table-pls"><thead><tr><th>Nome</th><th>Função</th><th>Empresa</th><th>Admissão / início</th><th>Tempo / contrato</th><th style="text-align:right">Salário / valor mensal</th><th>Situação</th><th></th></tr></thead><tbody>' +
@@ -8803,9 +8807,42 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             f('dep', 'Setor / departamento (recibo com carteira)', c.departamento) + f('mat', 'Matrícula (recibo com carteira; vazio = automática)', c.matricula) +
             '<div class="form-group"><label class="form-label">FGTS no recibo (só sem carteira assinada)</label><select id="rh-m-fgts" class="form-control">' + opts([{ v: '1', t: 'Separar 8% do valor combinado (como nos recibos atuais)' }, { v: '0', t: 'Não separar' }], c.fgts_separado ? '1' : '0') + '</select></div></div>' +
             '<div class="sx-sec">Documentos e pagamento</div><div class="form-grid">' + f('pis', 'PIS', c.pis) + f('ctps', 'CTPS', c.ctps) + f('pix', 'PIX / conta para pagamento', c.pix, 'text', { full: true }) + '</div>' +
+            '<div class="sx-sec">Ligação com Demandas</div><div class="form-group"><label class="form-label">É o técnico… (nome na tela de Demandas)</label><select id="rh-m-tec" class="form-control">' + opts((R.tecs || []).map(function(t) { return { v: t.nome, t: t.nome + (t.ativo ? '' : ' (inativo)') }; }), c.tecnico_nome, '— não é técnico —') + '</select><div class="sx-muted">Com isso, faltas e atestados lançados em Demandas aparecem aqui sozinhos (e vice-versa).</div></div>' +
             '<div class="sx-sec">Benefícios (entram todo mês no recibo)</div><div id="rh-bens">' + c.beneficios.map(benRow).join('') + '</div>' +
             '<div class="sx-bens-add"><button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="transp">+ Transporte (por dia)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="alim">+ Alimentação (fixo)</button> <button type="button" class="btn-pls-secondary" data-sx="rh-ben-add" data-p="outro">+ Outro</button></div>' +
             '<div class="form-group full-width" style="margin-top:.7rem"><label class="form-label">Observações</label><textarea id="rh-m-obs" class="form-control" rows="2">' + esc(c.obs || '') + '</textarea></div>';
+        }
+        function sincTec(novo, antigo) {
+          if (!novo || novo === antigo) return Promise.resolve();
+          return Promise.all(['Falta', 'Atestado', 'Folga'].map(function(t) { return Promise.resolve(sb.from('tec_ausencias').update({ tipo: t }).eq('tecnico', novo).eq('tipo', t)).then(function() {}, function() {}); }));
+        }
+        function mudarVinculo(ent, id) {
+          var ehC = ent === 'c', x = ehC ? colabPorId(id) : prestPorId(id); if (!x) return;
+          var hj = hoje();
+          abrirModal('Mudar vínculo de ' + x.nome + ' — ' + (ehC ? 'CLT ➜ PJ' : 'PJ ➜ CLT'),
+            '<div class="sx-dica" style="margin-top:0">O cadastro atual é <b>encerrado</b> na véspera da data escolhida e um <b>novo cadastro</b> é criado já com os dados copiados (nome, CPF, telefone, endereço, PIX, empresa, ligação com Demandas). Recibos, pagamentos e pastas antigas continuam no cadastro antigo — nada se perde.</div>' +
+            '<div class="form-grid"><div class="form-group"><label class="form-label">Data da mudança <span class="req-star">*</span></label><input id="mv-data" type="date" class="form-control" value="' + hj + '"></div>' +
+            (ehC ? '<div class="form-group"><label class="form-label">Valor mensal combinado como PJ (R$)</label><input id="mv-val" class="form-control" inputmode="decimal" value="' + numStr(x.salario) + '"></div>' +
+              '<div class="form-group"><label class="form-label">CNPJ</label><input id="mv-cnpj" class="form-control"></div><div class="form-group"><label class="form-label">Razão social</label><input id="mv-razao" class="form-control"></div>' +
+              '<div class="form-group"><label class="form-label">Forma de cobrança</label><select id="mv-forma" class="form-control">' + opts(FORMAS, 'mensal') + '</select></div>'
+            : '<div class="form-group"><label class="form-label">Salário combinado como CLT (R$)</label><input id="mv-val" class="form-control" inputmode="decimal" value="' + numStr(x.valor_mensal) + '"></div>' +
+              '<div class="form-group"><label class="form-label">Carteira assinada?</label><select id="mv-cart" class="form-control"><option value="1" selected>Sim — carteira assinada</option><option value="0">Não</option></select></div>') + '</div>',
+            'Mudar vínculo', function() {
+              var data = $('mv-data').value; if (!data) throw new Error('Informe a data da mudança.');
+              var val = r2(parseValor($('mv-val').value)), vespera = addDias(data, -1), q;
+              if (ehC) {
+                if (x.admissao && vespera < x.admissao) throw new Error('A data da mudança é antes da admissão.');
+                q = chk(sb.from('rh_prestadores').insert({ nome: x.nome, cpf: x.cpf, funcao: x.funcao, telefone: x.telefone, endereco: x.endereco, nascimento: x.nascimento, pix: x.pix, empresa_id: x.empresa_id, inicio: data, valor_mensal: val, forma: $('mv-forma').value, cnpj: $('mv-cnpj').value.trim() || null, razao_social: $('mv-razao').value.trim() || null, tecnico_nome: x.tecnico_nome, obs: x.obs, servicos: [], contrato_assinado: false, exige_nf: true }).select())
+                  .then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return chk(sb.from('rh_colaboradores').update({ demissao: vespera, motivo_demissao: 'Mudança de vínculo para PJ' }).eq('id', x.id).select()); });
+              } else {
+                if (x.inicio && vespera < x.inicio) throw new Error('A data da mudança é antes do início do contrato PJ.');
+                var novoC = null;
+                q = chk(sb.from('rh_colaboradores').insert({ nome: x.nome, cpf: x.cpf, funcao: x.funcao, telefone: x.telefone, endereco: x.endereco, nascimento: x.nascimento, pix: x.pix, empresa_id: x.empresa_id, admissao: data, salario: val, carteira_assinada: $('mv-cart').value === '1', fgts_separado: true, goza_ferias: true, beneficios: [], tecnico_nome: x.tecnico_nome, obs: x.obs }).select())
+                  .then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); novoC = r.data[0].id; return chk(sb.from('rh_prestadores').update({ fim: vespera }).eq('id', x.id).select()); })
+                  .then(function() { return carregarRh(); }).then(function() { return copiarVig(novoC, data); });
+              }
+              return q.then(carregarRh).then(function() { renderRh(); showToast('Vínculo alterado ✔ — confira o novo cadastro'); });
+            });
         }
         function abrirColab(id, nomePre) {
           var c = id ? colabPorId(id) : null;
@@ -8824,13 +8861,15 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               admissao: $('rh-m-adm').value || null, demissao: $('rh-m-dem').value || null, motivo_demissao: $('rh-m-mdem').value.trim() || null,
               goza_ferias: $('rh-m-gf').value === '1', salario: r2(parseValor($('rh-m-sal').value)), fgts_separado: $('rh-m-fgts').value === '1', carteira_assinada: $('rh-m-clt').value === '1', departamento: $('rh-m-dep').value.trim() || null, matricula: $('rh-m-mat').value.trim() || null,
               pis: $('rh-m-pis').value.trim() || null, ctps: $('rh-m-ctps').value.trim() || null, pix: $('rh-m-pix').value.trim() || null,
-              beneficios: bens, obs: $('rh-m-obs').value.trim() || null
+              beneficios: bens, obs: $('rh-m-obs').value.trim() || null, tecnico_nome: $('rh-m-tec').value || null
             };
             if (!d.nome) throw new Error('Informe o nome.');
             if (d.admissao && d.demissao && d.demissao < d.admissao) throw new Error('A demissão não pode ser antes da admissão.');
             var q = c ? sb.from('rh_colaboradores').update(d).eq('id', c.id).select() : sb.from('rh_colaboradores').insert(d).select();
-            return chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregarRh(); })
-              .then(function() { renderRh(); showToast('Colaborador salvo ✔'); });
+            var novoId = null;
+            return chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); novoId = r.data[0].id; return sincTec(d.tecnico_nome, c && c.tecnico_nome); })
+              .then(function() { return (!c && novoId && d.admissao !== undefined) ? carregarRh().then(function() { return copiarVig(novoId, d.admissao || hoje()); }) : null; })
+              .then(carregarRh).then(function() { renderRh(); showToast('Colaborador salvo ✔'); });
           });
         }
         function excluirColab(id) {
@@ -9661,7 +9700,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var ativos = R.prest.filter(prestAtivo), aPagar = 0, nfPend = 0, pagos = 0;
           var linhas = R.prest.filter(function(p) { return prestAtivo(p) || pjPag(p.id, R.compPj); }).map(function(p) {
             var g = pjPag(p.id, R.compPj), sit, nf = '—', val = '—', acoes = '';
-            var base = btnPasta('prestador', p.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-editar" data-id="' + p.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pj-excluir" data-id="' + p.id + '">Excluir</button>';
+            var base = btnPasta('prestador', p.id) + '<button type="button" class="btn-pls-secondary" data-sx="rh-pj-editar" data-id="' + p.id + '">Editar</button> <button type="button" class="btn-pls-secondary" data-sx="rh-vinc" data-ent="p" data-id="' + p.id + '" title="Mudar de PJ para CLT">⇄ Vínculo</button> <button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pj-excluir" data-id="' + p.id + '">Excluir</button>';
             if (g) {
               val = '<b>' + brl(g.total) + '</b>';
               if (g.pago) pagos++; else aPagar += Number(g.total);
@@ -9696,7 +9735,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             '<button type="button" class="btn-pls-secondary sx-del" data-sx="rh-pjsv-del">✕</button></div>';
         }
         function abrirPrestador(id, nomePre) {
-          var p = id ? prestPorId(id) : { forma: 'mensal', servicos: [], exige_nf: true, contrato_assinado: false, nome: nomePre || '' };
+          var p = id ? prestPorId(id) : { forma: 'mensal', servicos: [], exige_nf: true, contrato_assinado: false, nome: nomePre || '' }, p0 = id ? p : null;
           function f(i, lbl, v, tipo, full) { return '<div class="form-group' + (full ? ' full-width' : '') + '"><label class="form-label">' + lbl + '</label><input id="pj-m-' + i + '" class="form-control" type="' + (tipo || 'text') + '" value="' + esc(v || '') + '"></div>'; }
           abrirModal(id ? 'Editar colaborador PJ' : 'Novo colaborador',
             (id ? '' : '<div class="form-group" style="margin-bottom:.6rem"><label class="form-label">Regime</label><select id="pj-m-regime" class="form-control"><option value="clt">CLT (colaborador)</option><option value="pj" selected>PJ (prestador de serviço)</option></select></div>') +
@@ -9709,6 +9748,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             f('ini', 'Início do contrato', p.inicio, 'date') + f('fim', 'Fim do contrato (vazio = indeterminado)', p.fim, 'date') +
             '<div class="form-group"><label class="form-label">Contrato assinado?</label><select id="pj-m-ass" class="form-control">' + opts([{ v: '1', t: 'Sim, assinado' }, { v: '0', t: 'Ainda não' }], p.contrato_assinado ? '1' : '0') + '</select></div>' +
             '<div class="form-group"><label class="form-label">Exige nota fiscal para pagar?</label><select id="pj-m-nf" class="form-control">' + opts([{ v: '1', t: 'Sim, cobrar NF' }, { v: '0', t: 'Não' }], p.exige_nf ? '1' : '0') + '</select></div></div>' +
+            '<div class="form-group full-width"><label class="form-label">É o técnico… (nome na tela de Demandas)</label><select id="pj-m-tec" class="form-control">' + opts((R.tecs || []).map(function(t) { return { v: t.nome, t: t.nome + (t.ativo ? '' : ' (inativo)') }; }), p.tecnico_nome, '— não é técnico —') + '</select><div class="sx-muted">Faltas e atestados lançados em Demandas passam a aparecer no RH sozinhos.</div></div>' +
             '<div class="sx-sec">Serviços e valores</div><div id="pj-svs">' + (p.servicos || []).map(svRow).join('') + '</div>' +
             '<button type="button" class="btn-pls-secondary" data-sx="rh-pjsv-add">+ Serviço</button><div class="sx-muted" style="margin-top:.3rem">Marque “todo mês” nos serviços que entram sozinhos no pagamento mensal. Os demais ficam na lista para você incluir quando forem feitos.</div>' +
             '<div class="form-group full-width" style="margin-top:.7rem"><label class="form-label">Observações</label><textarea id="pj-m-obs" class="form-control" rows="2">' + esc(p.obs || '') + '</textarea></div>',
@@ -9722,13 +9762,13 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 nome: $('pj-m-nome').value.trim(), razao_social: $('pj-m-razao').value.trim() || null, cnpj: $('pj-m-cnpj').value.trim() || null, cpf: $('pj-m-cpf').value.trim() || null,
                 funcao: $('pj-m-func').value.trim() || null, nascimento: $('pj-m-nasc').value || null, telefone: $('pj-m-tel').value.trim() || null, email: $('pj-m-email').value.trim() || null, endereco: $('pj-m-end').value.trim() || null, pix: $('pj-m-pix').value.trim() || null,
                 empresa_id: $('pj-m-emp').value || null, forma: $('pj-m-forma').value, inicio: $('pj-m-ini').value || null, fim: $('pj-m-fim').value || null,
-                valor_mensal: r2(parseValor($('pj-m-vm').value)), contrato_assinado: $('pj-m-ass').value === '1', exige_nf: $('pj-m-nf').value === '1', servicos: svs, obs: $('pj-m-obs').value.trim() || null
+                valor_mensal: r2(parseValor($('pj-m-vm').value)), contrato_assinado: $('pj-m-ass').value === '1', exige_nf: $('pj-m-nf').value === '1', servicos: svs, obs: $('pj-m-obs').value.trim() || null, tecnico_nome: $('pj-m-tec').value || null
               };
               if (!d.nome) throw new Error('Informe o nome.');
               if (d.inicio && d.fim && d.fim < d.inicio) throw new Error('O fim do contrato não pode ser antes do início.');
               var q = id ? sb.from('rh_prestadores').update(d).eq('id', id).select() : sb.from('rh_prestadores').insert(d).select();
-              return chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return carregarRh(); })
-                .then(function() { renderRh(); showToast('Prestador salvo ✔'); });
+              return chk(q).then(function(r) { if (!r.data || !r.data.length) throw new Error('Sem permissão para gravar.'); return sincTec(d.tecnico_nome, p0 && p0.tecnico_nome); })
+                .then(carregarRh).then(function() { renderRh(); showToast('Prestador salvo ✔'); });
             });
         }
         function excluirPrestador(id) {
@@ -9850,7 +9890,33 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         function fmtHm(min) { return Math.floor(min / 60) + 'h' + (min % 60 ? String(min % 60).padStart(2, '0') : ''); }
         function isoAdd(iso, n) { var d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
         function dowIso(iso) { return new Date(iso + 'T00:00:00Z').getUTCDay(); }
-        function escDe(c) {
+        function jornDe(id) { return (R.jorn || []).filter(function(j) { return j.id === id; })[0]; }
+        function vigEm(pid, iso) { var l = (R.vig || []).filter(function(v) { return v.pessoa_id === pid && v.inicio <= iso; }).sort(function(a, b) { return b.inicio.localeCompare(a.inicio); }); return l[0] || null; }
+        function escEm(c, iso) {
+          var v = vigEm(c.id, iso), j = v && jornDe(v.jornada_id), old = R.esc && R.esc[c.id], base = j ? j.semana : (old ? old.semana : null), sem = {};
+          for (var d = 0; d < 7; d++) sem[d] = (base && base[d]) || ESC_PAD[d];
+          return { semana: sem, dsr: j ? j.dsr_dow : (old ? old.dsr_dow : 0), alt: (j && j.alt_dow != null) ? j.alt_dow : null, altRef: v ? v.alt_ref : null, custom: !!(j || old), jorn: j || null, vig: v };
+        }
+        function jornCurto(j) { return j ? String(j.nome).split(' — ')[0] : ''; }
+        function jornResumo(j) {
+          var sem = j.semana, dias = [1, 2, 3, 4, 5, 6, 0].filter(function(d) { return sem[d] && sem[d].t; });
+          return dias.map(function(d) { var x = sem[d]; return DOWN[d] + ' ' + x.e + '–' + x.s + (j.alt_dow === d ? ' (alternado)' : ''); }).join(' · ') + ' · intervalo ' + fmtHm((dias.length && sem[dias[0]].i) || 0) + ' · DSR ' + DOWN[j.dsr_dow];
+        }
+        function jornNomeHoje(c) { var e = escEm(c, hoje()); return e.jorn ? jornCurto(e.jorn) : (e.custom ? 'Personalizada' : 'Padrão (não definida)'); }
+        function jornTxt(c) {
+          var e = escEm(c, hoje()), fut = (R.vig || []).filter(function(v) { return v.pessoa_id === c.id && v.inicio > hoje(); }).sort(function(a, b) { return a.inicio.localeCompare(b.inicio); });
+          var h = e.jorn ? '<b>' + esc(jornCurto(e.jorn)) + '</b> — ' + esc(jornResumo(e.jorn)) : (e.custom ? 'Personalizada' : '<b>Padrão — nenhuma jornada definida</b> (use “Jornadas” para definir)');
+          fut.forEach(function(v) { var j = jornDe(v.jornada_id); if (j) h += '<br>➡ A partir de <b>' + fd(v.inicio) + '</b>: <b>' + esc(jornCurto(j)) + '</b> — ' + esc(jornResumo(j)); });
+          return h;
+        }
+        function copiarVig(novoId, inicio) {
+          var ref = R.colab.filter(function(x) { return x.id !== novoId && ativo(x) && vigEm(x.id, hoje()); })[0]; if (!ref) return Promise.resolve();
+          var vs = (R.vig || []).filter(function(v) { return v.pessoa_id === ref.id && (v.inicio > inicio || v === vigEm(ref.id, inicio)); }), rows = [];
+          vs.forEach(function(v) { rows.push({ pessoa_id: novoId, jornada_id: v.jornada_id, inicio: v.inicio < inicio ? inicio : v.inicio, alt_ref: v.alt_ref }); });
+          return rows.length ? chk(sb.from('rh_escala_vig').upsert(rows, { onConflict: 'pessoa_id,inicio' })).catch(function() {}) : Promise.resolve();
+        }
+        function escDe(c) { return escEm(c, hoje()); }
+        function escDeOld(c) {
           var e = R.esc && R.esc[c.id], sem = {};
           for (var d = 0; d < 7; d++) sem[d] = (e && e.semana && e.semana[d]) || ESC_PAD[d];
           return { semana: sem, dsr: e ? e.dsr_dow : 0, custom: !!e };
@@ -9866,21 +9932,22 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         }
         function nomeFeriado(iso) { var x = (R.fer || []).filter(function(f) { return f.data === iso; })[0]; return x ? x.nome : (feriadosNac(+iso.slice(0, 4))[iso] || ''); }
         function ocorDe(c) { return (R.ocor || []).filter(function(o) { return o.colaborador_id === c.id; }); }
-        function ocorEm(oc, iso) { for (var i = 0; i < oc.length; i++) if (oc[i].inicio <= iso && oc[i].fim >= iso) return oc[i]; return null; }
+        function ocorEm(oc, iso) { var pr = { atestado: 4, abonada: 3, folga: 2, falta: 1 }, b = null; for (var i = 0; i < oc.length; i++) if (oc[i].inicio <= iso && oc[i].fim >= iso && (!b || (pr[oc[i].tipo] || 0) > (pr[b.tipo] || 0))) b = oc[i]; return b; }
         function feriasEm(c, iso) { return (R.ferias || []).some(function(f) { return f.colaborador_id === c.id && f.inicio && f.fim && f.inicio <= iso && f.fim >= iso; }); }
         function statusDia(c, esc, oc, iso) {
           if (c.admissao && iso < c.admissao) return { st: 'fora' };
           if (c.demissao && iso > c.demissao) return { st: 'fora' };
-          var dow = dowIso(iso), x = esc.semana[dow], fer = nomeFeriado(iso);
+          esc = escEm(c, iso); var dow = dowIso(iso), x = esc.semana[dow], fer = nomeFeriado(iso);
           if (feriasEm(c, iso)) return { st: 'ferias' };
           if (fer) return { st: 'feriado', txt: fer };
           if (!x.t) return { st: dow === esc.dsr ? 'dsr' : 'folgaesc' };
+          if (esc.alt === dow && esc.altRef) { var wk = Math.floor((Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) - Date.UTC(+esc.altRef.slice(0, 4), +esc.altRef.slice(5, 7) - 1, +esc.altRef.slice(8, 10))) / 86400000 / 7); if (((wk % 2) + 2) % 2 === 1) return { st: 'folgaesc' }; }
           var o = ocorEm(oc, iso);
           if (o) return { st: o.tipo === 'folga' ? 'folgacomp' : o.tipo, min: minDia(x), o: o };
           return { st: 'trab', min: minDia(x) };
         }
         function rhFreq(c, comp) {
-          var esc = escDe(c), oc = ocorDe(c), n = diasNoMes(comp), dias = [], t = { prev: 0, trab: 0, faltas: 0, atestado: 0, abonada: 0, folgacomp: 0, feriado: 0, ferias: 0, minPrev: 0, minTrab: 0, dsrPerd: 0 };
+          var esc = escEm(c, comp + '-15'), oc = ocorDe(c), n = diasNoMes(comp), dias = [], t = { prev: 0, trab: 0, faltas: 0, atestado: 0, abonada: 0, folgacomp: 0, feriado: 0, ferias: 0, minPrev: 0, minTrab: 0, dsrPerd: 0 };
           for (var d = 1; d <= n; d++) {
             var iso = comp + '-' + String(d).padStart(2, '0'), s = statusDia(c, esc, oc, iso); s.d = iso; s.dow = dowIso(iso); dias.push(s);
             if (s.st === 'feriado') t.feriado++; else if (s.st === 'ferias') t.ferias++;
@@ -9892,7 +9959,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           oc.filter(function(o) { return o.tipo === 'falta'; }).forEach(function(o) {
             for (var iso = o.inicio, g = 0; iso <= o.fim && g < 400; iso = isoAdd(iso, 1), g++) {
               if (statusDia(c, esc, oc, iso).st !== 'falta') continue;
-              var dsr = isoAdd(iso, (esc.dsr - dowIso(iso) + 7) % 7);
+              var dsr = isoAdd(iso, (escEm(c, iso).dsr - dowIso(iso) + 7) % 7);
               if (dsr.slice(0, 7) === comp) vistos[dsr] = 1;
             }
           });
@@ -9917,8 +9984,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var sc = $('fq-col'); if (sc) { sc.innerHTML = lista.map(function(c) { return '<option value="' + c.id + '">' + esc(c.nome) + '</option>'; }).join(''); sc.value = FQ.col; }
           var sm = $('fq-mes'); if (sm) sm.value = FQ.mes;
           var c = R.colab.filter(function(x) { return x.id === FQ.col; })[0];
-          var geral = '<div class="sx-sec" style="margin-top:1rem">Resumo de todos — ' + esc(nomeMes(FQ.mes)) + '</div><div class="table-container"><table class="table-pls"><thead><tr><th>Colaborador</th><th>Dias de escala</th><th>Trabalhou</th><th>Faltas</th><th>Atestado (dias)</th><th>Horas trabalhadas</th><th>Desconto previsto</th></tr></thead><tbody>' +
-            lista.map(function(x) { var t = rhFreq(x, FQ.mes).t; return '<tr><td><a href="#" data-fq="ver" data-id="' + x.id + '">' + esc(x.nome) + '</a></td><td>' + t.prev + '</td><td>' + t.trab + '</td><td>' + (t.faltas ? '<b style="color:#dc2626">' + t.faltas + '</b>' : 0) + '</td><td>' + t.atestado + '</td><td>' + fmtHm(t.minTrab) + ' / ' + fmtHm(t.minPrev) + '</td><td>' + (t.descFaltas + t.descDsr ? brl(t.descFaltas + t.descDsr) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+          var geral = '<div class="sx-sec" style="margin-top:1rem">Resumo de todos — ' + esc(nomeMes(FQ.mes)) + '</div><div class="table-container"><table class="table-pls"><thead><tr><th>Colaborador</th><th>Jornada</th><th>Dias de escala</th><th>Trabalhou</th><th>Faltas</th><th>Atestado (dias)</th><th>Horas trabalhadas</th><th>Desconto previsto</th></tr></thead><tbody>' +
+            lista.map(function(x) { var t = rhFreq(x, FQ.mes).t; return '<tr><td><a href="#" data-fq="ver" data-id="' + x.id + '">' + esc(x.nome) + '</a></td><td>' + esc(jornNomeHoje(x)) + '</td><td>' + t.prev + '</td><td>' + t.trab + '</td><td>' + (t.faltas ? '<b style="color:#dc2626">' + t.faltas + '</b>' : 0) + '</td><td>' + t.atestado + '</td><td>' + fmtHm(t.minTrab) + ' / ' + fmtHm(t.minPrev) + '</td><td>' + (t.descFaltas + t.descDsr ? brl(t.descFaltas + t.descDsr) : '—') + '</td></tr>'; }).join('') + '</tbody></table></div>';
           if (!c) { $('rh-freq').innerHTML = '<div class="sx-vazio">Nenhum colaborador.</div>'; return; }
           var f = rhFreq(c, FQ.mes), t = f.t, cor = { trab: '#16a34a', falta: '#dc2626', atestado: '#2563eb', abonada: '#7c3aed', folgacomp: '#0891b2', dsr: '#94a3b8', folgaesc: '#94a3b8', feriado: '#d97706', ferias: '#0d9488', fora: '#cbd5e1' }, nm = { trab: 'Trabalhou', falta: 'FALTA', atestado: 'Atestado', abonada: 'Falta abonada', folgacomp: 'Folga/compensação', dsr: 'DSR', folgaesc: 'Folga (escala)', feriado: 'Feriado', ferias: 'Férias', fora: '—' };
           var card = function(v, l, k) { return '<div style="flex:1;min-width:120px;border:1px solid #e2e8f0;border-radius:10px;padding:.5rem .7rem;background:#fff"><div style="font-size:1.25rem;font-weight:800;color:' + (k || '#0f172a') + '">' + v + '</div><div class="sx-muted">' + l + '</div></div>'; };
@@ -9926,7 +9993,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           el.innerHTML = '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">' +
             card(t.prev, 'dias de escala') + card(t.trab, 'dias trabalhados', '#16a34a') + card(t.faltas, 'faltas', t.faltas ? '#dc2626' : '') + card(t.atestado, 'dias de atestado', '#2563eb') + card(t.abonada + t.folgacomp, 'abonadas / folgas') +
             card(fmtHm(t.minTrab), 'horas trabalhadas (de ' + fmtHm(t.minPrev) + ' previstas)') + card((t.descFaltas + t.descDsr) ? brl(t.descFaltas + t.descDsr) : '—', 'desconto no recibo' + (t.dsrPerd ? ' (faltas ' + brl(t.descFaltas) + ' + DSR ' + brl(t.descDsr) + ')' : ''), (t.descFaltas + t.descDsr) ? '#dc2626' : '') + '</div>' +
-            '<div class="sx-muted" style="margin-bottom:.4rem">Escala: ' + [1, 2, 3, 4, 5, 6, 0].filter(function(d) { return f.esc.semana[d].t; }).map(function(d) { var x = f.esc.semana[d]; return DOWN[d] + ' ' + x.e + '–' + x.s; }).join(' · ') + ' · DSR: ' + DOWN[f.esc.dsr] + (f.esc.custom ? '' : ' <b>(escala padrão — ajuste em "Escala")</b>') + '. As horas são as da escala (o sistema não registra ponto).</div>' +
+            '<div class="sx-muted" style="margin-bottom:.4rem;line-height:1.6"><b>Jornada:</b> ' + jornTxt(c) + '<br>As horas são as da jornada (o sistema ainda não registra ponto).</div>' +
             '<div class="table-container"><table class="table-pls"><thead><tr><th>Dia</th><th>Situação</th><th>Horas</th><th>Obs.</th></tr></thead><tbody>' + f.dias.map(function(s) {
               return '<tr><td>' + fd(s.d) + ' <span class="sx-muted">' + DOWN[s.dow] + '</span></td><td><span class="sx-pill" style="background:' + cor[s.st] + ';color:#fff">' + nm[s.st] + '</span></td><td>' + (s.st === 'trab' ? fmtHm(s.min) : '') + '</td><td class="sx-muted">' + esc(s.txt || (s.o && s.o.obs) || '') + (f.t.dsrDatas.indexOf(s.d) >= 0 ? ' <b style="color:#dc2626">DSR perdido (descontado)</b>' : '') + '</td></tr>';
             }).join('') + '</tbody></table></div>' +
@@ -9961,6 +10028,70 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               return chk(sb.from('rh_escalas').upsert({ colaborador_id: c.id, semana: sem, dsr_dow: dsr, updated_at: new Date().toISOString() })).then(function() { R.esc[c.id] = { colaborador_id: c.id, semana: sem, dsr_dow: dsr }; showToast('Escala salva ✔'); renderFreq(); });
             });
         }
+        function fqJornadas(c) {
+          var js = R.jorn || [], hj = hoje();
+          var uso = {}; R.colab.filter(ativo).forEach(function(x) { var e = escEm(x, hj); if (e.jorn) uso[e.jorn.id] = (uso[e.jorn.id] || 0) + 1; });
+          var vigs = (R.vig || []).filter(function(v) { return v.pessoa_id === c.id; }).sort(function(a, b) { return b.inicio.localeCompare(a.inicio); });
+          var prox = (function() { var d = hj; for (var i = 0; i < 8; i++) { if (dowIso(d) === 6) return d; d = isoAdd(d, 1); } return hj; })();
+          abrirModal('Jornadas de trabalho',
+            '<div class="sx-sec" style="margin-top:0">1) Jornadas cadastradas</div>' +
+            (js.length ? '<table class="table-pls"><tbody>' + js.map(function(j) { return '<tr><td><b>' + esc(j.nome) + '</b><br><span class="sx-muted">' + esc(jornResumo(j)) + '</span></td><td class="sx-muted">' + (uso[j.id] ? uso[j.id] + ' em uso hoje' : '') + '</td><td class="sx-acoes"><button type="button" class="btn-pls-secondary" data-fq="jedit" data-id="' + j.id + '">Editar</button> <button type="button" class="btn-pls-secondary sx-del" data-fq="jdel" data-id="' + j.id + '">✕</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Nenhuma jornada cadastrada.</div>') +
+            '<button type="button" class="btn-pls-secondary" data-fq="jnova" style="margin-top:.4rem">+ Nova jornada</button>' +
+            '<div class="sx-sec">2) Colocar uma jornada em vigor (muda os dias a partir da data — o passado não muda)</div><div class="form-grid">' +
+            '<div class="form-group full-width"><label class="form-label">Jornada</label><select id="jv-j" class="form-control">' + opts(js.map(function(j) { return { v: j.id, t: j.nome }; }), '', '— escolher —') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">A partir de</label><input id="jv-ini" type="date" class="form-control" value="' + hj + '"></div>' +
+            '<div class="form-group"><label class="form-label">Para quem</label><select id="jv-quem" class="form-control"><option value="todos">Todos os colaboradores ativos</option><option value="um">Só ' + esc(c.nome) + '</option></select></div>' +
+            '<div class="form-group"><label class="form-label">Se a jornada tem sábado alternado: primeiro sábado trabalhado</label><input id="jv-ref" type="date" class="form-control" value="' + prox + '"></div>' +
+            '<div class="form-group"><label class="form-label">Sábado alternado</label><select id="jv-div" class="form-control"><option value="0">Todos trabalham nos mesmos sábados</option><option value="1">Dividir em 2 grupos (metade em cada sábado)</option></select></div></div>' +
+            '<button type="button" class="btn-pls-primary" data-fq="japl">Aplicar jornada</button>' +
+            '<div class="sx-sec">3) Histórico de ' + esc(c.nome) + '</div>' +
+            (vigs.length ? '<table class="table-pls"><tbody>' + vigs.map(function(v) { var j = jornDe(v.jornada_id); return '<tr><td>' + fd(v.inicio) + (v.inicio > hj ? ' <span class="sx-pill sx-espera">futuro</span>' : '') + '</td><td>' + esc(j ? j.nome : '?') + (v.alt_ref ? '<br><span class="sx-muted">1º sábado trabalhado: ' + fd(v.alt_ref) + '</span>' : '') + '</td><td><button type="button" class="btn-pls-secondary sx-del" data-fq="jvigdel" data-id="' + v.id + '">✕</button></td></tr>'; }).join('') + '</tbody></table>' : '<div class="sx-vazio">Sem jornada definida (usa a padrão).</div>'),
+            'Fechar', function() {});
+        }
+        function jornInputs(j) {
+          j = j || { nome: '', dsr_dow: 0, alt_dow: null, semana: { 0: { t: 0, e: '08:00', s: '17:00', i: 0 }, 1: { t: 1, e: '08:00', s: '18:00', i: 90 }, 2: { t: 1, e: '08:00', s: '18:00', i: 90 }, 3: { t: 1, e: '08:00', s: '18:00', i: 90 }, 4: { t: 1, e: '08:00', s: '18:00', i: 90 }, 5: { t: 1, e: '08:00', s: '18:00', i: 90 }, 6: { t: 0, e: '08:00', s: '15:00', i: 90 } } };
+          return j;
+        }
+        function fqJornForm(j0, c) {
+          var j = jornInputs(j0);
+          abrirModal(j0 ? 'Editar jornada' : 'Nova jornada',
+            '<div class="form-group"><label class="form-label">Nome da jornada</label><input id="jf-nome" class="form-control" value="' + esc(j.nome) + '" placeholder="ex.: Escala 5x2 — seg a sex 8h às 18h"></div>' +
+            '<table class="table-pls"><thead><tr><th>Dia</th><th>Trabalha?</th><th>Entrada</th><th>Saída</th><th>Intervalo (min)</th></tr></thead><tbody>' + [1, 2, 3, 4, 5, 6, 0].map(function(d) { var x = j.semana[d] || ESC_PAD[d];
+              return '<tr><td><b>' + DOWN[d] + '</b></td><td><input type="checkbox" id="jf-t' + d + '"' + (x.t ? ' checked' : '') + '></td><td><input type="time" id="jf-e' + d + '" class="form-control" value="' + x.e + '"></td><td><input type="time" id="jf-s' + d + '" class="form-control" value="' + x.s + '"></td><td><input type="number" id="jf-i' + d + '" class="form-control" min="0" step="5" value="' + (x.i || 0) + '"></td></tr>'; }).join('') + '</tbody></table>' +
+            '<div class="form-grid" style="margin-top:.5rem"><div class="form-group"><label class="form-label">Descanso semanal (DSR)</label><select id="jf-dsr" class="form-control">' + [0, 6, 1, 2, 3, 4, 5].map(function(d) { return '<option value="' + d + '"' + (d === j.dsr_dow ? ' selected' : '') + '>' + DOWN[d] + '</option>'; }).join('') + '</select></div>' +
+            '<div class="form-group"><label class="form-label">Dia alternado</label><select id="jf-alt" class="form-control"><option value="">Nenhum — todo dia marcado é trabalhado</option><option value="6"' + (j.alt_dow === 6 ? ' selected' : '') + '>Sábado: trabalha sábado sim, sábado não</option></select></div></div>' +
+            '<div class="sx-muted">Marque “Trabalha?” no sábado e escolha “sábado alternado”: o sistema trabalha um sábado e folga no seguinte (o primeiro sábado trabalhado você escolhe ao aplicar a jornada).</div>',
+            'Salvar jornada', function() {
+              var nome = $('jf-nome').value.trim(); if (!nome) throw new Error('Dê um nome à jornada.');
+              var sem = {}; for (var d = 0; d < 7; d++) sem[d] = { t: $('jf-t' + d).checked ? 1 : 0, e: $('jf-e' + d).value || '08:00', s: $('jf-s' + d).value || '17:00', i: Number($('jf-i' + d).value) || 0 };
+              var row = { nome: nome, semana: sem, dsr_dow: Number($('jf-dsr').value), alt_dow: $('jf-alt').value === '' ? null : Number($('jf-alt').value) };
+              var q = j0 ? sb.from('rh_jornadas').update(row).eq('id', j0.id).select('*') : sb.from('rh_jornadas').insert(row).select('*');
+              return chk(q).then(function(r) { var x = r.data && r.data[0]; if (!x) throw new Error('Sem permissão para gravar.'); R.jorn = (R.jorn || []).filter(function(y) { return y.id !== x.id; }).concat([x]); showToast('Jornada salva ✔'); renderFreq(); setTimeout(function() { fqJornadas(c); }, 60); });
+            });
+        }
+        function jDel(id, c) {
+          if ((R.vig || []).some(function(v) { return v.jornada_id === id; })) { showToast('Essa jornada está em uso por alguém. Troque a jornada deles antes de excluir.', 5000); return; }
+          if (!confirm('Excluir esta jornada?')) return;
+          chk(sb.from('rh_jornadas').delete().eq('id', id).select('id')).then(function() { R.jorn = R.jorn.filter(function(j) { return j.id !== id; }); fecharModal(); setTimeout(function() { fqJornadas(c); }, 60); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function jVigDel(id, c) {
+          chk(sb.from('rh_escala_vig').delete().eq('id', id).select('id')).then(function() { R.vig = R.vig.filter(function(v) { return v.id !== id; }); renderFreq(); fecharModal(); setTimeout(function() { fqJornadas(c); }, 60); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
+        function jAplicar(c) {
+          var jid = $('jv-j').value, ini = $('jv-ini').value, quem = $('jv-quem').value, ref = $('jv-ref').value, div = $('jv-div').value === '1';
+          if (!jid || !ini) { showToast('Escolha a jornada e a data de início.', 4000); return; }
+          var j = jornDe(jid), alvo = quem === 'um' ? [c] : R.colab.filter(ativo).sort(function(a, b) { return norm(a.nome).localeCompare(norm(b.nome)); });
+          if (j.alt_dow != null) {
+            if (!ref) { showToast('Informe o primeiro sábado trabalhado.', 4000); return; }
+            for (var g = 0; g < 7 && dowIso(ref) !== j.alt_dow; g++) ref = isoAdd(ref, 1);
+          }
+          if (!confirm('Colocar “' + jornCurto(j) + '” em vigor a partir de ' + fd(ini) + ' para ' + (quem === 'um' ? c.nome : alvo.length + ' colaboradores') + '?')) return;
+          var rows = alvo.map(function(x, i) { return { pessoa_id: x.id, jornada_id: jid, inicio: ini, alt_ref: j.alt_dow != null ? (div && i % 2 === 1 ? isoAdd(ref, 7) : ref) : null }; });
+          chk(sb.from('rh_escala_vig').upsert(rows, { onConflict: 'pessoa_id,inicio' }).select('*')).then(function(r) {
+            var novos = r.data || rows; R.vig = (R.vig || []).filter(function(v) { return !novos.some(function(n) { return n.pessoa_id === v.pessoa_id && n.inicio === v.inicio; }); }).concat(novos);
+            showToast('Jornada aplicada a ' + rows.length + ' colaborador(es) ✔'); renderFreq(); fecharModal(); setTimeout(function() { fqJornadas(c); }, 60);
+          }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); });
+        }
         function fqFeriados() {
           var l = (R.fer || []).slice().sort(function(a, b) { return a.data.localeCompare(b.data); });
           abrirModal('Feriados extras (municipais, pontes…)',
@@ -9977,7 +10108,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           var a = t.getAttribute('data-fq'), c = R.colab.filter(function(x) { return x.id === FQ.col; })[0];
           if (a === 'ver') { ev.preventDefault(); FQ.col = t.getAttribute('data-id'); renderFreq(); window.scrollTo(0, 0); }
           else if (a === 'nova' && c) fqOcorForm(c);
-          else if (a === 'esc' && c) fqEscForm(c);
+          else if (a === 'esc' && c) fqJornadas(c);
+          else if (a === 'jnova' && c) fqJornForm(null, c);
+          else if (a === 'jedit' && c) fqJornForm(jornDe(t.getAttribute('data-id')), c);
+          else if (a === 'jdel' && c) jDel(t.getAttribute('data-id'), c);
+          else if (a === 'japl' && c) jAplicar(c);
+          else if (a === 'jvigdel' && c) jVigDel(t.getAttribute('data-id'), c);
           else if (a === 'fer') fqFeriados();
           else if (a === 'del') { if (!confirm('Remover esta ocorrência?')) return; var id = t.getAttribute('data-id'); chk(sb.from('rh_ocorrencias').delete().eq('id', id).select('id')).then(function() { R.ocor = R.ocor.filter(function(o) { return o.id !== id; }); renderFreq(); showToast('Ocorrência removida.'); }).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); }
           else if (a === 'ferdel') { var d = t.getAttribute('data-d'); chk(sb.from('rh_feriados').delete().eq('data', d).select('data')).then(function() { R.fer = R.fer.filter(function(f) { return f.data !== d; }); renderFreq(); fqFeriados(); }); }
@@ -14575,6 +14711,7 @@ function temPend(pd) { return !!(pd.dia.length || pd.ant.length || pd.mes); }
             case 'rh-rs-hdel': if (confirm('Desfazer esta rescisão? O registro será apagado (o cadastro do colaborador não muda).')) chk(sb.from('rh_rescisoes').delete().eq('id', id).select()).then(carregarRh).then(renderRescisao).catch(function(e) { showToast('Erro: ' + (e.message || e), 5000); }); break;
             case 'rh-pj-des': desfazerPj(id); break;
             case 'rh-pj-editar': abrirPrestador(id); break;
+            case 'rh-vinc': mudarVinculo(a.getAttribute('data-ent'), id); break;
             case 'rh-pj-excluir': excluirPrestador(id); break;
             case 'rh-pj-gerar': gerarPj(id); break;
             case 'rh-pj-ajustar': abrirAjustePj(id); break;
